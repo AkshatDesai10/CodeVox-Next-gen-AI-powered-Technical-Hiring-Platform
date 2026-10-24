@@ -14,7 +14,6 @@ import {
   type ThresholdConfig,
 } from './job-profiles-phase2.util';
 import { AutonomousInterviewDecision } from '../autonomous-interview/entities/candidate-autonomous-interview.mysql.entity';
-import { TakeHomeOrchestratorService } from '../take-home/take-home-orchestrator.service';
 import { RoundSnapshotService } from '../assessment-reports/round-snapshot.service';
 import { AssessmentReportsService } from '../assessment-reports/assessment-reports.service';
 
@@ -30,8 +29,6 @@ export class JobProfilePipelineService {
     private readonly profiles: Repository<JobProfileMysql>,
     @InjectRepository(JobProfileStageMysql)
     private readonly stages: Repository<JobProfileStageMysql>,
-    @Inject(forwardRef(() => TakeHomeOrchestratorService))
-    private readonly takeHomeOrchestrator: TakeHomeOrchestratorService,
     private readonly roundSnapshots: RoundSnapshotService,
     @Inject(forwardRef(() => AssessmentReportsService))
     private readonly assessmentReports: AssessmentReportsService,
@@ -274,7 +271,6 @@ export class JobProfilePipelineService {
         status: JobApplicationStatus.IN_PROGRESS,
       },
     );
-    await this.takeHomeOrchestrator.assignForApplication(app.id, nextStage.id);
     return {
       advanced: true,
       stage_id: nextStage.id,

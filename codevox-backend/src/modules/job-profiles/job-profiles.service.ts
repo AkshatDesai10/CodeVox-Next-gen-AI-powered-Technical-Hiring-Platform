@@ -50,7 +50,6 @@ import {
 import { normalizeRubricQuestionPlan } from './rubric-question-plan';
 import { firstInterviewStage, resolveInitialInterviewPhase } from './interview-phase.util';
 import { verbalBudgetSaveError } from './verbal-interview-budget';
-import { TakeHomeOrchestratorService } from '../take-home/take-home-orchestrator.service';
 import { RoundSnapshotService } from '../assessment-reports/round-snapshot.service';
 
 const DEFAULT_STAGES: Array<Partial<JobProfileStageMysql>> = [
@@ -93,8 +92,6 @@ export class JobProfilesService {
     private readonly candidates: Repository<CandidateMysql>,
     @InjectRepository(AssessmentTemplateMysql)
     private readonly templates: Repository<AssessmentTemplateMysql>,
-    @Inject(forwardRef(() => TakeHomeOrchestratorService))
-    private readonly takeHomeOrchestrator: TakeHomeOrchestratorService,
     private readonly roundSnapshots: RoundSnapshotService,
   ) {}
 
@@ -890,16 +887,7 @@ export class JobProfilesService {
     });
     await this.roundSnapshots.freezeAssignedPipeline(String(savedApp.id));
 
-    let takeHomeUrl: string | undefined;
-    if (firstStage?.stageType === JobStageType.TAKE_HOME && firstStage.id) {
-      const submission = await this.takeHomeOrchestrator.assignForApplication(
-        savedApp.id,
-        firstStage.id,
-      );
-      if (submission) {
-        takeHomeUrl = `/assessments/candidate/take-home/${submission.submissionToken}`;
-      }
-    }
+    const takeHomeUrl: string | undefined = undefined;
 
     return {
       application_token: token,

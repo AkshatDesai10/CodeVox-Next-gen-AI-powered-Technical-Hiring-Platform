@@ -8,7 +8,6 @@ import { AutonomousInterviewRoundMysql } from '../autonomous-interview/entities/
 import { JobApplicationMysql } from '../job-profiles/entities/job-application.mysql.entity';
 import { JobProfileMysql } from '../job-profiles/entities/job-profile.mysql.entity';
 import { JobProfileStageMysql } from '../job-profiles/entities/job-profile-stage.mysql.entity';
-import { TakeHomeLlmClient } from '../take-home/take-home-llm.client';
 import { ProjectInterviewSubmissionMysql } from './entities/project-interview-submission.mysql.entity';
 import { ExcelGraderService } from './excel-grader.service';
 import { ProjectEvaluationService } from './project-evaluation.service';
@@ -40,7 +39,6 @@ import { GitRepoSnapshotFetcher, REPO_SNAPSHOT_FETCHER } from './repo-snapshot.f
     ProjectInterviewService,
     ProjectEvaluationService,
     ExcelGraderService,
-    TakeHomeLlmClient,
     ProjectInterviewLlmClient,
     { provide: PROJECT_EVALUATION_LLM, useExisting: ProjectInterviewLlmClient },
     GitRepoSnapshotFetcher,

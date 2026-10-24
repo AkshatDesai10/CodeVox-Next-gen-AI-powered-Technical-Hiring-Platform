@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AssessmentExecutionModule } from '../assessment-execution/assessment-execution.module';
 import { ProctorModule } from '../proctor/proctor.module';
 import { JobProfilesModule } from '../job-profiles/job-profiles.module';
-import { TakeHomeModule } from '../take-home/take-home.module';
 import { ProjectInterviewModule } from '../project-interview/project-interview.module';
 import { CandidateAutonomousInterviewMysql } from './entities/candidate-autonomous-interview.mysql.entity';
 import { AutonomousInterviewRoundMysql } from './entities/autonomous-interview-round.mysql.entity';
@@ -37,7 +36,6 @@ import { RoundSnapshotModule } from '../assessment-reports/round-snapshot.module
     AssessmentAiModule,
     RoundSnapshotModule,
     forwardRef(() => JobProfilesModule),
-    forwardRef(() => TakeHomeModule),
     forwardRef(() => ProjectInterviewModule),
   ],
   controllers: [AutonomousInterviewController],
@@ -55,9 +53,8 @@ import { RoundSnapshotModule } from '../assessment-reports/round-snapshot.module
     InterviewRecordingService,
   ],
   exports: [
-    AutonomousInterviewRepository,
-    AutonomousInterviewRoundsRepository,
     SessionCoordinatorService,
+    AutonomousInterviewRepository,
     InterviewRecordingService,
   ],
 })

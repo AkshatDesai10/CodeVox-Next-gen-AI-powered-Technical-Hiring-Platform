@@ -9,7 +9,6 @@ import { randomBytes } from 'crypto';
 import { OpenAiClientService } from '../assessment-platform/assessment-ai/openai-client.service';
 import { AutonomousInterviewRepository } from '../autonomous-interview/autonomous-interview.repository';
 import { CandidateAutonomousInterviewMysql, AutonomousInterviewPhase } from '../autonomous-interview/entities/candidate-autonomous-interview.mysql.entity';
-import { TakeHomeOrchestratorService } from '../take-home/take-home-orchestrator.service';
 import { extractReportText } from '../ai-detection/text-extraction.util';
 import { RecruitmentService } from '../recruitment/recruitment.service';
 import { ResumeScreeningService } from '../recruitment/resume-screening/resume-screening.service';
@@ -143,8 +142,6 @@ export class CandidatePortalService {
     private readonly candidates: Repository<CandidateMysql>,
     private readonly openai: OpenAiClientService,
     private readonly interviewRepo: AutonomousInterviewRepository,
-    @Inject(forwardRef(() => TakeHomeOrchestratorService))
-    private readonly takeHomeOrchestrator: TakeHomeOrchestratorService,
     @Inject(forwardRef(() => RecruitmentService))
     private readonly recruitmentService: RecruitmentService,
     @Inject(forwardRef(() => ResumeScreeningService))
@@ -740,9 +737,7 @@ export class CandidatePortalService {
     demoCandidates.set(demoToken, { name: candidateName, email: candidateEmail });
     await this.roundSnapshots.freezeAssignedPipeline(String(savedApp.id));
 
-    if (firstStage?.stageType === JobStageType.TAKE_HOME && firstStage.id) {
-      await this.takeHomeOrchestrator.assignForApplication(savedApp.id, firstStage.id);
-    }
+
 
     const config = profile.autonomousInterviewConfig ?? {};
     const allStages = await this.stages.find({

@@ -23,11 +23,18 @@ import {
   JobStageType,
 } from '../job-profiles/entities/job-profile-stage.mysql.entity';
 import { ProblemBankProblemMysql } from '../job-profiles/entities/problem-bank-problem.mysql.entity';
-import { TakeHomeEvalRunMysql } from '../take-home/entities/take-home-eval-run.mysql.entity';
-import {
-  TakeHomeSubmissionMysql,
-  TakeHomeSubmissionStatus,
-} from '../take-home/entities/take-home-submission.mysql.entity';
+type TakeHomeSubmissionMysql = any;
+type TakeHomeEvalRunMysql = any;
+const TakeHomeSubmissionStatus = {
+  ASSIGNED: 'assigned',
+  IN_PROGRESS: 'in_progress',
+  SUBMITTED: 'submitted',
+  GRADING: 'grading',
+  GRADED: 'graded',
+  EVALUATED: 'evaluated',
+  FAILED: 'failed',
+  EXPIRED: 'expired',
+} as const;
 import { ApplicationRoundSnapshotMysql } from './entities/application-round-snapshot.mysql.entity';
 import { ROUND_SOURCE, RoundSnapshotService } from './round-snapshot.service';
 import {
@@ -101,10 +108,6 @@ export class AssessmentReportsService {
     private readonly candidates: Repository<CandidateMysql>,
     @InjectRepository(CodingRoundSubmissionEntity)
     private readonly codingSubs: Repository<CodingRoundSubmissionEntity>,
-    @InjectRepository(TakeHomeSubmissionMysql)
-    private readonly takeHomeSubs: Repository<TakeHomeSubmissionMysql>,
-    @InjectRepository(TakeHomeEvalRunMysql)
-    private readonly takeHomeEvals: Repository<TakeHomeEvalRunMysql>,
     @InjectRepository(CandidateAutonomousInterviewMysql)
     private readonly interviews: Repository<CandidateAutonomousInterviewMysql>,
     @InjectRepository(ProblemBankProblemMysql)
@@ -223,10 +226,7 @@ export class AssessmentReportsService {
       this.codingSubs.find({
         where: { applicationId: String(app.id), inactive: false },
       }),
-      this.takeHomeSubs.find({
-        where: { jobApplicationId: String(app.id), inactive: 0 },
-        order: { createdAt: 'DESC' },
-      }),
+      Promise.resolve([] as any[]),
       this.loadInterviewsForPortalToken(app.candidateToken),
       this.overlays.findOne({
         where: { leadId: `app:${app.id}` },
@@ -1133,10 +1133,7 @@ export class AssessmentReportsService {
           order: { sortOrder: 'ASC' },
         }),
         this.codingSubs.find({ where: { applicationId: In(appIds), inactive: false } }),
-        this.takeHomeSubs.find({
-          where: { jobApplicationId: In(appIds), inactive: 0 },
-          order: { createdAt: 'DESC' },
-        }),
+        Promise.resolve([] as any[]),
         tokens.length
           ? this.interviews
             .createQueryBuilder('i')
@@ -2642,13 +2639,7 @@ export class AssessmentReportsService {
     takeHomeRows: TakeHomeSubmissionMysql[],
   ): Promise<TakeHomeStageReport> {
     const row = takeHomeRows.find((t) => String(t.stageId) === String(stage.id)) ?? null;
-    const evalRuns = row
-      ? await this.takeHomeEvals.find({
-        where: { submissionId: row.id, inactive: 0 },
-        order: { createdAt: 'DESC' },
-        take: 5,
-      })
-      : [];
+    const evalRuns: any[] = [];
 
     const criteria = Array.isArray(row?.criteriaResultsJson)
       ? row!.criteriaResultsJson.map((c) => {

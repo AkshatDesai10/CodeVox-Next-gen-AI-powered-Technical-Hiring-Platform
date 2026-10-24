@@ -10,8 +10,6 @@ import { JobApplicationMysql } from '../job-profiles/entities/job-application.my
 import { JobProfileMysql } from '../job-profiles/entities/job-profile.mysql.entity';
 import { JobProfileStageMysql } from '../job-profiles/entities/job-profile-stage.mysql.entity';
 import { ProblemBankProblemMysql } from '../job-profiles/entities/problem-bank-problem.mysql.entity';
-import { TakeHomeEvalRunMysql } from '../take-home/entities/take-home-eval-run.mysql.entity';
-import { TakeHomeSubmissionMysql } from '../take-home/entities/take-home-submission.mysql.entity';
 import { RecruitmentLeadOverlayMysql } from '../recruitment/entities/recruitment-lead-overlay.mysql.entity';
 import { AssessmentReportsController } from './assessment-reports.controller';
 import { AssessmentReportsService } from './assessment-reports.service';
@@ -31,8 +29,6 @@ import { AssessmentAiModule } from '../assessment-platform/assessment-ai/assessm
       JobProfileStageMysql,
       CandidateMysql,
       CodingRoundSubmissionEntity,
-      TakeHomeSubmissionMysql,
-      TakeHomeEvalRunMysql,
       CandidateAutonomousInterviewMysql,
       AutonomousInterviewRoundMysql,
       ProblemBankProblemMysql,

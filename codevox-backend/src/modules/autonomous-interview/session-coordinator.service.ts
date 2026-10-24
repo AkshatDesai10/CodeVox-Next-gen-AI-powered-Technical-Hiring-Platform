@@ -40,7 +40,6 @@ import {
   ScreeningAnalyzerService,
   type ScreeningVoiceAudit,
 } from './screening-analyzer.service';
-import { TakeHomeService } from '../take-home/take-home.service';
 const DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT = 35;
 import { ProjectInterviewService } from '../project-interview/project-interview.service';
 
@@ -65,8 +64,6 @@ export class SessionCoordinatorService {
     private readonly jobProfilesRepo: JobProfilesRepository,
     private readonly screeningAnalyzer: ScreeningAnalyzerService,
     private readonly roundSnapshots: RoundSnapshotService,
-    @Inject(forwardRef(() => TakeHomeService))
-    private readonly takeHome: TakeHomeService,
     private readonly recordings: InterviewRecordingService,
     private readonly projectInterview: ProjectInterviewService,
   ) { }
@@ -117,135 +114,12 @@ export class SessionCoordinatorService {
    * Maps Round Config include_take_home_verification → runtime take_home_verification_enabled.
    * Skips (does not crash) when submission/report is missing.
    */
-  private async resolveTakeHomeVerificationContext(input: {
-    stages: Array<{ id: string; stageType: string; sortOrder: number }>;
-    interviewStageId: string;
-    applicationId: string | null;
-    takeHomeWeightPct: number;
-    candidateToken: string;
-  }): Promise<{
+  private async resolveTakeHomeVerificationContext(_input: unknown): Promise<{
     enabled: boolean;
     weightPct: number;
     payload: Record<string, unknown> | null;
   }> {
-    const ordered = [...input.stages].sort((a, b) => a.sortOrder - b.sortOrder);
-    const techIdx = ordered.findIndex((s) => String(s.id) === input.interviewStageId);
-    const preceding = techIdx > 0 ? ordered[techIdx - 1] : undefined;
-    if (!preceding || preceding.stageType !== 'take_home') {
-      this.logger.warn(
-        `Take-Home verification enabled but preceding stage is not take_home token=${input.candidateToken} — skipping`,
-      );
-      return { enabled: false, weightPct: 0, payload: null };
-    }
-    if (!input.applicationId) {
-      this.logger.warn(
-        `Take-Home verification enabled but no application id token=${input.candidateToken} — skipping`,
-      );
-      return { enabled: false, weightPct: 0, payload: null };
-    }
-    try {
-      const report = await this.takeHome.getRecruiterReport(
-        input.applicationId,
-        String(preceding.id),
-      );
-      const payload = this.buildTakeHomeVerificationPayload(report, input.takeHomeWeightPct);
-      this.logger.log(
-        `Take-Home report loaded: true token=${input.candidateToken} stage=${preceding.id} weight_pct=${input.takeHomeWeightPct}`,
-      );
-      return {
-        enabled: true,
-        weightPct: input.takeHomeWeightPct,
-        payload,
-      };
-    } catch (err) {
-      this.logger.warn(
-        `Take-Home report loaded: false token=${input.candidateToken} — skipping verification (${
-          err instanceof Error ? err.message : String(err)
-        })`,
-      );
-      return { enabled: false, weightPct: 0, payload: null };
-    }
-  }
-
-  /** Structured report context for the LLM — no raw source files. */
-  private buildTakeHomeVerificationPayload(
-    report: Awaited<ReturnType<TakeHomeService['getRecruiterReport']>>,
-    takeHomeWeightPct: number,
-  ): Record<string, unknown> {
-    const problem = (report.config?.problem ?? {}) as Record<string, unknown>;
-    const criteria = report.config?.criteria ?? [];
-    const verificationCtx =
-      report.verification_context && typeof report.verification_context === 'object'
-        ? (report.verification_context as Record<string, unknown>)
-        : {};
-    const scoresJson = (report.submission.scores_json ?? {}) as Record<string, unknown>;
-    const evaluationFeedback =
-      (typeof verificationCtx.evaluation_feedback === 'string'
-        ? verificationCtx.evaluation_feedback
-        : null) ??
-      (typeof scoresJson.evaluation_feedback === 'string' ? scoresJson.evaluation_feedback : null);
-
-    // Prioritize structured evaluation fields; keep generous but bounded sizes.
-    const evalRuns = (report.eval_runs ?? []).slice(0, 2).map((r) => {
-      const harnessLog =
-        typeof r.harness_log === 'string' ? r.harness_log.slice(0, 6000) : null;
-      const harnessOutput = r.harness_output;
-      let harnessOutputSafe: unknown = harnessOutput;
-      if (harnessOutput && typeof harnessOutput === 'object') {
-        const ho = { ...(harnessOutput as Record<string, unknown>) };
-        // Cap noisy stdout/stderr; keep tests / status fields intact.
-        if (typeof ho.stdout === 'string') ho.stdout = ho.stdout.slice(0, 4000);
-        if (typeof ho.stderr === 'string') ho.stderr = ho.stderr.slice(0, 2000);
-        harnessOutputSafe = ho;
-      }
-      return {
-        status: r.status,
-        error_message: r.error_message,
-        completed_at: r.completed_at,
-        harness_output: harnessOutputSafe,
-        harness_log_excerpt: harnessLog,
-      };
-    });
-
-    return {
-      take_home_weight_pct: takeHomeWeightPct,
-      problem: {
-        title: problem.title ?? null,
-        description_md: String(problem.description_md ?? '').slice(0, 8000),
-        submission_instructions_md: String(problem.submission_instructions_md ?? '').slice(0, 3000),
-        submission_type: problem.submission_type ?? null,
-        allowed_libraries: problem.allowed_libraries ?? [],
-        forbidden_libraries: problem.forbidden_libraries ?? [],
-      },
-      criteria,
-      scoring_weights: report.config?.scoring_weights ?? null,
-      evaluation_mode: report.config?.evaluation?.mode ?? null,
-      expected_output_format: report.config?.evaluation?.expected_output_format ?? null,
-      summary: verificationCtx.summary ?? {
-        composite_score: report.submission.score,
-        breakdown: scoresJson,
-        plagiarism_score: report.submission.plagiarism_score,
-        ai_probability: report.submission.ai_probability,
-      },
-      evaluation_feedback: evaluationFeedback,
-      readme: typeof verificationCtx.readme === 'string' ? verificationCtx.readme.slice(0, 12000) : '',
-      file_tree:
-        typeof verificationCtx.file_tree === 'string' ? verificationCtx.file_tree.slice(0, 16000) : '',
-      project_signals:
-        typeof verificationCtx.project_signals === 'string'
-          ? verificationCtx.project_signals.slice(0, 8000)
-          : '',
-      submission: {
-        status: report.submission.status,
-        score: report.submission.score,
-        scores_json: report.submission.scores_json,
-        criteria_results: report.submission.criteria_results,
-        plagiarism_score: report.submission.plagiarism_score,
-        ai_probability: report.submission.ai_probability,
-        artifact_type: report.submission.artifact_type,
-      },
-      eval_runs: evalRuns,
-    };
+    return { enabled: false, weightPct: 0, payload: null };
   }
 
   async recordConsent(candidateToken: string) {

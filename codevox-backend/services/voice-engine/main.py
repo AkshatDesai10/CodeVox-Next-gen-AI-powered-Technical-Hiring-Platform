@@ -41,13 +41,12 @@ class StartAgentRequest(BaseModel):
     token: str
     room_name: str
     phase: Literal["intro_verbal", "ai_verbal", "hr_verbal", "ai_screening", "bnd_assessment", "bnd_interview"] = "ai_verbal"
-    session_type: Literal["candidate_interview", "student_viva"] = "candidate_interview"
+    session_type: str = "candidate_interview"
     tech_stack: str | None = None
     resume_skills: list[str] = Field(default_factory=list)
     candidate_name: str | None = None
     candidate_id: str | None = None
     application_id: str | None = None
-    viva_profile: dict | None = None
     question_mode: str | None = None
     language_preference: str | None = None
     panel_mode: str | None = None
@@ -67,23 +66,6 @@ class StartAgentRequest(BaseModel):
     project_interview_payload: dict | None = None
     project_build_payload: dict | None = None
     round_type: str | None = None
-
-
-class VivaControlRequest(BaseModel):
-    token: str
-    action: Literal[
-        "pause",
-        "resume",
-        "inject",
-        "skip",
-        "takeover",
-        "release_ai",
-        "student_pass",
-        "set_language",
-    ]
-    text: str | None = None
-    topic: str | None = None
-    language: str | None = None
 
 
 class AnalyzeSubmissionRequest(BaseModel):
@@ -165,7 +147,6 @@ async def start_agent(body: StartAgentRequest):
                 "candidate_name": body.candidate_name,
                 "candidate_id": body.candidate_id or body.application_id,
                 "application_id": body.application_id or body.candidate_id,
-                "viva_profile": body.viva_profile,
                 "question_mode": body.question_mode,
                 "language_preference": body.language_preference,
                 "panel_mode": body.panel_mode,
@@ -197,25 +178,9 @@ async def start_agent(body: StartAgentRequest):
 
 @app.get("/api/v1/voice/active-agent/{token}")
 async def active_agent(token: str):
-    from viva_runtime_registry import is_viva_active
-
     task = _active_tasks.get(token.strip())
-    active = (task is not None and not task.done()) or is_viva_active(token.strip())
+    active = task is not None and not task.done()
     return {"active": active, "token": token.strip()}
-
-
-@app.post("/api/v1/voice/viva-control")
-async def viva_control(body: VivaControlRequest):
-    from viva_control import apply_viva_control
-
-    result = await apply_viva_control(
-        body.token.strip(),
-        body.action,
-        text=body.text,
-        topic=body.topic,
-        language=body.language,
-    )
-    return result
 
 
 @app.post("/api/v1/voice/chat-turn")

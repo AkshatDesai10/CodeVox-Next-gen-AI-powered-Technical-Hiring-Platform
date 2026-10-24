@@ -14,7 +14,6 @@ import {
   JobProfileStageMysql,
   JobStageType,
 } from '../job-profiles/entities/job-profile-stage.mysql.entity';
-import { TakeHomeSubmissionMysql } from '../take-home/entities/take-home-submission.mysql.entity';
 import { ProjectInterviewService } from '../project-interview/project-interview.service';
 import {
   ProjectInterviewStatus,
@@ -55,8 +54,6 @@ export class RoundSnapshotService {
     private readonly stages: Repository<JobProfileStageMysql>,
     @InjectRepository(CodingRoundSubmissionEntity)
     private readonly codingSubs: Repository<CodingRoundSubmissionEntity>,
-    @InjectRepository(TakeHomeSubmissionMysql)
-    private readonly takeHomeSubs: Repository<TakeHomeSubmissionMysql>,
     @InjectRepository(CandidateAutonomousInterviewMysql)
     private readonly interviews: Repository<CandidateAutonomousInterviewMysql>,
     @InjectRepository(JobApplicationMysql)
@@ -209,59 +206,8 @@ export class RoundSnapshotService {
     }
   }
 
-  async upsertFromTakeHome(submission: TakeHomeSubmissionMysql): Promise<void> {
-    try {
-      const stage = await this.stages.findOne({
-        where: { id: String(submission.stageId) },
-      });
-
-      const assignedMeta = await this.snapshots.findOne({
-        where: {
-          jobApplicationId: String(submission.jobApplicationId),
-          sourceTable: ROUND_SOURCE.ASSIGNED,
-          sourceId: String(submission.stageId),
-          inactive: 0,
-        },
-      });
-
-      // Prefer assigned freeze; else live take-home name; else historical take-home label.
-      let stageName = assignedMeta?.stageName?.trim() || 'Take-home';
-      let sortOrder = assignedMeta?.sortOrder ?? stage?.sortOrder ?? 0;
-      if (!assignedMeta?.stageName?.trim()) {
-        if (stage?.stageType === JobStageType.TAKE_HOME && stage.name?.trim()) {
-          stageName = stage.name.trim();
-        } else if (stage?.jobProfileId) {
-          const hist = await this.stages.find({
-            where: {
-              jobProfileId: String(stage.jobProfileId),
-              stageType: JobStageType.TAKE_HOME,
-            },
-            order: { sortOrder: 'ASC' },
-          });
-          const soft = hist.filter((s) => Number(s.inactive) !== 0);
-          const pick = soft.length ? soft[soft.length - 1] : hist[0];
-          if (pick?.name?.trim()) stageName = pick.name.trim();
-        }
-      }
-
-      await this.upsert({
-        jobApplicationId: String(submission.jobApplicationId),
-        stageId: String(submission.stageId),
-        stageKey: assignedMeta?.stageKey ?? stage?.stageKey ?? null,
-        stageType: JobStageType.TAKE_HOME,
-        stageName,
-        sortOrder,
-        sourceTable: ROUND_SOURCE.TAKE_HOME,
-        sourceId: String(submission.id),
-        scorePct: submission.score != null ? Number(submission.score) : null,
-        status: submission.status,
-        attemptedAt: submission.submittedAt ?? submission.createdAt ?? null,
-      });
-    } catch (e) {
-      this.logger.warn(
-        `upsertFromTakeHome failed for ${submission.id}: ${(e as Error)?.message ?? e}`,
-      );
-    }
+  async upsertFromTakeHome(_submission: any): Promise<void> {
+    return;
   }
 
   async upsertFromProjectSubmission(
@@ -569,12 +515,9 @@ export class RoundSnapshotService {
     });
     if (!app) return [];
 
-    const [coding, takeHome, projectSubs, interviewRows] = await Promise.all([
+    const [coding, projectSubs, interviewRows] = await Promise.all([
       this.codingSubs.find({
         where: { applicationId: String(app.id), inactive: false },
-      }),
-      this.takeHomeSubs.find({
-        where: { jobApplicationId: String(app.id), inactive: 0 },
       }),
       this.projectInterview.getSubmissionsForApplication(String(app.id)),
       app.candidateToken
@@ -592,9 +535,6 @@ export class RoundSnapshotService {
 
     for (const row of coding) {
       await this.upsertFromCoding(row);
-    }
-    for (const row of takeHome) {
-      await this.upsertFromTakeHome(row);
     }
     for (const row of projectSubs) {
       await this.upsertFromProjectSubmission(app, row);

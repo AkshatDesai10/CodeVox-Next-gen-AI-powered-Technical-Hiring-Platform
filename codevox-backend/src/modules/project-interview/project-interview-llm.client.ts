@@ -3,7 +3,6 @@ import {
   OpenAiClientService,
   type ChatJsonDetailedResult,
 } from '../assessment-platform/assessment-ai/openai-client.service';
-import { TakeHomeLlmClient } from '../take-home/take-home-llm.client';
 
 export type ProjectLlmMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
@@ -25,26 +24,16 @@ export interface ProjectEvaluationLlm {
 export const PROJECT_EVALUATION_LLM = Symbol('PROJECT_EVALUATION_LLM');
 
 /**
- * Prefers `PROJECT_EVAL_LLM_*` (Claude Sonnet or Gemini) for GitHub/project evaluation,
- * then `TAKEHOME_LLM_*`, then the shared assessment LLM.
+ * Project evaluation LLM client using OpenAiClientService.
  * Throws instead of returning canned JSON.
  */
 @Injectable()
 export class ProjectInterviewLlmClient implements ProjectEvaluationLlm {
   private readonly logger = new Logger(ProjectInterviewLlmClient.name);
 
-  constructor(
-    private readonly takeHomeLlm: TakeHomeLlmClient,
-    private readonly openai: OpenAiClientService,
-  ) {}
+  constructor(private readonly openai: OpenAiClientService) {}
 
   activeModel(): string {
-    if (this.takeHomeLlm.isConfigured('PROJECT_EVAL_LLM')) {
-      return this.takeHomeLlm.model('PROJECT_EVAL_LLM');
-    }
-    if (this.takeHomeLlm.isConfigured('TAKEHOME_LLM')) {
-      return this.takeHomeLlm.model('TAKEHOME_LLM');
-    }
     return this.openai.activeModel();
   }
 
@@ -57,24 +46,6 @@ export class ProjectInterviewLlmClient implements ProjectEvaluationLlm {
     messages: ProjectLlmMessage[],
     options?: ProjectLlmOptions,
   ): Promise<ChatJsonDetailedResult<T>> {
-    if (this.takeHomeLlm.isConfigured('PROJECT_EVAL_LLM')) {
-      const provider = this.takeHomeLlm.provider('PROJECT_EVAL_LLM');
-      const model = this.takeHomeLlm.model('PROJECT_EVAL_LLM');
-      this.logger.log(`Project evaluation LLM provider=${provider} model=${model}`);
-      return this.takeHomeLlm.chatJsonDetailed<T>(messages, {
-        ...options,
-        envPrefix: 'PROJECT_EVAL_LLM',
-      });
-    }
-    if (this.takeHomeLlm.isConfigured('TAKEHOME_LLM')) {
-      const provider = this.takeHomeLlm.provider('TAKEHOME_LLM');
-      const model = this.takeHomeLlm.model('TAKEHOME_LLM');
-      this.logger.log(`Project evaluation LLM (take-home fallback) provider=${provider} model=${model}`);
-      return this.takeHomeLlm.chatJsonDetailed<T>(messages, {
-        ...options,
-        envPrefix: 'TAKEHOME_LLM',
-      });
-    }
     if (!this.openai.isConfigured()) {
       throw new Error('No LLM provider configured for project evaluation');
     }

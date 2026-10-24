@@ -38,7 +38,6 @@ import { JobProfileStallScheduler } from './job-profile-stall.scheduler';
 import { JobProfilesController } from './job-profiles.controller';
 import { CandidatePortalController } from './candidate-portal.controller';
 import { CandidatePortalService } from './candidate-portal.service';
-import { TakeHomeModule } from '../take-home/take-home.module';
 import { RecruitmentModule } from '../recruitment/recruitment.module';
 import { ProjectInterviewModule } from '../project-interview/project-interview.module';
 import { RoundSnapshotModule } from '../assessment-reports/round-snapshot.module';
@@ -81,7 +80,6 @@ import { AssessmentExecutionModule } from '../assessment-execution/assessment-ex
     AssessmentAiModule,
     RoundSnapshotModule,
     forwardRef(() => AutonomousInterviewModule),
-    forwardRef(() => TakeHomeModule),
     forwardRef(() => RecruitmentModule),
     ProjectInterviewModule,
   ],

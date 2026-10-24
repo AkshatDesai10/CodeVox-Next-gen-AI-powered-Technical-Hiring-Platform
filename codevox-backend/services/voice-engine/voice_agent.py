@@ -13,7 +13,7 @@ from typing import Any
 
 from livekit import rtc
 
-from conversation_engine import run_unified_interview, run_viva_interview
+from conversation_engine import run_unified_interview
 from llm_engine import validate_voice_keys
 from recording import SessionRecorder, _is_recording_enabled
 
@@ -32,26 +32,6 @@ async def run_voice_agent(payload: dict[str, Any]) -> None:
     token = str(payload.get("token", ""))
     room_name = str(payload.get("room_name", ""))
 
-    if session_type == "student_viva":
-        logger.info("Starting viva voice agent token=%s room=%s", token, room_name)
-        result = await run_viva_interview(
-            room_name,
-            token,
-            viva_profile=payload.get("viva_profile") or {},
-            question_mode=str(payload.get("question_mode", "hybrid")),
-            language_preference=payload.get("language_preference"),
-            panel_mode=str(payload.get("panel_mode", "ai_sole")),
-            candidate_name=payload.get("candidate_name"),
-            question_bank=payload.get("question_bank"),
-            sarvam_llm_model=payload.get("sarvam_llm_model"),
-            max_turns=payload.get("max_turns"),
-            resume_snapshot=payload.get("resume_snapshot"),
-            reconnect_grace_sec=payload.get("reconnect_grace_sec"),
-            rubric_criteria=payload.get("rubric_criteria"),
-        )
-        if not result.done:
-            logger.warning("Viva interview incomplete for token=%s", token)
-        return
 
     from prompts import normalize_interview_language
 

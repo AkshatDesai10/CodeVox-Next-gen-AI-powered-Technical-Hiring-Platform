@@ -6,7 +6,6 @@ import { AutonomousInterviewRoundsRepository } from '../autonomous-interview/aut
 import { CodingRoundSubmissionEntity } from '../coding-round/coding-round-submission.entity';
 import { JobApplicationMysql } from '../job-profiles/entities/job-application.mysql.entity';
 import { JobProfileStageMysql } from '../job-profiles/entities/job-profile-stage.mysql.entity';
-import { TakeHomeSubmissionMysql } from '../take-home/entities/take-home-submission.mysql.entity';
 import { ProjectInterviewModule } from '../project-interview/project-interview.module';
 import { ApplicationRoundSnapshotMysql } from './entities/application-round-snapshot.mysql.entity';
 import { RoundSnapshotService } from './round-snapshot.service';
@@ -19,7 +18,6 @@ import { RoundSnapshotService } from './round-snapshot.service';
       JobApplicationMysql,
       JobProfileStageMysql,
       CodingRoundSubmissionEntity,
-      TakeHomeSubmissionMysql,
       CandidateAutonomousInterviewMysql,
       AutonomousInterviewRoundMysql,
     ]),
