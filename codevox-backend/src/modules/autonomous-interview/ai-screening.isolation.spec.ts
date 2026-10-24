@@ -31,14 +31,14 @@ function testValidateStages() {
     ]) === null,
     'AI Screening first ok',
   );
+  // Non-first AI Screening is allowed (e.g. after coding); validator only
+  // rejects duplicate screening stages / zero enabled topics.
   assert(
-    String(
-      validateAiScreeningStages([
-        { stageType: 'coding', sortOrder: 0 },
-        { stageType: 'ai_screening', sortOrder: 1, roundConfig: {} },
-      ]),
-    ).includes('first'),
-    'AI Screening must be first',
+    validateAiScreeningStages([
+      { stageType: 'coding', sortOrder: 0 },
+      { stageType: 'ai_screening', sortOrder: 1, roundConfig: {} },
+    ]) === null,
+    'AI Screening after coding ok',
   );
   assert(
     String(

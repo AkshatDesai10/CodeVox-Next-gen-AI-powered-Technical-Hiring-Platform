@@ -1217,7 +1217,9 @@ async def _process_orchestrated_turn(
                 source = state.question_source  # type: ignore[assignment]
                 take_home_diverted = True
             state.last_emitted_action_mode = (
-                "TAKE_HOME_VERIFICATION" if take_home_diverted else brain_dec.action_mode
+                "TAKE_HOME_VERIFICATION"
+                if take_home_diverted
+                else brain_dec.action_mode
             )
             state.last_emitted_question_source = (
                 "TAKE_HOME_VERIFICATION"

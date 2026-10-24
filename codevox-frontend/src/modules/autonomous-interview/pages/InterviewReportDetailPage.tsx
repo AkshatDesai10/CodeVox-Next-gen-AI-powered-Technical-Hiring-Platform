@@ -12,6 +12,7 @@ import type {
   InterviewSessionReport,
 } from '@/modules/autonomous-interview/types/interview-report';
 import fixtureReport from '@/modules/autonomous-interview/fixtures/rohit-sharma-php-report.json';
+import { withBasePath } from '@/lib/with-base-path';
 
 type Props = {
   token: string;
@@ -132,7 +133,12 @@ export function InterviewReportDetailPage({ token }: Props) {
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      const shareToken = payload?.shareToken;
+      const path = shareToken
+        ? withBasePath(`/interview-report/${encodeURIComponent(shareToken)}`)
+        : window.location.pathname + window.location.search;
+      const url = shareToken ? `${window.location.origin}${path}` : window.location.href;
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -186,7 +192,7 @@ export function InterviewReportDetailPage({ token }: Props) {
             className="inline-flex items-center gap-2 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] px-3 py-2 text-sm font-semibold text-[var(--assessment-on-surface)] transition hover:border-[var(--assessment-primary)] hover:text-[var(--assessment-primary)]"
           >
             <AssessmentMaterialIcon name={copied ? 'check' : 'link'} size={16} />
-            {copied ? 'Link copied' : 'Copy link'}
+            {copied ? 'Link copied' : 'Copy share link'}
           </button>
         </div>
       </div>

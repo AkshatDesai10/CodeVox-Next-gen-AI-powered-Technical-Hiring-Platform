@@ -43,3 +43,33 @@ body {
   margin: 0;
   padding: 0;
 }
+
+.codevox-input,
+.nexus-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  background-color: #160A30 !important;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #FFFFFF !important;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.codevox-input:focus,
+.nexus-input:focus {
+  border-color: #7C3AED !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
+}
+
+.codevox-input::placeholder,
+.nexus-input::placeholder {
+  color: rgba(196, 181, 253, 0.5) !important;
+}
+
+.codevox-input option,
+.nexus-input option {
+  background-color: #160A30 !important;
+  color: #FFFFFF !important;
+}

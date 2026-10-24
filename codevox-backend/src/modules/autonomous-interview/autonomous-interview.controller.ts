@@ -66,6 +66,15 @@ export class AutonomousInterviewController {
     return ok('Interview report fetched', await this.audit.getReport(token));
   }
 
+  /** Public executive-summary card — HMAC share token, no admin JWT. */
+  @Get('reports/share/:shareToken')
+  async getSharedReport(@Param('shareToken') shareToken: string) {
+    return ok(
+      'Shared interview executive summary',
+      await this.audit.getSharedExecutiveCard(shareToken),
+    );
+  }
+
   @Get('session/:token')
   async getSession(@Param('token') token: string) {
     return ok('Session fetched', await this.coordinator.getSession(token));
@@ -367,6 +376,7 @@ export class AutonomousInterviewController {
       round_config?: Record<string, unknown>;
       job_profile_context?: Record<string, unknown>;
       ended_by?: 'candidate';
+      merge_to_verbal?: boolean;
     },
     @Headers('x-service-key') serviceKey?: string,
   ) {

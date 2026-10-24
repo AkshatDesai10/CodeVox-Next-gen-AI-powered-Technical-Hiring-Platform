@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   canvasToJpegDataUrl,
   freezeVideoFrame,
@@ -423,6 +424,12 @@ export function CandidatePortalIdentityGate({
             >
               {busy ? 'Continuing…' : 'All Good — Continue'}
             </button>
+            <Link
+              href={`/candidate/warmup/${encodeURIComponent(token)}`}
+              className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Optional: 2-min Practice sandbox
+            </Link>
           </div>
 
           {error ? (
@@ -476,6 +483,12 @@ export function CandidatePortalIdentityGate({
             >
               {busy ? 'Saving…' : 'Agree & continue'}
             </button>
+            <Link
+              href={`/candidate/warmup/${encodeURIComponent(token)}`}
+              className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Optional: 2-min Practice sandbox
+            </Link>
           </div>
         ) : (
           <div className="mt-6 space-y-4">

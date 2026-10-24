@@ -73,6 +73,17 @@ class ScreeningTurnResult:
     state_delta: dict[str, Any] = field(default_factory=dict)
 
 
+_STANDARD_CLOSING = (
+    "Thank you — that covers what we needed for screening today. "
+    "We'll continue with the next steps of the interview shortly."
+)
+_HANDOFF_TO_VERBAL_CLOSING = (
+    "Thanks — that covers the screening questions. "
+    "Next, I'd like to dig into the technical side of your experience "
+    "and walk through how you approach engineering problems."
+)
+
+
 class ScreeningOrchestrator:
     def __init__(
         self,
@@ -82,12 +93,14 @@ class ScreeningOrchestrator:
         job_profile_context: dict[str, Any] | None = None,
         candidate_name: str | None = None,
         resume_skills: list[str] | None = None,
+        handoff_to_verbal: bool = False,
     ) -> None:
         self.config = config
         self.client = client
         self.job_profile_context = job_profile_context or {}
         self.candidate_name = candidate_name
         self.resume_skills = resume_skills or []
+        self.handoff_to_verbal = handoff_to_verbal
         self.interview_language = "en-IN"
         self.state = ScreeningConversationState.from_enabled_topics(config.enabled_topics())
         self.started_at = time.monotonic()
@@ -95,13 +108,19 @@ class ScreeningOrchestrator:
         self._opening_sent = False
         loaded = config.configured_requirements()
         logger.info(
-            "AI Screening requirements loaded count=%s ids=%s",
+            "AI Screening requirements loaded count=%s ids=%s handoff_to_verbal=%s",
             len(loaded),
             [r.id for r in loaded],
+            handoff_to_verbal,
         )
 
     def _enabled(self) -> list[ScreeningTopic]:
         return self.config.enabled_topics()
+
+    def _closing_message(self) -> str:
+        """Organic bridge into technical verbal when merging; otherwise standard screening close."""
+        raw = _HANDOFF_TO_VERBAL_CLOSING if self.handoff_to_verbal else _STANDARD_CLOSING
+        return self._spoken(raw)
 
     def _time_exceeded(self) -> bool:
         return (time.monotonic() - self.started_at) >= self.config.max_time_minutes * 60
@@ -365,10 +384,7 @@ class ScreeningOrchestrator:
         self._extract_early_facts(text)
 
         if self.should_stop() and self.state.questions_asked > 0:
-            closing = self._spoken(
-                "Thank you — that covers what we needed for screening today. "
-                "We'll continue with the next steps of the interview shortly."
-            )
+            closing = self._closing_message()
             self.chat_history.append({"role": "assistant", "content": closing})
             return ScreeningTurnResult(spoken_reply=closing, done=True)
 
@@ -418,10 +434,7 @@ class ScreeningOrchestrator:
             done = True
             turn_kind = "closing"
             focus_id = None
-            reply = self._spoken(
-                "Thank you — that covers what we needed for screening today. "
-                "We'll continue with the next steps of the interview shortly."
-            )
+            reply = self._closing_message()
 
         if focus_id and focus_id in self.state.topics and not done:
             self.state.current_focus_topic_id = focus_id
@@ -450,8 +463,7 @@ class ScreeningOrchestrator:
         closing_rule = ""
         if getattr(self, "interview_language", "en-IN") == "hi-IN":
             hindi_close = speak_line(
-                "Thank you — that covers what we needed for screening today. "
-                "We'll continue with the next steps of the interview shortly.",
+                _HANDOFF_TO_VERBAL_CLOSING if self.handoff_to_verbal else _STANDARD_CLOSING,
                 "hi-IN",
             )
             closing_rule = (
@@ -510,9 +522,7 @@ class ScreeningOrchestrator:
             data["turn_kind"] = "closing"
             data["done"] = True
             if not str(data.get("spoken_reply") or "").strip():
-                data["spoken_reply"] = self._spoken(
-                    "Thank you — that covers what we needed for screening today."
-                )
+                data["spoken_reply"] = self._closing_message()
             return data
 
         logger.info(

@@ -800,7 +800,7 @@ function SubmitScreen(props: {
             {(excelMode
               ? [
                   ['table_view', 'We compare your answer cells to the master key (problem≠key).'],
-                  ['fact_check', 'You get a Build score from matched cells; gaps feed the viva.'],
+                  ['fact_check', 'You get a Build score from matched cells; gaps feed the interview.'],
                   ['record_voice_over', 'An AI interviewer asks conceptual questions about your workbook.'],
                 ]
               : documentPack
@@ -830,7 +830,7 @@ function SubmitScreen(props: {
             <h3 className="text-lg font-bold text-[var(--assessment-on-surface)]">Ready for your interview?</h3>
             <p className="mt-2 text-sm text-[var(--assessment-on-surface-variant)]">
               {excelMode
-                ? 'Your workbook will be graded against the answer key (PDF is viva-weighted). The voice interview starts after grading.'
+                ? 'Your workbook will be graded against the answer key. The voice interview starts after grading.'
                 : documentPack
                   ? 'Your zip will be read and scored. The voice interview starts after grading. Make sure you are in a quiet place with your camera and microphone available.'
                   : 'Once your repository has been analysed, the voice interview starts immediately. Make sure you are in a quiet place with your camera and microphone available.'}

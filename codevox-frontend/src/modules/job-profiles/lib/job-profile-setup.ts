@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   JobProfileCompetency,
   JobProfileDetail,
   JobProfileStage,
@@ -16,93 +16,68 @@ export function isRubricStepComplete(competencies: JobProfileCompetency[]): bool
   return competencies.length > 0;
 }
 
-export function isTakeHomeStageConfigured(stage: JobProfileStage): boolean {
-  if (stage.stage_type !== 'take_home') return false;
-  const config = parseTakeHomeRoundConfig(stage.round_config);
-  return Boolean(
-    config.problem.title.trim() || config.problem.description_md.trim(),
-  );
+export function isTakeHomeStageConfigured(_stage: JobProfileStage): boolean {
+  return false;
 }
 
 export function isQuestionsStepComplete(
   questions: Array<{ prompt: string; kind?: string }>,
   stages: JobProfileStage[] = [],
 ): boolean {
-  const hasInterviewQuestions = questions.some((q) => q.prompt.trim().length > 0);
-  const hasTakeHomeRounds = stages.some((s) => isTakeHomeStageConfigured(s));
-  const hasAiScreening = stages.some((s) => s.stage_type === 'ai_screening');
-  const hasAiRounds = stages.some(
-    (s) =>
-      s.stage_type === 'ai_verbal' ||
-      (s.mode === 'ai_led' && s.stage_type !== 'ai_screening'),
-  );
-  return hasInterviewQuestions || hasTakeHomeRounds || hasAiRounds || hasAiScreening;
+  // If pipeline stages are configured, CodeVox generates/selects questions dynamically
+  if (stages && stages.length > 0) {
+    const hasManualCoding = stages.some(
+      (s) => s.stage_type === 'coding' && (s.round_config as any)?.question_strategy === 'manual'
+    );
+    const hasManualVerbal = stages.some(
+      (s) => s.stage_type === 'ai_verbal' && (s.round_config as any)?.question_strategy === 'manual'
+    );
+    if (hasManualCoding && !questions.some((q) => q.kind === 'coding')) return false;
+    if (hasManualVerbal && !questions.some((q) => q.kind !== 'coding')) return false;
+    return true;
+  }
+  return true;
 }
 
-/** Scale competency weights so they sum to 100%. */
 export function normalizeCompetencyWeights<T extends { weight_pct: number }>(
-  rows: T[],
+  items: T[],
 ): T[] {
-  if (!rows.length) return rows;
-  const total = rows.reduce((sum, row) => sum + row.weight_pct, 0);
-  if (total <= 0) {
-    const base = Math.floor((100 / rows.length) * 10) / 10;
-    let remaining = 100;
-    return rows.map((row, index) => {
-      const weight_pct =
-        index === rows.length - 1
-          ? Math.round(remaining * 10) / 10
-          : base;
-      remaining -= weight_pct;
-      return { ...row, weight_pct };
-    });
+  if (items.length === 0) return items;
+  const sum = items.reduce((acc, x) => acc + (x.weight_pct || 0), 0);
+  if (sum === 0) {
+    const each = Number((100 / items.length).toFixed(1));
+    return items.map((x, i) => ({
+      ...x,
+      weight_pct: i === items.length - 1 ? 100 - each * (items.length - 1) : each,
+    }));
   }
-  if (Math.abs(total - 100) < 0.01) return rows;
-  let remaining = 100;
-  return rows.map((row, index) => {
-    if (index === rows.length - 1) {
-      return { ...row, weight_pct: Math.round(remaining * 10) / 10 };
-    }
-    const weight_pct = Math.round((row.weight_pct / total) * 1000) / 10;
-    remaining -= weight_pct;
-    return { ...row, weight_pct };
-  });
+  const scaled = items.map((x) => ({
+    ...x,
+    weight_pct: Math.round(((x.weight_pct || 0) / sum) * 1000) / 10,
+  }));
+  const diff = 100 - scaled.reduce((acc, x) => acc + x.weight_pct, 0);
+  if (scaled.length > 0 && Math.abs(diff) > 0.01) {
+    scaled[scaled.length - 1].weight_pct = Number(
+      (scaled[scaled.length - 1].weight_pct + diff).toFixed(1),
+    );
+  }
+  return scaled;
 }
 
 export function canPublishJobProfile(input: {
   competencies: JobProfileCompetency[];
-  questions: Array<{ prompt: string }>;
+  questions: Array<{ prompt: string; kind?: string }>;
   stages?: JobProfileStage[];
 }): boolean {
   const stages = input.stages ?? [];
-  const onlyAiScreeningOrHuman =
-    stages.length > 0 &&
-    stages.every(
-      (s) =>
-        s.stage_type === 'ai_screening' ||
-        s.stage_type === 'hr_verbal' ||
-        s.stage_type === 'panel' ||
-        s.mode === 'human_led',
-    );
-  const hasScoredAiRound = stages.some(
-    (s) =>
-      s.stage_type === 'ai_verbal' ||
-      s.stage_type === 'coding' ||
-      s.stage_type === 'screening' ||
-      s.stage_type === 'take_home' ||
-      s.stage_type === 'project_interview',
-  );
+  if (!stages.length) return false;
+
   const projectRoundsReady = stages
     .filter((s) => s.stage_type === 'project_interview')
     .every((s) => isProjectInterviewConfigured(s.round_config));
   if (!projectRoundsReady) return false;
-  if (onlyAiScreeningOrHuman && !hasScoredAiRound) {
-    return isQuestionsStepComplete(input.questions, stages);
-  }
-  return (
-    isRubricStepComplete(input.competencies) &&
-    isQuestionsStepComplete(input.questions, stages)
-  );
+
+  return isQuestionsStepComplete(input.questions, stages);
 }
 
 export function firstIncompleteSetupStep(data: JobProfileDetail): 1 | 2 | 3 {
@@ -111,14 +86,20 @@ export function firstIncompleteSetupStep(data: JobProfileDetail): 1 | 2 | 3 {
   return 3;
 }
 
-export function setupPathForProfile(profileId: string, step: 1 | 2 | 3): string {
-  if (step === 1) return `/assessments/job-profiles/${profileId}/basics`;
-  if (step === 2) return `/assessments/job-profiles/${profileId}/configure?step=rubric`;
-  return `/assessments/job-profiles/${profileId}/configure?step=questions`;
+export function configureStepFromSearchParam(param: string | null): 1 | 2 | 3 | null {
+  if (param === '1' || param === 'basics') return 1;
+  if (param === '2' || param === 'stages') return 2;
+  if (param === '3' || param === 'round-config') return 3;
+  return null;
 }
 
-export function configureStepFromSearchParam(step: string | null): 2 | 3 {
-  return step === 'questions' ? 3 : 2;
+export function setupPathForProfile(id: string, step: 1 | 2 | 3): string {
+  const map: Record<1 | 2 | 3, string> = {
+    1: 'basics',
+    2: 'stages',
+    3: 'round-config',
+  };
+  return `/assessments/job-profiles/${id}/configure?step=${map[step]}`;
 }
 
 export function setupPathForDetail(data: JobProfileDetail): string {

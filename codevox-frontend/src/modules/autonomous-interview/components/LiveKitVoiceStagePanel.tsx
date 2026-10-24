@@ -22,6 +22,12 @@ import { getProjectInterviewSubmission } from '@/modules/assessments/lib/project
 import { AI_INTERVIEWER_AVATAR_URL } from '@/modules/autonomous-interview/lib/ai-interviewer-avatar';
 import { disconnectLiveKitRoom } from '@/modules/autonomous-interview/lib/livekit-session';
 import { useInterviewLeaveGuard, releaseInterviewLeaveGuard, type LeaveAttempt } from '@/modules/autonomous-interview/lib/interview-leave-guard';
+import { InterviewRecBadge } from '@/modules/autonomous-interview/components/InterviewRecBadge';
+import { VoicePhasePillStrip } from '@/modules/autonomous-interview/components/VoicePhasePillStrip';
+import {
+  resolveSpeakingState,
+  useVoicePhaseProgress,
+} from '@/modules/autonomous-interview/hooks/useVoicePhaseProgress';
 import type { ProctorEventInput } from '@/modules/proctor/types';
 
 const NOTES_PREFIX = 'nexus-interview-notes:';
@@ -132,6 +138,29 @@ export function LiveKitVoiceStagePanel({
   const [notes, setNotes] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const [buildDueAtMs, setBuildDueAtMs] = useState<number | null>(null);
+  const [backendVoicePhase, setBackendVoicePhase] = useState<string | null>(null);
+  const [backendEngine, setBackendEngine] = useState<string | null>(null);
+
+  const analyzingResponse =
+    status === 'live' && hasSpokenThisTurn && !candidateSpeaking;
+  const avatarGlowState = resolveSpeakingState({
+    agentSpeaking: status === 'agent_speaking',
+    analyzing: analyzingResponse,
+    listening: status === 'live' && !analyzingResponse,
+  });
+  const voicePillPhase = useVoicePhaseProgress({
+    visible: visible && !compact && !buildMode,
+    speakingState: avatarGlowState,
+    backendPhase: backendVoicePhase ?? subPhase ?? phase,
+    backendEngine,
+  });
+  const showRecBadge =
+    visible &&
+    !compact &&
+    (status === 'connecting' ||
+      status === 'waiting_agent' ||
+      status === 'live' ||
+      status === 'agent_speaking');
 
   const { enqueue } = useProctorEventBatch(
     (events: ProctorEventInput[]) => postInterviewProctorEvents(candidateToken, events),
@@ -211,11 +240,33 @@ export function LiveKitVoiceStagePanel({
           : (session.introMaxTurns ?? 50),
       );
       setRoomName(`interview-${candidateToken}`);
+      setBackendVoicePhase(session.voicePhase ?? session.currentPhase ?? phase ?? null);
+      if (session.engine) setBackendEngine(session.engine);
+      else if (
+        session.isBehavioral ||
+        session.currentPhase === 'hr_verbal' ||
+        phase === 'hr_verbal'
+      ) {
+        setBackendEngine('behavioral');
+      }
     });
     return () => {
       cancelled = true;
     };
   }, [candidateToken, visible, phase, buildMode]);
+
+  // Keep phase pills in sync when parent viewport shifts (e.g. screening→verbal merge).
+  useEffect(() => {
+    if (!phase) return;
+    setBackendVoicePhase(phase);
+    if (phase === 'hr_verbal') setBackendEngine('behavioral');
+    else if (phase === 'ai_screening') setBackendEngine('screening');
+    else if (phase === 'ai_verbal') setBackendEngine('technical');
+  }, [phase]);
+
+  useEffect(() => {
+    if (subPhase === 'transition') setBackendVoicePhase('transition');
+  }, [subPhase]);
 
   useEffect(() => {
     try {
@@ -999,6 +1050,9 @@ export function LiveKitVoiceStagePanel({
         </div>
 
         <div className="flex items-center gap-3">
+          {showRecBadge ? (
+            <InterviewRecBadge elapsed={elapsed} compact className="hidden sm:inline-flex" />
+          ) : null}
           <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 sm:px-4">
             <AssessmentMaterialIcon name="timer" size={16} className="text-white" />
             <span className="font-mono-label text-xs font-medium text-white">
@@ -1060,6 +1114,16 @@ export function LiveKitVoiceStagePanel({
           <div className="custom-scrollbar relative z-10 flex h-full w-full flex-col justify-between overflow-y-auto p-6">
             {/* Active question card */}
             <div className="w-full shrink-0 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-5 shadow-sm">
+              {!buildMode && (phase === 'ai_verbal' || phase === 'hr_verbal' || phase === 'ai_screening') ? (
+                <div className="mb-3">
+                  <VoicePhasePillStrip active={voicePillPhase} />
+                </div>
+              ) : null}
+              {showRecBadge ? (
+                <div className="mb-3 sm:hidden">
+                  <InterviewRecBadge elapsed={elapsed} />
+                </div>
+              ) : null}
               <div className="mb-2.5 flex items-center justify-between gap-3 border-b border-[var(--assessment-outline-variant)]/40 pb-2.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-2.5">
                   <span className="font-mono-label inline-flex items-center gap-1.5 rounded-full border border-[var(--assessment-primary)]/30 bg-[var(--assessment-primary)]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--assessment-primary)]">
@@ -1102,6 +1166,10 @@ export function LiveKitVoiceStagePanel({
             {/* Middle: interviewer tile + HUD */}
             <div className="my-4 grid min-h-0 flex-1 grid-cols-12 items-stretch gap-5">
               <div className="group relative col-span-8 flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[#1d3054] shadow-sm">
+                <div
+                  className={`avatar-glow-ring rounded-xl is-${avatarGlowState}`}
+                  aria-hidden
+                />
                 <img
                   alt="AI interviewer"
                   className="absolute inset-0 h-full w-full scale-[1.02] object-cover object-[center_18%] brightness-[0.96] contrast-[1.04] saturate-[1.05] transition-transform duration-500 group-hover:scale-[1.04]"
@@ -1135,7 +1203,9 @@ export function LiveKitVoiceStagePanel({
                 <div className="relative z-10 flex w-full items-end justify-between p-3.5">
                   <div className="flex flex-1 items-end justify-start">
                     {showWave ? (
-                      <div className="glass-card wave-container rounded-full px-3 py-2 shadow-sm">
+                      <div
+                        className={`glass-card wave-container rounded-full px-3 py-2 shadow-sm is-${avatarGlowState}`}
+                      >
                         {Array.from({ length: 8 }).map((_, i) => (
                           <div
                             key={i}

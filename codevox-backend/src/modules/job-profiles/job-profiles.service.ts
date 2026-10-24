@@ -35,6 +35,7 @@ import { JobQuestionKind } from './entities/job-profile-question.mysql.entity';
 import { JobApplicationStatus } from './entities/job-application.mysql.entity';
 import { JobProfilesRepository } from './job-profiles.repository';
 import {
+  defaultAiScreeningRoundConfig,
   normalizeAiScreeningRoundConfig,
   validateAiScreeningStages,
 } from './ai-screening-round.types';
@@ -52,25 +53,58 @@ import { firstInterviewStage, resolveInitialInterviewPhase } from './interview-p
 import { verbalBudgetSaveError } from './verbal-interview-budget';
 import { RoundSnapshotService } from '../assessment-reports/round-snapshot.service';
 
+export type PipelinePresetId =
+  | 'coding_only'
+  | 'unified_voice'
+  | 'coding_plus_voice'
+  | 'screening_plus_full';
+
+const PIPELINE_PRESET_IDS: PipelinePresetId[] = [
+  'coding_only',
+  'unified_voice',
+  'coding_plus_voice',
+  'screening_plus_full',
+];
+
+/** One LiveKit session: AI Screening then technical verbal (not tech→HR). */
+function buildUnifiedVoiceRoundConfig(): Record<string, unknown> {
+  return {
+    merge_screening_verbal: true,
+    ...defaultAiScreeningRoundConfig(),
+  };
+}
+
+const CODING_STAGE: Partial<JobProfileStageMysql> = {
+  stageKey: 'technical_assessment',
+  name: 'AI-First Technical Assessment',
+  description: 'System-generated coding challenge based on job profile.',
+  mode: JobStageMode.AI_LED,
+  mandatory: 1,
+  stageType: JobStageType.CODING,
+};
+
+const UNIFIED_VOICE_STAGE: Partial<JobProfileStageMysql> = {
+  stageKey: 'unified_ai_voice',
+  name: 'Unified AI Voice Interview',
+  description:
+    'AI Screening followed by technical verbal interview in one continuous voice call.',
+  mode: JobStageMode.AI_LED,
+  mandatory: 1,
+  stageType: JobStageType.AI_VERBAL,
+};
+
+const SCREENING_STAGE: Partial<JobProfileStageMysql> = {
+  stageKey: 'initial_screen',
+  name: 'Initial Screen',
+  description: 'Automated CV scan and baseline competency check.',
+  mode: JobStageMode.AI_LED,
+  mandatory: 1,
+  stageType: JobStageType.SCREENING,
+};
+
 const DEFAULT_STAGES: Array<Partial<JobProfileStageMysql>> = [
-  {
-    stageKey: 'initial_screen',
-    name: 'Initial Screen',
-    description: 'Automated CV scan and baseline competency check.',
-    sortOrder: 0,
-    mode: JobStageMode.AI_LED,
-    mandatory: 1,
-    stageType: JobStageType.SCREENING,
-  },
-  {
-    stageKey: 'technical_assessment',
-    name: 'AI-First Technical Assessment',
-    description: 'System-generated coding challenge based on job profile.',
-    sortOrder: 1,
-    mode: JobStageMode.AI_LED,
-    mandatory: 1,
-    stageType: JobStageType.CODING,
-  },
+  SCREENING_STAGE,
+  CODING_STAGE,
   {
     stageKey: 'hr_panel',
     name: 'Final HR Panel',
@@ -81,6 +115,42 @@ const DEFAULT_STAGES: Array<Partial<JobProfileStageMysql>> = [
     stageType: JobStageType.HR_VERBAL,
   },
 ];
+
+/** Build stage defs for a Magic Job Creator pipeline preset. */
+export function buildPipelinePresetStages(
+  preset: string | null | undefined,
+): Array<Partial<JobProfileStageMysql>> {
+  const key = String(preset ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_') as PipelinePresetId | '';
+  const resolved: PipelinePresetId = (PIPELINE_PRESET_IDS as string[]).includes(key)
+    ? (key as PipelinePresetId)
+    : 'coding_plus_voice';
+
+  const withOrder = (stages: Array<Partial<JobProfileStageMysql>>) =>
+    stages.map((s, i) => ({ ...s, sortOrder: i }));
+
+  switch (resolved) {
+    case 'coding_only':
+      return withOrder([{ ...CODING_STAGE }]);
+    case 'unified_voice':
+      return withOrder([{ ...UNIFIED_VOICE_STAGE, roundConfig: buildUnifiedVoiceRoundConfig() }]);
+    case 'screening_plus_full':
+      // CV screening + coding + merged voice (screening topics live inside the voice stage).
+      return withOrder([
+        { ...SCREENING_STAGE },
+        { ...CODING_STAGE },
+        { ...UNIFIED_VOICE_STAGE, roundConfig: buildUnifiedVoiceRoundConfig() },
+      ]);
+    case 'coding_plus_voice':
+    default:
+      return withOrder([
+        { ...CODING_STAGE },
+        { ...UNIFIED_VOICE_STAGE, roundConfig: buildUnifiedVoiceRoundConfig() },
+      ]);
+  }
+}
 
 @Injectable()
 export class JobProfilesService {
@@ -330,7 +400,7 @@ export class JobProfilesService {
 
   async create(
     actor: JwtUserPayload,
-    body: { title: string; department?: string },
+    body: { title: string; department?: string; pipeline_preset?: string },
   ) {
     await this.assertWrite(actor);
     const title = body.title?.trim();
@@ -358,11 +428,50 @@ export class JobProfilesService {
       },
     });
 
+    const seedStages = body.pipeline_preset
+      ? buildPipelinePresetStages(body.pipeline_preset)
+      : DEFAULT_STAGES.map((s, i) => ({ ...s, sortOrder: s.sortOrder ?? i }));
+
     await this.repo.saveStages(
-      DEFAULT_STAGES.map((s) => ({ ...s, jobProfileId: profile.id, inactive: 0 })),
+      seedStages.map((s) => ({ ...s, jobProfileId: profile.id, inactive: 0 })),
     );
 
     return this.get(actor, profile.id);
+  }
+
+  async applyPipelinePreset(
+    actor: JwtUserPayload,
+    id: string,
+    body: { preset: string },
+  ) {
+    await this.assertWrite(actor);
+    const profile = await this.repo.requireById(id);
+    if (profile.status !== JobProfileStatus.DRAFT) {
+      throw new BadRequestException('Pipeline presets can only be applied to draft job profiles');
+    }
+    const preset = body.preset?.trim();
+    if (!preset) throw new BadRequestException('preset is required');
+    if (!(PIPELINE_PRESET_IDS as string[]).includes(preset)) {
+      throw new BadRequestException(
+        `Unknown pipeline preset. Expected one of: ${PIPELINE_PRESET_IDS.join(', ')}`,
+      );
+    }
+
+    const stages = buildPipelinePresetStages(preset);
+    await this.repo.replaceStages(
+      id,
+      stages.map((s) => ({
+        stageKey: s.stageKey!,
+        name: s.name!,
+        description: s.description ?? null,
+        mode: s.mode ?? JobStageMode.AI_LED,
+        mandatory: s.mandatory ?? 1,
+        stageType: s.stageType ?? JobStageType.CUSTOM,
+        skipRules: s.skipRules ?? null,
+        roundConfig: s.roundConfig ?? null,
+      })),
+    );
+    return this.get(actor, id);
   }
 
   async updateBasics(actor: JwtUserPayload, id: string, body: Record<string, unknown>) {
@@ -444,10 +553,6 @@ export class JobProfilesService {
       };
     });
 
-    const takeHomeCount = payload.filter((stage) => stage.stageType === JobStageType.TAKE_HOME).length;
-    if (takeHomeCount > 1) {
-      throw new BadRequestException('Only one take-home assessment stage is allowed per job profile');
-    }
 
     const screeningError = validateAiScreeningStages(
       payload.map((stage, i) => ({
@@ -477,6 +582,17 @@ export class JobProfilesService {
           string,
           unknown
         >;
+      } else if (
+        stage.stageType === JobStageType.AI_VERBAL &&
+        stage.roundConfig &&
+        Boolean((stage.roundConfig as Record<string, unknown>).merge_screening_verbal)
+      ) {
+        const screening = normalizeAiScreeningRoundConfig(stage.roundConfig);
+        stage.roundConfig = {
+          ...(stage.roundConfig ?? {}),
+          ...screening,
+          merge_screening_verbal: true,
+        } as unknown as Record<string, unknown>;
       } else if (stage.stageType === JobStageType.PROJECT_INTERVIEW) {
         stage.roundConfig = {
           ...(stage.roundConfig ?? {}),
@@ -493,13 +609,7 @@ export class JobProfilesService {
         if (budgetError) {
           throw new BadRequestException(budgetError);
         }
-        const rc = stage.roundConfig as any;
-        if (rc.include_take_home_verification || (rc.rubrics && rc.rubrics.some((r: any) => r.type === 'take_home_verification'))) {
-          // check if previous stage is take_home
-          if (i === 0 || payload[i - 1].stageType !== JobStageType.TAKE_HOME) {
-            throw new BadRequestException('Take-Home Assessment Verification rubric can only be used if the immediately preceding stage is a Take-Home Assessment.');
-          }
-        }
+
       }
     }
 

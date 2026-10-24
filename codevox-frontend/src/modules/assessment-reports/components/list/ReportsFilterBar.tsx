@@ -115,7 +115,6 @@ export function ReportsFilterBar(props: {
         >
           <option value="">All stages</option>
           <option value="coding">Coding</option>
-          <option value="take_home">Take-home</option>
           <option value="project_interview">Build &amp; Defend</option>
           <option value="screening">Screening</option>
           <option value="ai_verbal">AI Verbal</option>

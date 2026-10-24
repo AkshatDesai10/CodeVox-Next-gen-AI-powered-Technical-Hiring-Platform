@@ -337,7 +337,7 @@ export class JobProfilesController {
   @RequirePermissions('job_profiles:write', 'assessments:write')
   async create(
     @CurrentUser() user: JwtUserPayload,
-    @Body() body: { title: string; department?: string },
+    @Body() body: { title: string; department?: string; pipeline_preset?: string },
   ) {
     return ok('Job profile created', await this.service.create(user, body));
   }
@@ -347,6 +347,13 @@ export class JobProfilesController {
   @RequirePermissions('job_profiles:write', 'assessments:write')
   async draftJd(@Body() body: { title: string; brief?: string; department?: string }) {
     return ok('JD draft generated', await this.ai.draftJd(body));
+  }
+
+  @Post('ai/parse-jd')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async parseJd(@Body() body: { jd_text: string }) {
+    return ok('JD parsed', await this.ai.parseJdFromText(body));
   }
 
   @Post('project-interview/files')
@@ -607,6 +614,20 @@ export class JobProfilesController {
     @Body() body: { stages: Array<Record<string, unknown>> },
   ) {
     return ok('Stages updated', await this.service.updateStages(user, id, body.stages ?? []));
+  }
+
+  @Post(':id/apply-pipeline-preset')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async applyPipelinePreset(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body() body: { preset: string },
+  ) {
+    return ok(
+      'Pipeline preset applied',
+      await this.service.applyPipelinePreset(user, id, body),
+    );
   }
 
   @Put(':id/stages/reorder')

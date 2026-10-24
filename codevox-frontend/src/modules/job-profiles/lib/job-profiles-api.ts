@@ -176,11 +176,47 @@ export function inviteCandidateToInterview(
   );
 }
 
+export type PipelinePresetId =
+  | 'coding_only'
+  | 'unified_voice'
+  | 'coding_plus_voice'
+  | 'screening_plus_full';
+
+export type ParsedJobProfileJd = {
+  title: string;
+  department: string;
+  seniority_level: string;
+  employment_type: string;
+  openings_count: number;
+  location_mode: string;
+  location_text: string;
+  compensation_band_min?: number | null;
+  compensation_band_max?: number | null;
+  currency?: string | null;
+  candidate_facing_intro: string;
+  responsibilities: string[];
+  required_skills: string[];
+  nice_to_have_skills: string[];
+  experience_min: number;
+  experience_max: number;
+  recommended_pipeline: PipelinePresetId;
+  ai_powered?: boolean;
+};
+
 export function createJobProfile(body: {
   title: string;
   department?: string;
+  pipeline_preset?: PipelinePresetId | string;
 }) {
   return unwrap(clientApiPost<Envelope<JobProfileDetail>>('/api/job-profiles', body));
+}
+
+export function applyPipelinePreset(id: string, preset: PipelinePresetId | string) {
+  return unwrap(
+    clientApiPost<Envelope<JobProfileDetail>>(`/api/job-profiles/${id}/apply-pipeline-preset`, {
+      preset,
+    }),
+  );
 }
 
 export function updateJobProfileBasics(id: string, body: Record<string, unknown>) {
@@ -448,6 +484,12 @@ export function draftJobProfileJd(body: { title: string; brief?: string; departm
         ai_powered?: boolean;
       }>
     >('/api/job-profiles/ai/draft-jd', body),
+  );
+}
+
+export function parseJobProfileJd(body: { jd_text: string }) {
+  return unwrap(
+    clientApiPost<Envelope<ParsedJobProfileJd>>('/api/job-profiles/ai/parse-jd', body),
   );
 }
 

@@ -114,8 +114,59 @@
   box-shadow: var(--shadow-card, 0 2px 8px rgba(15, 23, 42, 0.05));
 }
 
+/* Comprehensive dark theme form inputs for recruiter & job profile pages */
+.nexus-recruiter-root input:not([type="checkbox"]):not([type="radio"]),
+.nexus-recruiter-root select,
+.nexus-recruiter-root textarea,
+.codevox-recruiter-root input:not([type="checkbox"]):not([type="radio"]),
+.codevox-recruiter-root select,
+.codevox-recruiter-root textarea,
+.nexus-card input:not([type="checkbox"]):not([type="radio"]),
+.nexus-card select,
+.nexus-card textarea,
+.nexus-input,
+.codevox-input {
+  background-color: #160A30 !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(139, 92, 246, 0.25) !important;
+  border-radius: 0.75rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.nexus-recruiter-root input:not([type="checkbox"]):not([type="radio"]):focus,
+.nexus-recruiter-root select:focus,
+.nexus-recruiter-root textarea:focus,
+.codevox-recruiter-root input:not([type="checkbox"]):not([type="radio"]):focus,
+.codevox-recruiter-root select:focus,
+.codevox-recruiter-root textarea:focus,
+.nexus-card input:not([type="checkbox"]):not([type="radio"]):focus,
+.nexus-card select:focus,
+.nexus-card textarea:focus,
+.nexus-input:focus,
+.codevox-input:focus {
+  border-color: #7C3AED !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
+}
+
+.nexus-recruiter-root input::placeholder,
+.nexus-recruiter-root textarea::placeholder,
+.codevox-recruiter-root input::placeholder,
+.codevox-recruiter-root textarea::placeholder,
+.nexus-card input::placeholder,
+.nexus-card textarea::placeholder {
+  color: rgba(196, 181, 253, 0.5) !important;
+}
+
+.nexus-recruiter-root select option,
+.codevox-recruiter-root select option,
+.nexus-card select option {
+  background-color: #160A30 !important;
+  color: #FFFFFF !important;
+}
+
 .nexus-glass-ai {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(124, 58, 237, 0.12);
   backdrop-filter: blur(8px);
   border: 1px dashed var(--nexus-secondary);
   border-radius: var(--radius-md, 0.75rem);

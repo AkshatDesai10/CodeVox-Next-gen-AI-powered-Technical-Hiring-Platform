@@ -11,6 +11,7 @@ import {
   approveJobProfile,
   archiveJobProfile,
   closeJobProfile,
+  deleteJobProfile,
   exportJobProfilesCsv,
   getJobProfile,
   listJobProfiles,
@@ -36,6 +37,15 @@ export function JobProfilesDashboardPage() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<TabFilter>('all');
   const [showAiTip, setShowAiTip] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteJobProfile(id),
+    onSuccess: () => {
+      invalidate();
+      setProfileToDelete(null);
+    },
+  });
   const queryClient = useQueryClient();
 
   const localQuery = useQuery({
@@ -280,14 +290,25 @@ export function JobProfilesDashboardPage() {
                           </span>
                         </td>
                         <td className="text-right">
-                          <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                             <Link
                               href={`/assessments/job-profiles/${profile.id}/analytics`}
-                              className="rounded-full p-2 hover:bg-[var(--assessment-surface-container)]"
+                              className="rounded-full p-2 text-violet-300 hover:text-white hover:bg-violet-900/30 transition-colors"
                               title="Analytics"
                             >
                               <AssessmentMaterialIcon name="analytics" size={18} />
                             </Link>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProfileToDelete({ id: profile.id, title: profile.title });
+                              }}
+                              className="rounded-full p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="Delete Profile"
+                            >
+                              <AssessmentMaterialIcon name="delete" size={18} />
+                            </button>
                             {profile.status === 'pending_approval' ? (
                               <button
                                 type="button"
@@ -369,6 +390,42 @@ export function JobProfilesDashboardPage() {
           ) : null}
         </button>
       </div>
+      {profileToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-[#160A30] p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/25">
+                <AssessmentMaterialIcon name="delete_forever" size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Job Profile?</h3>
+                <p className="text-xs text-slate-400">This action will remove this job profile from active listings.</p>
+              </div>
+            </div>
+            <p className="mb-6 rounded-xl border border-violet-500/20 bg-[#100724] p-3 text-sm text-violet-200">
+              Are you sure you want to delete <span className="font-bold text-white">&ldquo;{profileToDelete.title}&rdquo;</span>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => setProfileToDelete(null)}
+                className="rounded-xl border border-violet-500/25 px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-900/30 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate(profileToDelete.id)}
+                className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Profile'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

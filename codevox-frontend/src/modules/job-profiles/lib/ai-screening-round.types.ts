@@ -266,16 +266,25 @@ export function createCustomAiScreeningRequirement(): AiScreeningRequirement {
   };
 }
 
-/** Pipeline rule: at most one AI Screening stage, on whichever round it was assigned. */
+/** Pipeline rule: at most one AI Screening stage (standalone or merged into verbal). */
 export function validateAiScreeningStages(
   stages: Array<{ stage_type: string; sort_order?: number; round_config?: unknown }>,
 ): string | null {
   const screening = stages.filter((s) => s.stage_type === 'ai_screening');
-  if (screening.length === 0) return null;
+  const merged = stages.filter((s) => {
+    if (s.stage_type !== 'ai_verbal') return false;
+    const cfg = (s.round_config ?? {}) as Record<string, unknown>;
+    return Boolean(cfg.merge_screening_verbal);
+  });
   if (screening.length > 1) {
     return 'Only one AI Screening stage is allowed.';
   }
-  const cfg = normalizeAiScreeningRoundConfig(screening[0]!.round_config);
+  if (screening.length > 0 && merged.length > 0) {
+    return 'Use either a separate AI Screening stage or merged screening inside voice — not both.';
+  }
+  const target = screening[0] ?? merged[0];
+  if (!target) return null;
+  const cfg = normalizeAiScreeningRoundConfig(target.round_config);
   if (countEnabledAiScreeningTopics(cfg) < 1) {
     return 'AI Screening requires at least one enabled topic.';
   }

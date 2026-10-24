@@ -86,7 +86,7 @@ function SignInForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="viva-input"
+            className="codevox-input"
           />
         </label>
         <label className="block text-sm">
@@ -97,7 +97,7 @@ function SignInForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="viva-input"
+            className="codevox-input"
           />
         </label>
         <button

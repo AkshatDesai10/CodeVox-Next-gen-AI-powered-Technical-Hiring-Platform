@@ -4,13 +4,54 @@ import { useMemo, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 import { uploadProjectInterviewFile } from '@/modules/job-profiles/lib/job-profiles-api';
-import {
-  FieldLabel,
-  SectionCard,
-  formatLibraries,
-  parseLibraries,
-  textInputClass,
-} from '@/modules/job-profiles/components/take-home/TakeHomeRoundConfigForm';
+export function textInputClass(extra = '') {
+  return `w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] px-3 py-2 text-xs text-[var(--assessment-on-surface)] placeholder-[var(--assessment-on-surface-variant)] focus:border-[var(--assessment-primary)] focus:outline-none ${extra}`;
+}
+
+export function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--assessment-on-surface-variant)] mb-1">
+      {children}
+    </label>
+  );
+}
+
+export function SectionCard({
+  icon,
+  title,
+  children,
+}: {
+  icon?: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-5 space-y-3">
+      <div className="flex items-center gap-2 text-sm font-bold text-[var(--assessment-on-surface)]">
+        {icon ? (
+          <AssessmentMaterialIcon
+            name={icon}
+            size={18}
+            className="text-[var(--assessment-primary)]"
+          />
+        ) : null}
+        <span>{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export function formatLibraries(libs: string[]): string {
+  return (libs || []).join(', ');
+}
+
+export function parseLibraries(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 import {
   CODE_DEFEND_TOPIC_PRESETS,
   EXCEL_DEFEND_TOPIC_PRESETS,

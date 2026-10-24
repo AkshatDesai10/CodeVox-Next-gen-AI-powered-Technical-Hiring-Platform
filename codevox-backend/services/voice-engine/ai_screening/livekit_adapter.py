@@ -53,6 +53,8 @@ class ScreeningSessionState:
     candidate_left: bool = False
     ended_by: str | None = None
     done: bool = False
+    # When True, post_screening_complete signals Nest to keep the session open for verbal.
+    handoff_to_verbal: bool = False
     # Compat with shared wiring helpers
     interview_language: str = "en-IN"
     phase: str = "ai_screening"
@@ -170,6 +172,7 @@ class ScreeningOrchestratorLLMStream(LLMStream):
                     ],
                 },
                 job_profile_context=orch.job_profile_context,
+                merge_to_verbal=bool(state.handoff_to_verbal),
             )
         except Exception:
             logger.exception("post_screening_complete failed token=%s", state.candidate_token)
@@ -209,18 +212,21 @@ async def run_ai_screening_interview(
     candidate_id: str | None = None,
     resume_skills: list[str] | None = None,
     language_preference: str | None = None,
+    handoff_to_verbal: bool = False,
 ) -> ScreeningInterviewResult:
     cfg = ScreeningRoundConfig.from_payload(round_config)
     raw_cfg = round_config or {}
     raw_reqs = raw_cfg.get("screeningRequirements") or raw_cfg.get("screening_requirements")
     configured = cfg.configured_requirements()
     logger.info(
-        "AI Screening payload token=%s maxQuestions=%s requirements_in_payload=%s configured_with_expected_answer=%s ids=%s",
+        "AI Screening payload token=%s maxQuestions=%s requirements_in_payload=%s "
+        "configured_with_expected_answer=%s ids=%s handoff_to_verbal=%s",
         candidate_token,
         raw_cfg.get("maxQuestions") or raw_cfg.get("max_questions"),
         len(raw_reqs) if isinstance(raw_reqs, list) else 0,
         len(configured),
         [r.id for r in configured],
+        handoff_to_verbal,
     )
     if not cfg.enabled_topics():
         logger.error("AI Screening has zero enabled topics token=%s", candidate_token)
@@ -232,6 +238,7 @@ async def run_ai_screening_interview(
         job_profile_context=job_profile_context,
         candidate_name=candidate_name,
         resume_skills=resume_skills,
+        handoff_to_verbal=handoff_to_verbal,
     )
     from prompts import normalize_interview_language
 
@@ -241,6 +248,7 @@ async def run_ai_screening_interview(
         candidate_token=candidate_token,
         orch=orch,
         interview_language=spoken,
+        handoff_to_verbal=handoff_to_verbal,
     )
     room: rtc.Room | None = None
     recorder: SessionRecorder | None = None
@@ -440,6 +448,8 @@ async def run_ai_screening_interview(
                 )
                 await asyncio.sleep(1)
 
+            # Always disconnect the screening agent from the room so a verbal
+            # agent can rejoin the same room_name. Candidate stays connected.
             if room is not None:
                 await room.disconnect()
                 room = None

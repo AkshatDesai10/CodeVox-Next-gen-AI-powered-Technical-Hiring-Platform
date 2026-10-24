@@ -6,10 +6,11 @@ import {
   Patch,
   Post,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RequirePermissions } from '../../common/decorators/require-permission.decorator';
@@ -45,6 +46,24 @@ export class RecruitmentController {
     return ok(
       'Lead stage counts',
       await this.service.getLeadInboxStageCounts(user, body as never),
+    );
+  }
+
+  @Post('leads/batch-invite')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async batchInviteLeads(
+    @CurrentUser() user: JwtUserPayload,
+    @Body()
+    body: {
+      lead_ids?: string[];
+      job_profile_id?: string;
+      min_score?: number;
+    },
+  ) {
+    return ok(
+      'Batch invite processed',
+      await this.service.batchInviteLeads(user, body),
     );
   }
 
@@ -97,6 +116,26 @@ export class RecruitmentController {
     return ok(
       'AI interview started',
       await this.service.startAiInterview(user, leadId, body),
+    );
+  }
+
+  @Post('candidates/bulk')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  @UseInterceptors(
+    FilesInterceptor('resumes', 50, {
+      storage: memoryStorage(),
+      limits: { fileSize: 8 * 1024 * 1024 },
+    }),
+  )
+  async bulkCreateCandidates(
+    @CurrentUser() user: JwtUserPayload,
+    @Body() body: { job_profile_id?: string },
+    @UploadedFiles() resumes?: Express.Multer.File[],
+  ) {
+    return ok(
+      'Bulk candidates created',
+      await this.service.bulkCreateCandidates(user, body, resumes ?? []),
     );
   }
 

@@ -8,6 +8,16 @@ export const PUBLIC_ROUTES: Array<{ method: string; path: string }> = [
   { method: 'POST', path: '/api/auth/resend-verification' },
 
   /** Candidate portal — token scoped, no auth */
+  { method: 'GET', path: '/api/candidate/portal/:token/dashboard' },
+  { method: 'POST', path: '/api/candidate/portal/:token/consent' },
+  { method: 'POST', path: '/api/candidate/portal/:token/preferences' },
+  { method: 'POST', path: '/api/candidate/portal/:token/face-capture' },
+  { method: 'POST', path: '/api/candidate/portal/:token/start' },
+  { method: 'POST', path: '/api/candidate/portal/demo-link' },
+  { method: 'GET', path: '/api/candidate/portal/*' },
+  { method: 'POST', path: '/api/candidate/portal/*' },
+  { method: 'GET', path: '/api/candidate-portal/*' },
+  { method: 'POST', path: '/api/candidate-portal/*' },
   { method: 'GET', path: '/api/candidate-portal/:token' },
   { method: 'POST', path: '/api/candidate-portal/:token/start' },
   { method: 'POST', path: '/api/candidate-portal/:token/complete-coding-challenge' },
@@ -24,6 +34,7 @@ export const PUBLIC_ROUTES: Array<{ method: string; path: string }> = [
   { method: 'POST', path: '/api/job-profiles/public/:slug/preview-rounds' },
 
   /** Autonomous interview — token scoped, no JWT */
+  { method: 'GET', path: '/api/autonomous-interview/reports/share/:shareToken' },
   { method: 'GET', path: '/api/autonomous-interview/session/:token' },
   { method: 'POST', path: '/api/autonomous-interview/session/:token/request-code-editor' },
   { method: 'POST', path: '/api/autonomous-interview/consent' },
@@ -51,6 +62,13 @@ export const PUBLIC_ROUTES: Array<{ method: string; path: string }> = [
   { method: 'POST', path: '/api/project-interview/sessions/:token/leave-build' },
 
   /** Coding round — token-scoped candidate session (no JWT) */
+  { method: 'GET', path: '/api/coding-round/*' },
+  { method: 'POST', path: '/api/coding-round/*' },
+  { method: 'GET', path: '/api/coding-round/:token' },
+  { method: 'POST', path: '/api/coding-round/:token/run' },
+  { method: 'POST', path: '/api/coding-round/:token/submit' },
+  { method: 'GET', path: '/api/project-interview/*' },
+  { method: 'POST', path: '/api/project-interview/*' },
   { method: 'GET', path: '/api/coding-round/session/:token' },
   { method: 'POST', path: '/api/coding-round/start' },
   { method: 'POST', path: '/api/coding-round/run' },

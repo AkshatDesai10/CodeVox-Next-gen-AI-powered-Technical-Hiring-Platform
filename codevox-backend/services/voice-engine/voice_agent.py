@@ -104,14 +104,19 @@ async def run_voice_agent(payload: dict[str, Any]) -> None:
             await post_complete(token, stage3_chat_history=result.chat_history, hr_voice_audit=result.audit)
         return
 
-    if engine == "screening":
+    round_config = payload.get("round_config") if isinstance(payload.get("round_config"), dict) else {}
+    # Merge path: one LiveKit room runs AI Screening then technical verbal continuously.
+    # Nest starts with engine=technical + round_config.merge_screening_verbal=true.
+    merge_screening_verbal = bool(round_config.get("merge_screening_verbal"))
+
+    if engine == "screening" and not merge_screening_verbal:
         logger.info("Starting AI Screening voice agent token=%s room=%s", token, room_name)
         from ai_screening.livekit_adapter import run_ai_screening_interview
 
         result = await run_ai_screening_interview(
             room_name,
             token,
-            round_config=payload.get("round_config"),
+            round_config=round_config,
             job_profile_context=job_profile_context,
             candidate_name=candidate_name,
             candidate_id=candidate_id,
@@ -123,16 +128,6 @@ async def run_voice_agent(payload: dict[str, Any]) -> None:
             logger.warning("AI Screening incomplete for token=%s", token)
         return
 
-    logger.info(
-        "Starting unified voice agent token=%s room=%s phase=%s stack=%s resume_skills=%s take_home_verification_enabled=%s",
-        token,
-        room_name,
-        phase,
-        tech_stack,
-        resume_skills,
-        bool(payload.get("take_home_verification_enabled")),
-    )
-
     th_enabled = bool(payload.get("take_home_verification_enabled"))
     raw_th_weight = payload.get("take_home_weight_pct")
     if raw_th_weight is None and th_enabled:
@@ -142,6 +137,63 @@ async def run_voice_agent(payload: dict[str, Any]) -> None:
             th_weight = float(raw_th_weight if raw_th_weight is not None else 0)
         except (TypeError, ValueError):
             th_weight = 20.0 if th_enabled else 0.0
+
+    if merge_screening_verbal:
+        logger.info(
+            "Starting merged screening→verbal session token=%s room=%s stack=%s",
+            token,
+            room_name,
+            tech_stack,
+        )
+        from ai_screening.livekit_adapter import run_ai_screening_interview
+
+        screening_result = await run_ai_screening_interview(
+            room_name,
+            token,
+            round_config=round_config,
+            job_profile_context=job_profile_context,
+            candidate_name=candidate_name,
+            candidate_id=candidate_id,
+            resume_skills=resume_skills,
+            language_preference=language_preference,
+            handoff_to_verbal=True,
+        )
+        if not screening_result.done:
+            logger.warning(
+                "Merged session: AI Screening incomplete — skipping verbal token=%s",
+                token,
+            )
+            return
+        # Same room_name: screening agent disconnects cleanly; verbal agent rejoins.
+        result = await run_unified_interview(
+            room_name,
+            tech_stack,
+            token,
+            resume_skills=resume_skills or None,
+            candidate_name=candidate_name,
+            candidate_id=candidate_id,
+            job_profile_context=job_profile_context,
+            rubric_criteria=payload.get("rubric_criteria") or [],
+            take_home_verification_enabled=th_enabled,
+            take_home_payload=payload.get("take_home_payload"),
+            take_home_weight_pct=th_weight,
+            project_interview_payload=payload.get("project_interview_payload"),
+            language_preference=language_preference,
+            round_config=round_config,
+        )
+        if not result.done:
+            logger.warning("Merged session: unified interview incomplete for token=%s", token)
+        return
+
+    logger.info(
+        "Starting unified voice agent token=%s room=%s phase=%s stack=%s resume_skills=%s take_home_verification_enabled=%s",
+        token,
+        room_name,
+        phase,
+        tech_stack,
+        resume_skills,
+        bool(payload.get("take_home_verification_enabled")),
+    )
 
     result = await run_unified_interview(
         room_name,
@@ -157,7 +209,7 @@ async def run_voice_agent(payload: dict[str, Any]) -> None:
         take_home_weight_pct=th_weight,
         project_interview_payload=payload.get("project_interview_payload"),
         language_preference=language_preference,
-        round_config=payload.get("round_config"),
+        round_config=round_config,
     )
     if not result.done:
         logger.warning("Unified interview incomplete for token=%s", token)

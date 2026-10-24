@@ -155,7 +155,7 @@ function ResultPanel({ report }: { report: AiDetectionReport }) {
       )}
 
       <p className="text-[11px] leading-relaxed text-[var(--assessment-on-surface-variant)]">
-        No AI detector is 100% reliable. Use this signal alongside a viva and
+        No AI detector is 100% reliable. Use this signal alongside an interview and
         your own review before drawing conclusions.
       </p>
     </div>

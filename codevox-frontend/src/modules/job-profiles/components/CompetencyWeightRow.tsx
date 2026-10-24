@@ -49,11 +49,11 @@ export function CompetencyWeightRow(props: {
                 if (val < 0) val = 0;
                 props.onWeightChange?.(val);
               }}
-              className={`w-16 rounded border px-2 py-1 text-right ${
+              className={`w-16 rounded border px-2 py-1 text-right bg-[#160A30] text-white ${
                 props.aiIdentified
-                  ? 'border-[var(--nexus-secondary)]/30 text-[var(--nexus-secondary)]'
-                  : 'border-[var(--assessment-outline-variant)] text-[var(--assessment-on-surface)]'
-              }`}
+                  ? 'border-violet-500/40 text-violet-300'
+                  : 'border-violet-500/25 text-white'
+              } focus:border-violet-400 focus:outline-none`}
             />
             <span className="text-[var(--assessment-on-surface-variant)]">%</span>
           </div>

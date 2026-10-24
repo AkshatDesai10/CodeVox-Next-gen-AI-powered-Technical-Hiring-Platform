@@ -25,6 +25,9 @@ export type AutonomousSession = {
   livenessVerifiedAt?: string | null;
   referenceFaceDescriptor?: number[] | null;
   voiceEnrolled?: boolean;
+  isBehavioral?: boolean;
+  voicePhase?: string;
+  engine?: string;
   proctorConfig?: {
     faceCheckIntervalMs: number;
     faceMatchThreshold: number;

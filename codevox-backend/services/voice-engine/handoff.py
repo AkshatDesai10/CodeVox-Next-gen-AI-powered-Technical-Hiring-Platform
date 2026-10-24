@@ -135,6 +135,7 @@ async def post_screening_complete(
     round_config: dict[str, Any] | None = None,
     job_profile_context: dict[str, Any] | None = None,
     ended_by: str | None = None,
+    merge_to_verbal: bool = False,
 ) -> None:
     """Persist AI Screening conversation and trigger async analyzer on Nest."""
     body: dict[str, Any] = {
@@ -146,6 +147,8 @@ async def post_screening_complete(
     }
     if ended_by:
         body["ended_by"] = ended_by
+    if merge_to_verbal:
+        body["merge_to_verbal"] = True
     async with httpx.AsyncClient(timeout=30.0) as client:
         res = await client.post(
             f"{NEST_CALLBACK_URL}/api/autonomous-interview/complete-screening",
@@ -153,7 +156,12 @@ async def post_screening_complete(
             headers=_headers(),
         )
         res.raise_for_status()
-    logger.info("AI Screening completed token=%s turns=%s", candidate_token, len(transcript))
+    logger.info(
+        "AI Screening completed token=%s turns=%s merge_to_verbal=%s",
+        candidate_token,
+        len(transcript),
+        merge_to_verbal,
+    )
 
 
 async def post_leave_build(candidate_token: str) -> None:

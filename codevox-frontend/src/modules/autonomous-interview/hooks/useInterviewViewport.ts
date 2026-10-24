@@ -64,23 +64,44 @@ export function useInterviewViewport(candidateToken: string) {
         if (data.type === 'CHAT_UPDATE' && data.payload?.chatHistory) {
           setChatHistory(data.payload.chatHistory);
           const cp = data.payload.currentPhase;
-          const isDedicatedRound =
-            cp === 'bnd_interview' ||
-            cp === 'bnd_assessment' ||
-            cp === 'ai_screening' ||
-            cp === 'ai_verbal' ||
-            cp === 'closing' ||
-            cp === 'completed' ||
-            cp === 'assessing';
-          if (!isDedicatedRound) {
-            if (data.payload.phase) {
+          const syncPhase = data.payload.phase;
+          // Dedicated HR rounds: engine reports hr_verbal — keep viewport aligned.
+          if (syncPhase === 'hr_verbal') {
+            setPhase((current) =>
+              current === 'assessing' || current === 'completed'
+                ? current
+                : normalizeViewportPhase(syncPhase),
+            );
+            if (data.payload.subPhase) setSubPhase(data.payload.subPhase);
+          } else if (syncPhase === 'ai_screening' || data.payload.subPhase === 'transition') {
+            // Merged screening→verbal: reflect screening / transition while Nest may already be ai_verbal.
+            if (syncPhase) {
               setPhase((current) =>
                 current === 'assessing' || current === 'completed'
                   ? current
-                  : normalizeViewportPhase(data.payload.phase),
+                  : normalizeViewportPhase(syncPhase),
               );
             }
             if (data.payload.subPhase) setSubPhase(data.payload.subPhase);
+          } else {
+            const isDedicatedRound =
+              cp === 'bnd_interview' ||
+              cp === 'bnd_assessment' ||
+              cp === 'ai_screening' ||
+              cp === 'ai_verbal' ||
+              cp === 'closing' ||
+              cp === 'completed' ||
+              cp === 'assessing';
+            if (!isDedicatedRound) {
+              if (syncPhase) {
+                setPhase((current) =>
+                  current === 'assessing' || current === 'completed'
+                    ? current
+                    : normalizeViewportPhase(syncPhase),
+                );
+              }
+              if (data.payload.subPhase) setSubPhase(data.payload.subPhase);
+            }
           }
         }
         if (data.type === 'PROCTOR_ALERT') {

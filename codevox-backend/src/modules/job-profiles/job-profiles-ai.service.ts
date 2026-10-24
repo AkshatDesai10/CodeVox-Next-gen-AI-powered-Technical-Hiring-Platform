@@ -52,6 +52,51 @@ type JdDraft = {
   experience_max: number;
 };
 
+export type PipelinePresetId =
+  | 'coding_only'
+  | 'unified_voice'
+  | 'coding_plus_voice'
+  | 'screening_plus_full';
+
+export type ParsedJdFromText = {
+  title: string;
+  department: string;
+  seniority_level: 'junior' | 'mid' | 'senior' | 'lead' | string;
+  employment_type: string;
+  openings_count: number;
+  location_mode: 'remote' | 'hybrid' | 'onsite' | string;
+  location_text: string;
+  compensation_band_min?: number | null;
+  compensation_band_max?: number | null;
+  currency?: string | null;
+  candidate_facing_intro: string;
+  responsibilities: string[];
+  required_skills: string[];
+  nice_to_have_skills: string[];
+  experience_min: number;
+  experience_max: number;
+  recommended_pipeline: PipelinePresetId;
+  ai_powered?: boolean;
+};
+
+const PIPELINE_PRESET_IDS: PipelinePresetId[] = [
+  'coding_only',
+  'unified_voice',
+  'coding_plus_voice',
+  'screening_plus_full',
+];
+
+function normalizePipelinePreset(raw: unknown): PipelinePresetId {
+  const value = String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (value === 'build_defend') return 'coding_plus_voice';
+  return (PIPELINE_PRESET_IDS as string[]).includes(value)
+    ? (value as PipelinePresetId)
+    : 'coding_plus_voice';
+}
+
 type BiasResult = {
   flags: Array<{ severity: 'info' | 'warning' | 'critical'; message: string }>;
   blocked: boolean;
@@ -166,6 +211,130 @@ export class JobProfilesAiService {
     }
     await this.logAi('draft_jd', null, body, normalized);
     return { ...normalized, ai_powered: this.openai.isConfigured() };
+  }
+
+  async parseJdFromText(body: { jd_text: string }) {
+    const raw = typeof body.jd_text === 'string' ? body.jd_text.trim() : '';
+    if (!raw) throw new BadRequestException('jd_text is required');
+    const jdText = raw.slice(0, 20_000);
+
+    const fallbackTitle =
+      jdText
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .find((l) => l.length > 0)
+        ?.replace(/^#+\s*/, '')
+        .replace(/^(job title|role|position)\s*[:\-–]\s*/i, '')
+        .slice(0, 120) || 'Untitled role';
+
+    const localFallback = (): ParsedJdFromText => ({
+      title: fallbackTitle,
+      department: 'Engineering',
+      seniority_level: 'mid',
+      employment_type: 'full_time',
+      openings_count: 1,
+      location_mode: 'hybrid',
+      location_text: '',
+      compensation_band_min: null,
+      compensation_band_max: null,
+      currency: 'INR',
+      candidate_facing_intro: jdText.slice(0, 800),
+      responsibilities: [],
+      required_skills: [],
+      nice_to_have_skills: [],
+      experience_min: 2,
+      experience_max: 5,
+      recommended_pipeline: 'coding_plus_voice',
+    });
+
+    if (!this.openai.isConfigured()) {
+      const normalized = localFallback();
+      await this.logAi('parse_jd', null, { jd_text_len: jdText.length }, normalized);
+      return { ...normalized, ai_powered: false };
+    }
+
+    const messages: ChatMessage[] = [
+      {
+        role: 'system',
+        content:
+          'You are a technical recruiter. Parse a pasted job description into structured JSON with keys: title (string), department (string), seniority_level (junior|mid|senior|lead or free string), employment_type (string e.g. full_time|contract), openings_count (number), location_mode (remote|hybrid|onsite), location_text (string), compensation_band_min (number|null), compensation_band_max (number|null), currency (string|null), candidate_facing_intro (string), responsibilities (string[]), required_skills (string[]), nice_to_have_skills (string[]), experience_min (number), experience_max (number), recommended_pipeline (coding_only|unified_voice|coding_plus_voice|screening_plus_full). Prefer coding_plus_voice unless the JD clearly fits another assessment style. Do not recommend build_defend.',
+      },
+      {
+        role: 'user',
+        content: `Parse this job description into structured fields:\n\n${jdText}`,
+      },
+    ];
+
+    const result = await this.openai.chatJson<
+      Partial<ParsedJdFromText> & { __isFallback?: boolean; fallback?: boolean }
+    >(messages, { temperature: 0.2 });
+
+    if (result?.__isFallback || result?.fallback) {
+      const normalized = localFallback();
+      await this.logAi('parse_jd', null, { jd_text_len: jdText.length }, normalized);
+      return { ...normalized, ai_powered: false };
+    }
+
+    const asStringList = (v: unknown) =>
+      Array.isArray(v) ? v.map((s) => String(s).trim()).filter(Boolean) : [];
+
+    const asOptNumber = (v: unknown): number | null => {
+      if (v == null || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const seniorityRaw = String(result?.seniority_level ?? '')
+      .trim()
+      .toLowerCase();
+    const seniority_level =
+      seniorityRaw === 'junior' ||
+      seniorityRaw === 'mid' ||
+      seniorityRaw === 'senior' ||
+      seniorityRaw === 'lead'
+        ? seniorityRaw
+        : seniorityRaw || 'mid';
+
+    const locationRaw = String(result?.location_mode ?? '')
+      .trim()
+      .toLowerCase();
+    const location_mode =
+      locationRaw === 'remote' || locationRaw === 'hybrid' || locationRaw === 'onsite'
+        ? locationRaw
+        : 'hybrid';
+
+    let experience_min = Number.isFinite(Number(result?.experience_min))
+      ? Math.max(0, Math.trunc(Number(result.experience_min)))
+      : 2;
+    let experience_max = Number.isFinite(Number(result?.experience_max))
+      ? Math.max(0, Math.trunc(Number(result.experience_max)))
+      : 5;
+    if (experience_max < experience_min) experience_max = experience_min;
+
+    const openings = Number(result?.openings_count);
+    const normalized: ParsedJdFromText = {
+      title: String(result?.title ?? '').trim() || fallbackTitle,
+      department: String(result?.department ?? '').trim() || 'Engineering',
+      seniority_level,
+      employment_type: String(result?.employment_type ?? '').trim() || 'full_time',
+      openings_count: Number.isFinite(openings) && openings > 0 ? Math.trunc(openings) : 1,
+      location_mode,
+      location_text: String(result?.location_text ?? '').trim(),
+      compensation_band_min: asOptNumber(result?.compensation_band_min),
+      compensation_band_max: asOptNumber(result?.compensation_band_max),
+      currency: result?.currency != null ? String(result.currency).trim() || null : 'INR',
+      candidate_facing_intro:
+        String(result?.candidate_facing_intro ?? '').trim() || jdText.slice(0, 800),
+      responsibilities: asStringList(result?.responsibilities),
+      required_skills: asStringList(result?.required_skills),
+      nice_to_have_skills: asStringList(result?.nice_to_have_skills),
+      experience_min,
+      experience_max,
+      recommended_pipeline: normalizePipelinePreset(result?.recommended_pipeline),
+    };
+
+    await this.logAi('parse_jd', null, { jd_text_len: jdText.length }, normalized);
+    return { ...normalized, ai_powered: true };
   }
 
   async generateProjectRequirements(
@@ -328,9 +497,7 @@ export class JobProfilesAiService {
     if (stageType === 'coding') {
       rubricContext = 'coding assessment rubric';
       restrictionPrompt = 'Extract 3 to 5 foundational coding competencies (e.g., Data Structures & Algorithms, Logic & Problem Solving, Time/Space Complexity, Edge Case Handling, Clean Code). Do NOT suggest specific frameworks (e.g., Laravel, React), databases (e.g., MySQL), or DevOps tools (e.g., Git, Docker) for the coding round. Focus purely on general algorithmic problem-solving and code execution.';
-    } else if (stageType === 'take_home') {
-      rubricContext = 'take-home project rubric';
-      restrictionPrompt = 'Extract 3 to 5 engineering competencies suited for evaluating a take-home project. ALWAYS include universal project skills like "Requirement Fulfillment" (did they build what was asked?) and "Code Cleanliness & Quality". You may also extract domain-specific practices from the JD (e.g., Application Architecture, Framework Proficiency, API Design). Do NOT suggest pure algorithmic competencies (like LeetCode style logic) here. Focus on real-world holistic software engineering.';
+
     } else if (stageType === 'project_interview') {
       rubricContext = 'project defense interview rubric';
       restrictionPrompt = 'Extract 3 to 5 competencies for a voice interview where the candidate defends a project they built. ALWAYS include "Tooling & Library Understanding" (can they explain what the libraries, scripts and configuration in their repo do?) and "Business Logic Ownership" (can they explain roles, flows and features of their app?). You may add JD-driven conceptual topics (e.g. Database Concepts, API Design, State Management). Do NOT suggest live-coding, syntax recall or algorithmic puzzle skills.';

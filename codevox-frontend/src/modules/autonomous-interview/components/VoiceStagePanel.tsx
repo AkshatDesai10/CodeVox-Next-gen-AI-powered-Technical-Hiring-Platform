@@ -5,6 +5,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 import { getAutonomousSession, sendVoiceMessage } from '@/modules/autonomous-interview/lib/autonomous-interview-api';
 import { AI_INTERVIEWER_AVATAR_URL } from '@/modules/autonomous-interview/lib/ai-interviewer-avatar';
+import { InterviewRecBadge } from '@/modules/autonomous-interview/components/InterviewRecBadge';
+import { VoicePhasePillStrip } from '@/modules/autonomous-interview/components/VoicePhasePillStrip';
+import {
+  resolveSpeakingState,
+  useVoicePhaseProgress,
+} from '@/modules/autonomous-interview/hooks/useVoicePhaseProgress';
+import '@/modules/autonomous-interview/styles/conversation-session.css';
 
 type SpeechRecognitionCtor = new () => any;
 
@@ -18,7 +25,7 @@ type TranscriptMessage = {
 type Props = {
   candidateToken: string;
   techStack: string;
-  phase: 'ai_verbal' | 'hr_verbal';
+  phase: 'ai_verbal' | 'hr_verbal' | 'ai_screening' | 'unified';
   visible: boolean;
   onPhaseChange?: (phase: string) => void;
 };
@@ -591,9 +598,26 @@ export function VoiceStagePanel({
     return () => window.clearInterval(id);
   }, [visible]);
 
+  const avatarGlowState = resolveSpeakingState({
+    agentSpeaking,
+    analyzing: status === 'thinking',
+    listening: status === 'listening',
+  });
+  const voicePillPhase = useVoicePhaseProgress({
+    visible,
+    speakingState: avatarGlowState,
+    backendPhase: phase,
+    backendEngine:
+      phase === 'hr_verbal'
+        ? 'behavioral'
+        : phase === 'ai_screening'
+          ? 'screening'
+          : 'technical',
+  });
+
   if (!visible) return null;
 
-  const showWave = status === 'listening' || agentSpeaking;
+  const showWave = status === 'listening' || agentSpeaking || status === 'thinking';
   const isMicLive = status === 'listening';
   const isAgentHold = agentSpeaking || status === 'thinking';
   const overlayLabel = agentSpeaking
@@ -611,6 +635,7 @@ export function VoiceStagePanel({
   );
   const interviewTitle = `${techStack} Interview`;
   const phaseLabel = phase === 'hr_verbal' ? 'HR Verbal' : 'AI Verbal';
+  const showRecBadge = visible && !conversationEnded;
 
   return (
     <div className="conversation-session flex h-screen flex-col overflow-hidden bg-[var(--assessment-surface)] text-[var(--assessment-on-surface)]">
@@ -625,6 +650,7 @@ export function VoiceStagePanel({
           </span>
         </div>
         <div className="flex items-center gap-4">
+          {showRecBadge ? <InterviewRecBadge elapsed={elapsed} compact className="hidden sm:inline-flex" /> : null}
           <div className="hidden items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 sm:flex">
             <AssessmentMaterialIcon name="timer" size={18} className="text-white" />
             <span className="text-xs font-medium text-white">Timer: {elapsed}</span>
@@ -689,7 +715,16 @@ export function VoiceStagePanel({
 
       <main className="mt-14 flex min-h-0 flex-1 bg-[var(--color-page)]">
         <section className="relative flex w-[70%] flex-col items-center justify-center overflow-hidden bg-[var(--color-primary-container)]/20 p-6">
+          <div className="mb-3 w-full">
+            <VoicePhasePillStrip active={voicePillPhase} />
+          </div>
+          {showRecBadge ? (
+            <div className="mb-3 w-full sm:hidden">
+              <InterviewRecBadge elapsed={elapsed} />
+            </div>
+          ) : null}
           <div className="group relative h-full w-full overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[#1d3054] shadow-sm">
+            <div className={`avatar-glow-ring rounded-xl is-${avatarGlowState}`} aria-hidden />
             <div className="absolute inset-0 flex items-center justify-center">
               <img
                 src={AI_INTERVIEWER_AVATAR_URL}
@@ -708,7 +743,7 @@ export function VoiceStagePanel({
                   </span>
                 </div>
                 {showWave ? (
-                  <div className="glass-card wave-container rounded-full px-4 py-2 shadow-lg">
+                  <div className={`glass-card wave-container rounded-full px-4 py-2 shadow-lg is-${avatarGlowState}`}>
                     {Array.from({ length: 10 }).map((_, i) => (
                       <div
                         key={i}

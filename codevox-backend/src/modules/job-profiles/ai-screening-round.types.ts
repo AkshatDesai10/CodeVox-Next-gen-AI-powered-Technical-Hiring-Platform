@@ -231,11 +231,20 @@ export function validateAiScreeningStages(
   stages: Array<{ stageType: string; sortOrder: number; roundConfig?: unknown }>,
 ): string | null {
   const screening = stages.filter((s) => s.stageType === 'ai_screening');
-  if (screening.length === 0) return null;
+  const merged = stages.filter((s) => {
+    if (s.stageType !== 'ai_verbal') return false;
+    const cfg = (s.roundConfig ?? {}) as Record<string, unknown>;
+    return Boolean(cfg.merge_screening_verbal);
+  });
   if (screening.length > 1) {
     return 'Only one AI Screening stage is allowed.';
   }
-  const cfg = normalizeAiScreeningRoundConfig(screening[0].roundConfig);
+  if (screening.length > 0 && merged.length > 0) {
+    return 'Use either a separate AI Screening stage or merged screening inside voice — not both.';
+  }
+  const target = screening[0] ?? merged[0];
+  if (!target) return null;
+  const cfg = normalizeAiScreeningRoundConfig(target.roundConfig);
   if (!cfg.topics.some((t) => t.enabled)) {
     return 'AI Screening requires at least one enabled topic.';
   }

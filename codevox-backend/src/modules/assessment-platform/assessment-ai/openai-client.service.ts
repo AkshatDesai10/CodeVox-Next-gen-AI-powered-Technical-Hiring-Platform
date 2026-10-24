@@ -246,6 +246,39 @@ export class OpenAiClientService {
       };
     }
 
+    // Magic Job Creator — paste-JD parse
+    if (/Parse this job description into structured fields:/i.test(user)) {
+      const jdBody = user.replace(/^[\s\S]*?Parse this job description into structured fields:\s*/i, '');
+      const firstLine =
+        jdBody
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .find((l) => l.length > 0)
+          ?.replace(/^#+\s*/, '')
+          .slice(0, 120) || 'Untitled role';
+      return {
+        __isFallback: true,
+        fallback: true,
+        title: firstLine,
+        department: 'Engineering',
+        seniority_level: 'mid',
+        employment_type: 'full_time',
+        openings_count: 1,
+        location_mode: 'hybrid',
+        location_text: '',
+        compensation_band_min: null,
+        compensation_band_max: null,
+        currency: 'INR',
+        candidate_facing_intro: jdBody.slice(0, 800),
+        responsibilities: [],
+        required_skills: [],
+        nice_to_have_skills: [],
+        experience_min: 2,
+        experience_max: 5,
+        recommended_pipeline: 'coding_plus_voice',
+      };
+    }
+
     const batchMatch = user.match(/Generate exactly (\d+) unique spoken interview/i);
     if (batchMatch) {
       const count = Math.min(Math.max(parseInt(batchMatch[1] ?? '3', 10), 1), 8);

@@ -578,13 +578,15 @@ def build_unified_state(
     state.take_home_weight_pct = max(0.0, min(100.0, float(weight)))
     state.take_home_phase_active = False
     state.round_config = round_config if isinstance(round_config, dict) else None
-    raw_limit = (state.round_config or {}).get("verbal_duration_limit_minutes")
+    cfg = state.round_config or {}
+    raw_limit = cfg.get("verbal_duration_limit_minutes")
     if isinstance(raw_limit, (int, float)) and not isinstance(raw_limit, bool) and raw_limit > 0:
         minutes = max(10, min(int(state.knowledge_state.hard_ceiling_mins), int(raw_limit)))
         state.knowledge_state.hard_ceiling_mins = minutes
         state.knowledge_state.target_duration_mins = minutes
     logger.info(
-        "Unified state built token=%s take_home_verification_enabled=%s weight_pct=%s report_loaded=%s",
+        "Unified state built token=%s take_home_verification_enabled=%s weight_pct=%s "
+        "report_loaded=%s",
         candidate_token,
         state.take_home_verification_enabled,
         state.take_home_weight_pct,

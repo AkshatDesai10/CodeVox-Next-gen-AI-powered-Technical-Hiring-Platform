@@ -8,7 +8,6 @@ import { getAssessmentReport } from '../lib/assessment-report-api';
 import type {
   AssessmentStageReport,
   CodingStageReport,
-  TakeHomeStageReport,
   VerbalStageReport,
   AiScreeningStageReport,
 } from '../types/assessment-report';
@@ -88,7 +87,6 @@ function StageHeader(props: { stage: AssessmentStageReport; index: number; total
 function StageBody(props: { stage: AssessmentStageReport; applicationId: string }) {
   const { stage, applicationId } = props;
   if (stage.stageType === 'coding') return <CodingQuestionsTable stage={stage as CodingStageReport} />;
-  if (stage.stageType === 'take_home') return <TakeHomeStagePanel stage={stage as TakeHomeStageReport} />;
   if (stage.stageType === 'ai_screening') {
     return <AiScreeningStagePanel stage={stage as AiScreeningStageReport} />;
   }

@@ -29,8 +29,51 @@ import {
 } from './recruitment-local.types';
 import { randomBytes } from 'crypto';
 import { uploadBuffer, underUploads } from '../../files/local-storage';
+import { extractReportText } from '../ai-detection/text-extraction.util';
 
 const IST_TZ = 'Asia/Kolkata';
+const MAX_BULK_RESUMES = 50;
+const MAX_RESUME_BYTES = 8 * 1024 * 1024;
+const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+
+type UploadedResumeFile = {
+  buffer?: Buffer;
+  mimetype?: string;
+  originalname?: string;
+  size?: number;
+};
+
+function nameFromResumeFilename(originalname?: string): string {
+  const base = String(originalname ?? '')
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[_\-.]+/g, ' ')
+    .replace(/\b(resume|cv|curriculum vitae)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!base) return 'Candidate';
+  return base
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ')
+    .slice(0, 120);
+}
+
+function emailFromText(text: string): string | null {
+  const match = text.match(EMAIL_RE);
+  return match ? match[0].toLowerCase() : null;
+}
+
+function isAllowedResumeMime(file: UploadedResumeFile): boolean {
+  const name = String(file.originalname ?? '').toLowerCase();
+  const mime = String(file.mimetype ?? '').toLowerCase();
+  if (name.endsWith('.pdf') || mime.includes('pdf')) return true;
+  if (name.endsWith('.docx') || mime.includes('wordprocessingml') || mime.includes('officedocument')) {
+    return true;
+  }
+  if (name.endsWith('.doc') || mime === 'application/msword') return true;
+  return false;
+}
 
 function formatDateInIst(value: Date): string {
   // en-CA yields YYYY-MM-DD
@@ -203,6 +246,110 @@ export class RecruitmentService {
     return { lead, overlay };
   }
 
+  private async uploadManualResume(
+    leadId: string,
+    resume?: UploadedResumeFile,
+  ): Promise<string | undefined> {
+    if (!resume?.buffer?.length) return undefined;
+    if (resume.buffer.length > MAX_RESUME_BYTES) {
+      throw new BadRequestException('Resume must be 8MB or smaller');
+    }
+    const original = resume.originalname ?? 'resume.pdf';
+    const ext = (original.match(/\.[a-z0-9]+$/i)?.[0] ?? '.pdf').toLowerCase();
+    return uploadBuffer({
+      body: resume.buffer,
+      contentType: resume.mimetype || 'application/octet-stream',
+      key: underUploads('candidate-resumes', leadId, `${Date.now()}${ext}`),
+    });
+  }
+
+  private async inferIdentityFromResume(
+    resume?: UploadedResumeFile,
+  ): Promise<{ name: string; email: string | null; extractedText: string | null }> {
+    const nameFromFile = nameFromResumeFilename(resume?.originalname);
+    let extractedText: string | null = null;
+    let email: string | null = null;
+    if (resume?.buffer?.length) {
+      try {
+        extractedText = await extractReportText({
+          fieldname: 'resume',
+          originalname: resume.originalname ?? 'resume.pdf',
+          encoding: '7bit',
+          mimetype: resume.mimetype || 'application/octet-stream',
+          size: resume.buffer.length,
+          buffer: resume.buffer,
+          destination: '',
+          filename: resume.originalname ?? 'resume.pdf',
+          path: '',
+          stream: undefined as never,
+        });
+        email = emailFromText(extractedText);
+      } catch (err) {
+        console.warn(
+          `Bulk resume text extract failed for ${resume.originalname ?? 'file'}:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+    return { name: nameFromFile, email, extractedText };
+  }
+
+  /**
+   * Creates a manual lead overlay without inviting/emailing.
+   * Used by bulk upload (PENDING) and as the base for createManualCandidate.
+   */
+  private async createManualLeadPending(input: {
+    name: string;
+    email: string;
+    jobProfileId: string;
+    jobTitle: string;
+    resume?: UploadedResumeFile;
+    inviteStatus?: string | null;
+    portalStage?: string;
+    actorId?: string;
+    extractedText?: string | null;
+  }) {
+    const leadId = `manual_${randomBytes(8).toString('hex')}`;
+    const [firstName, ...rest] = input.name.trim().split(/\s+/);
+    const lastName = rest.join(' ');
+    const email = input.email.trim().toLowerCase();
+    const resumeUrl = await this.uploadManualResume(leadId, input.resume);
+
+    const overlay = await this.repo.mergeLeadOverlay(leadId, {
+      inviteStatus: input.inviteStatus ?? 'PENDING',
+      inviteToken: null,
+      portalStage: input.portalStage ?? 'New',
+      resumeExtractedText: input.extractedText?.trim() || null,
+      parsedResumeJson: {
+        source: 'manual',
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        job_profile_id: input.jobProfileId,
+        job_title: input.jobTitle,
+        resume_url: resumeUrl,
+      },
+    });
+
+    await this.resumeScreening.ensureManualLeadScreened(overlay).catch((err) => {
+      console.error(`Manual lead resume screen enqueue failed for lead ${leadId}:`, err);
+    });
+
+    await this.repo.logActivity({
+      leadId,
+      eventType: 'manual_candidate_pending',
+      eventSummary: `Manual candidate created for review (${email}) — ${input.jobTitle}`,
+      eventJson: {
+        jobTitle: input.jobTitle,
+        profileId: input.jobProfileId,
+        resume_url: resumeUrl ?? null,
+      },
+      actorId: input.actorId,
+    });
+
+    return { leadId, firstName, lastName, email, resumeUrl, overlay };
+  }
+
   async createManualCandidate(
     actor: JwtUserPayload,
     body: {
@@ -210,7 +357,7 @@ export class RecruitmentService {
       email?: string;
       job_profile_id?: string;
     },
-    resume?: { buffer?: Buffer; mimetype?: string; originalname?: string; size?: number },
+    resume?: UploadedResumeFile,
   ) {
     await this.assertWrite(actor);
     const name = String(body.name ?? '').trim();
@@ -220,83 +367,232 @@ export class RecruitmentService {
       throw new BadRequestException('Name and a valid email are required');
     }
     if (!profileId) throw new BadRequestException('Select a job role');
-    if (resume?.buffer?.length && resume.buffer.length > 8 * 1024 * 1024) {
+    if (resume?.buffer?.length && resume.buffer.length > MAX_RESUME_BYTES) {
       throw new BadRequestException('Resume must be 8MB or smaller');
     }
 
-    const leadId = `manual_${randomBytes(8).toString('hex')}`;
-    const [firstName, ...rest] = name.split(/\s+/);
-    const lastName = rest.join(' ');
-    let resumeUrl: string | undefined;
-    if (resume?.buffer?.length) {
-      const original = resume.originalname ?? 'resume.pdf';
-      const ext = (original.match(/\.[a-z0-9]+$/i)?.[0] ?? '.pdf').toLowerCase();
-      resumeUrl = await uploadBuffer({
-        body: resume.buffer,
-        contentType: resume.mimetype || 'application/octet-stream',
-        key: underUploads('candidate-resumes', leadId, `${Date.now()}${ext}`),
-      });
-    }
-
-    const invited = await this.jobProfiles.inviteLeadToInterview(actor, profileId, {
-      lead_id: leadId,
-      first_name: firstName,
-      last_name: lastName || undefined,
-      email,
-      resume_url: resumeUrl,
-    });
     const profile = await this.jobRepo.findById(profileId);
     const jobTitle = profile?.title ?? 'Assessment';
-    const token = invited.application_token;
-    const magicLinkUrl = `${this.portalBaseUrl()}/candidate/portal/${token}`;
-    const emailContent = buildMagicLinkEmail(name, jobTitle, magicLinkUrl);
-
-    const manualOverlay = await this.repo.mergeLeadOverlay(leadId, {
-      inviteStatus: 'INVITED',
-      inviteToken: token,
-      portalStage: 'Scheduled',
-      parsedResumeJson: {
-        source: 'manual',
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        job_profile_id: profileId,
-        job_title: jobTitle,
-        resume_url: resumeUrl,
-      },
-    });
-    await this.resumeScreening.ensureManualLeadScreened(manualOverlay).catch((err) => {
-      console.error(`Manual lead resume screen enqueue failed for lead ${leadId}:`, err);
-    });
-    await this.repo.links.save(
-      this.repo.links.create({
-        leadId: leadId,
-        localApplicationToken: token,
-        inactive: 0,
-      }),
-    );
-    await this.repo.logActivity({
-      leadId: leadId,
-      eventType: 'manual_candidate_invited',
-      eventSummary: `Manual candidate created and magic link sent to ${email} for ${jobTitle}`,
-      eventJson: { token, jobTitle, profileId },
+    const created = await this.createManualLeadPending({
+      name,
+      email,
+      jobProfileId: profileId,
+      jobTitle,
+      resume,
+      inviteStatus: 'PENDING',
+      portalStage: 'New',
       actorId: this.actorId(actor),
     });
 
-    const sent = await this.emailService.sendMail(email, emailContent.subject, emailContent.html);
-    if (!sent.accepted) {
+    const invited = await this.inviteLeadToAssessment(actor, created.leadId, {
+      jobProfileId: profileId,
+    });
+
+    if (invited.status === 'INVITED' && !invited.email_sent) {
       throw new BadRequestException(
         'Candidate was created, but the magic link email was not sent. Check SMTP settings, then open this lead and send the invite again.',
       );
     }
 
     return {
-      status: 'INVITED' as const,
-      invite_token: token,
-      interview_url: magicLinkUrl,
-      email_sent: true,
-      lead_id: leadId,
+      status: invited.status,
+      invite_token: invited.invite_token,
+      interview_url: invited.interview_url,
+      email_sent: invited.email_sent ?? false,
+      lead_id: created.leadId,
     };
+  }
+
+  async bulkCreateCandidates(
+    actor: JwtUserPayload,
+    body: { job_profile_id?: string },
+    resumes: UploadedResumeFile[],
+  ) {
+    await this.assertWrite(actor);
+    const profileId = String(body.job_profile_id ?? '').trim();
+    if (!profileId) throw new BadRequestException('job_profile_id is required');
+    if (!resumes?.length) throw new BadRequestException('Upload at least one resume');
+    if (resumes.length > MAX_BULK_RESUMES) {
+      throw new BadRequestException(`Maximum ${MAX_BULK_RESUMES} resumes per upload`);
+    }
+
+    const profile = await this.jobRepo.findById(profileId);
+    if (!profile) throw new NotFoundException('Job profile not found');
+    const jobTitle = profile.title ?? 'Assessment';
+
+    const items: Array<{
+      lead_id?: string;
+      name?: string;
+      resume_url?: string | null;
+      error?: string;
+    }> = [];
+    let created = 0;
+    let failed = 0;
+
+    for (const file of resumes) {
+      const original = file.originalname ?? 'resume';
+      try {
+        if (!file.buffer?.length) {
+          throw new BadRequestException('Empty file');
+        }
+        if (file.buffer.length > MAX_RESUME_BYTES) {
+          throw new BadRequestException('Resume must be 8MB or smaller');
+        }
+        if (!isAllowedResumeMime(file)) {
+          throw new BadRequestException('Only PDF and DOCX resumes are supported');
+        }
+
+        const inferred = await this.inferIdentityFromResume(file);
+        const name = inferred.name || nameFromResumeFilename(original);
+        const email =
+          inferred.email && inferred.email.includes('@')
+            ? inferred.email
+            : `noreply+pending_${randomBytes(4).toString('hex')}@localhost`;
+
+        const createdLead = await this.createManualLeadPending({
+          name,
+          email,
+          jobProfileId: profileId,
+          jobTitle,
+          resume: file,
+          inviteStatus: 'PENDING',
+          portalStage: 'New',
+          actorId: this.actorId(actor),
+          extractedText: inferred.extractedText,
+        });
+
+        if (!inferred.email) {
+          const placeholder = `noreply+${createdLead.leadId}@localhost`;
+          await this.repo.mergeLeadOverlay(createdLead.leadId, {
+            parsedResumeJson: {
+              ...(createdLead.overlay.parsedResumeJson as Record<string, unknown>),
+              email: placeholder,
+            },
+          });
+        }
+
+        created += 1;
+        items.push({
+          lead_id: createdLead.leadId,
+          name,
+          resume_url: createdLead.resumeUrl ?? null,
+        });
+      } catch (err) {
+        failed += 1;
+        items.push({
+          name: nameFromResumeFilename(original),
+          error: err instanceof Error ? err.message : 'Failed to create candidate',
+        });
+      }
+    }
+
+    return { created, failed, items };
+  }
+
+  async batchInviteLeads(
+    actor: JwtUserPayload,
+    body: {
+      lead_ids?: string[];
+      job_profile_id?: string;
+      min_score?: number;
+    },
+  ) {
+    await this.assertWrite(actor);
+    const leadIds = Array.isArray(body.lead_ids)
+      ? body.lead_ids.map((id) => String(id).trim()).filter(Boolean)
+      : [];
+    const profileId = String(body.job_profile_id ?? '').trim() || undefined;
+    const minScore =
+      body.min_score != null && Number.isFinite(Number(body.min_score))
+        ? Number(body.min_score)
+        : undefined;
+
+    let targets: string[] = leadIds;
+
+    if (minScore != null && leadIds.length === 0) {
+      const overlays = await this.repo.findInboxLeadOverlays();
+      targets = overlays
+        .filter((o) => {
+          if (o.inviteStatus === 'INVITED') return false;
+          const score =
+            o.resumeMatchScore != null && Number.isFinite(Number(o.resumeMatchScore))
+              ? Number(o.resumeMatchScore)
+              : null;
+          if (score == null || score < minScore) return false;
+          if (profileId) {
+            const parsed = o.parsedResumeJson as Record<string, unknown> | null;
+            const overlayProfile = String(parsed?.job_profile_id ?? '').trim();
+            const screenedProfile = String(o.resumeMatchJobProfileId ?? '').trim();
+            const matchesProfile =
+              overlayProfile === profileId || screenedProfile === profileId;
+            if (!matchesProfile) return false;
+          }
+          return true;
+        })
+        .map((o) => o.leadId);
+    }
+
+    if (!targets.length) {
+      throw new BadRequestException(
+        minScore != null
+          ? 'No leads matched the score filter'
+          : 'Provide lead_ids or min_score',
+      );
+    }
+
+    const results: Array<{
+      lead_id: string;
+      status: string;
+      skipped?: boolean;
+      error?: string;
+      invite_token?: string;
+      interview_url?: string;
+    }> = [];
+    let invited = 0;
+    let skipped = 0;
+
+    for (const leadId of targets) {
+      try {
+        const result = await this.inviteLeadToAssessment(actor, leadId, {
+          jobProfileId: profileId,
+        });
+        if (result.status === 'ALREADY_INVITED') {
+          skipped += 1;
+          results.push({
+            lead_id: leadId,
+            status: result.status,
+            skipped: true,
+            invite_token: result.invite_token,
+            interview_url: result.interview_url,
+          });
+        } else if (result.status === 'INVITED') {
+          invited += 1;
+          results.push({
+            lead_id: leadId,
+            status: result.status,
+            invite_token: result.invite_token,
+            interview_url: result.interview_url,
+          });
+        } else {
+          skipped += 1;
+          results.push({
+            lead_id: leadId,
+            status: result.status,
+            skipped: true,
+          });
+        }
+      } catch (err) {
+        skipped += 1;
+        results.push({
+          lead_id: leadId,
+          status: 'ERROR',
+          skipped: true,
+          error: err instanceof Error ? err.message : 'Invite failed',
+        });
+      }
+    }
+
+    return { invited, skipped, results };
   }
 
   private matchesLeadFilters(
@@ -1240,7 +1536,11 @@ export class RecruitmentService {
     return draft;
   }
 
-  async inviteLeadToAssessment(actor: JwtUserPayload, leadId: string) {
+  async inviteLeadToAssessment(
+    actor: JwtUserPayload,
+    leadId: string,
+    opts?: { jobProfileId?: string },
+  ) {
     await this.assertWrite(actor);
     const resolved = await this.resolveLocalLead(leadId);
     if (!resolved) throw new NotFoundException('Lead not found');
@@ -1258,9 +1558,14 @@ export class RecruitmentService {
 
     const candidateName = [lead.firstname, lead.lastname].filter(Boolean).join(' ') || 'Candidate';
     const courseName = lead.lead_courses[0]?.course_name ?? null;
+    const parsed = existingOverlay?.parsedResumeJson as Record<string, unknown> | null | undefined;
 
-    let profileId: string | undefined;
-    if (courseName) {
+    let profileId =
+      String(opts?.jobProfileId ?? '').trim() ||
+      String(parsed?.job_profile_id ?? '').trim() ||
+      undefined;
+
+    if (!profileId && courseName) {
       const [rows] = await this.jobRepo.listProfiles({ search: courseName, limit: 5 });
       const match = rows.find(
         (p) => p.title.toLowerCase() === courseName.toLowerCase() && p.status === JobProfileStatus.ACTIVE,
@@ -1271,7 +1576,6 @@ export class RecruitmentService {
     const baseUrl = this.portalBaseUrl();
 
     if (profileId) {
-      const parsed = existingOverlay?.parsedResumeJson as any;
       const result = await this.jobProfiles.inviteLeadToInterview(actor, profileId, {
         lead_id: lead.lead_id,
         first_name: lead.firstname,
@@ -1283,9 +1587,12 @@ export class RecruitmentService {
         skills: lead.lead_courses
           .map((c) => c.course_name)
           .filter((n): n is string => Boolean(n)),
-        projects_summary: parsed?.projects_summary,
-        experience_summary: parsed?.experience_summary,
-        education_summary: parsed?.education_summary,
+        projects_summary:
+          typeof parsed?.projects_summary === 'string' ? parsed.projects_summary : undefined,
+        experience_summary:
+          typeof parsed?.experience_summary === 'string' ? parsed.experience_summary : undefined,
+        education_summary:
+          typeof parsed?.education_summary === 'string' ? parsed.education_summary : undefined,
       });
 
       const token = result.application_token;
@@ -1295,7 +1602,11 @@ export class RecruitmentService {
       const jobTitle = profile?.title ?? courseName ?? 'Assessment';
 
       const emailContent = buildMagicLinkEmail(candidateName, jobTitle, magicLinkUrl);
-      await this.emailService.sendMail(lead.email, emailContent.subject, emailContent.html);
+      const sent = await this.emailService.sendMail(
+        lead.email,
+        emailContent.subject,
+        emailContent.html,
+      );
 
       await this.repo.mergeLeadOverlay(lead.lead_id, {
         inviteStatus: 'INVITED',
@@ -1328,12 +1639,16 @@ export class RecruitmentService {
         status: 'INVITED' as const,
         invite_token: token,
         interview_url: magicLinkUrl,
-        email_sent: true,
+        email_sent: Boolean(sent.accepted),
       };
     }
 
     const emailContent = buildNoOpeningEmail(candidateName, courseName ?? 'the applied position');
-    await this.emailService.sendMail(lead.email, emailContent.subject, emailContent.html);
+    const sent = await this.emailService.sendMail(
+      lead.email,
+      emailContent.subject,
+      emailContent.html,
+    );
 
     await this.repo.mergeLeadOverlay(lead.lead_id, {
       inviteStatus: 'NO_OPENING',
@@ -1349,7 +1664,7 @@ export class RecruitmentService {
 
     return {
       status: 'NO_OPENING' as const,
-      email_sent: true,
+      email_sent: Boolean(sent.accepted),
     };
   }
 

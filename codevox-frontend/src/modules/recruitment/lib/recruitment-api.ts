@@ -438,6 +438,78 @@ export async function createManualCandidate(input: {
   return payload.data as InviteLeadResult;
 }
 
+export type BulkCreateCandidateItem = {
+  lead_id?: string;
+  name?: string;
+  resume_url?: string | null;
+  error?: string;
+};
+
+export type BulkCreateCandidatesResult = {
+  created: number;
+  failed: number;
+  items: BulkCreateCandidateItem[];
+};
+
+export async function bulkCreateCandidates(input: {
+  jobProfileId: string;
+  resumes: File[];
+}) {
+  const form = new FormData();
+  form.set('job_profile_id', input.jobProfileId);
+  for (const file of input.resumes) {
+    form.append('resumes', file);
+  }
+  const res = await authedFetch('/api/recruitment/candidates/bulk', {
+    method: 'POST',
+    body: form,
+  });
+  const text = await res.text();
+  let payload: {
+    success?: boolean;
+    message?: string | string[];
+    data?: BulkCreateCandidatesResult;
+  } = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = {};
+  }
+  if (!res.ok || payload.success === false) {
+    const raw = payload.message;
+    const message = Array.isArray(raw) ? raw.join(', ') : raw || text || 'Bulk upload failed';
+    throw new Error(message);
+  }
+  return payload.data as BulkCreateCandidatesResult;
+}
+
+export type BatchInviteResult = {
+  invited: number;
+  skipped: number;
+  results: Array<{
+    lead_id: string;
+    status: string;
+    skipped?: boolean;
+    error?: string;
+    invite_token?: string;
+    interview_url?: string;
+  }>;
+};
+
+export function batchInviteLeads(input: {
+  lead_ids?: string[];
+  job_profile_id?: string;
+  min_score?: number;
+}) {
+  return unwrap(
+    clientApiPost<Envelope<BatchInviteResult>>('/api/recruitment/leads/batch-invite', {
+      lead_ids: input.lead_ids ?? [],
+      ...(input.job_profile_id ? { job_profile_id: input.job_profile_id } : {}),
+      ...(input.min_score != null ? { min_score: input.min_score } : {}),
+    }),
+  );
+}
+
 export function listRecruitmentInterviews(input?: Record<string, string>) {
   return unwrap(
     clientApiPost<

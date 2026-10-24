@@ -848,9 +848,7 @@ export class CandidatePortalService {
 
     if (!isAiRound) {
       let url = `/candidate/coding/${portalToken}`;
-      if (stage.stageType === JobStageType.TAKE_HOME) {
-        url = `/assessments/candidate/take-home/${portalToken}`;
-      } else if (stage.stageType === JobStageType.SCREENING || stage.stageType === JobStageType.CUSTOM) {
+      if (stage.stageType === JobStageType.SCREENING || stage.stageType === JobStageType.CUSTOM) {
         url = `/assessments/candidate/${portalToken}`;
       }
       return { token: portalToken, url };

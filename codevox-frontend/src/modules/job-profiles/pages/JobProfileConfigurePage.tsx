@@ -6,10 +6,17 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { JobProfilePhase2Panel } from '@/modules/job-profiles/components/JobProfilePhase2Panel';
 import { RoundConfigurationView } from '@/modules/job-profiles/components/RoundConfigurationView';
-import {
-  defaultTakeHomeRoundConfig,
-  type JobStageType,
-} from '@/modules/job-profiles/lib/take-home-round.types';
+import { ProfileStepper } from '@/modules/job-profiles/components/ProfileStepper';
+import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
+export type JobStageType =
+  | 'screening'
+  | 'coding'
+  | 'ai_verbal'
+  | 'hr_verbal'
+  | 'panel'
+  | 'custom'
+  | 'ai_screening'
+  | 'project_interview';
 import { defaultProjectInterviewRoundConfig } from '@/modules/job-profiles/lib/project-interview-round.types';
 import {
   defaultAiScreeningRoundConfig,
@@ -19,6 +26,9 @@ import {
 import { questionPlanError } from '@/modules/job-profiles/lib/rubric-question-plan';
 import { verbalBudgetSaveError } from '@/modules/job-profiles/lib/verbal-interview-budget';
 import {
+  applyPipelinePreset,
+  deleteJobProfile,
+  type PipelinePresetId,
   biasScreenJobProfile,
   compensationBenchmark,
   generateAiQuestions,
@@ -48,13 +58,59 @@ import {
   setupPathForProfile,
 } from '@/modules/job-profiles/lib/job-profile-setup';
 
+const PIPELINE_PRESETS: Array<{
+  id: PipelinePresetId;
+  title: string;
+  description: string;
+  stages: string;
+  icon: string;
+}> = [
+  {
+    id: 'coding_only',
+    title: 'Coding test only',
+    description:
+      'Candidate only solves coding problems online. No voice call. Fastest option when you just need a skills check.',
+    stages: 'Coding test',
+    icon: 'code',
+  },
+  {
+    id: 'unified_voice',
+    title: 'Voice interview only',
+    description:
+      'One AI voice call. First a short screening chat, then deeper technical questions — without hanging up.',
+    stages: 'Screening → Technical talk',
+    icon: 'mic',
+  },
+  {
+    id: 'coding_plus_voice',
+    title: 'Coding + voice interview',
+    description:
+      'First a coding test, then one AI voice call (screening + technical questions). Best fit for most roles.',
+    stages: 'Coding test → Voice call',
+    icon: 'auto_awesome',
+  },
+  {
+    id: 'screening_plus_full',
+    title: 'Full hiring flow',
+    description:
+      'Resume review first, then coding test, then a full AI voice interview. Use when you want every step covered.',
+    stages: 'Resume check → Coding → Voice',
+    icon: 'account_tree',
+  },
+];
+
+const STEPS = [
+  { id: 1, label: 'Basics & JD' },
+  { id: 2, label: 'Stages' },
+  { id: 3, label: 'Settings & Review' },
+];
+
 const STAGE_TYPE_OPTIONS: { value: JobStageType; label: string; duration: string }[] = [
   { value: 'ai_screening', label: 'AI Screening', duration: '5 mins' },
   { value: 'screening', label: 'AI Technical Screening', duration: '30 mins (Strict)' },
   { value: 'coding', label: 'Coding Assessment', duration: '60 mins (Strict)' },
   { value: 'ai_verbal', label: 'AI Verbal Interview', duration: '15 mins (Strict)' },
   { value: 'hr_verbal', label: 'HR Verbal Interview', duration: '30 mins' },
-  { value: 'take_home', label: 'Take-home Assessment', duration: '48 hours' },
   { value: 'project_interview', label: 'Build & Defend', duration: 'Build window + 20 mins' },
   { value: 'panel', label: 'Panel Interview', duration: '60 mins' },
   { value: 'custom', label: 'Custom Round', duration: '45 mins (Strict)' },
@@ -93,8 +149,6 @@ const getStageDurationLabel = (stageType: string): string => {
       return '45 mins (Strict)';
     case 'hr_verbal':
       return '30 mins';
-    case 'take_home':
-      return '48 hours';
     case 'project_interview':
       return 'Build window + 20 mins';
     case 'panel':
@@ -121,11 +175,34 @@ export function JobProfileConfigurePage() {
   const [questions, setQuestions] = useState<JobProfileQuestion[]>([]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const deleteProfileMutation = useMutation({
+    mutationFn: () => deleteJobProfile(id),
+    onSuccess: () => {
+      router.push('/assessments/job-profiles');
+    },
+  });
   const [showAiTip, setShowAiTip] = useState(true);
   const [nlInstruction, setNlInstruction] = useState('');
   const [aiActionPending, setAiActionPending] = useState<string | null>(null);
 
-  const viewStep = configureStepFromSearchParam(searchParams?.get('step') ?? null);
+  const viewStep = configureStepFromSearchParam(searchParams?.get('step') ?? null) ?? 2;
+
+  const applyPresetMutation = useMutation({
+    mutationFn: (preset: PipelinePresetId) => applyPipelinePreset(id, preset),
+    onSuccess: (data) => {
+      if (data) {
+        hydrateFrom(data);
+        queryClient.setQueryData(['job-profile', id], data);
+        setMessage('Pipeline preset applied successfully.');
+        setTimeout(() => setMessage(null), 3000);
+      }
+    },
+    onError: (err: Error) => {
+      setMessage(`Failed to apply preset: ${err.message}`);
+    },
+  });
 
   // Local state is the editing buffer: hydrate it from the server once per profile (after a
   // fresh fetch), never on background refetches, or unsaved edits get overwritten.
@@ -252,18 +329,32 @@ export function JobProfileConfigurePage() {
       if (budgetError) throw new Error(budgetError);
     }
 
-    const stagesToSave = stages.map((s, i) =>
-      s.stage_type === 'ai_screening'
-        ? {
-            ...s,
-            sort_order: i,
-            round_config: normalizeAiScreeningRoundConfig(s.round_config) as unknown as Record<
-              string,
-              unknown
-            >,
-          }
-        : { ...s, sort_order: i },
-    );
+    const stagesToSave = stages.map((s, i) => {
+      if (s.stage_type === 'ai_screening') {
+        return {
+          ...s,
+          sort_order: i,
+          round_config: normalizeAiScreeningRoundConfig(s.round_config) as unknown as Record<
+            string,
+            unknown
+          >,
+        };
+      }
+      const cfg = (s.round_config ?? {}) as Record<string, unknown>;
+      if (s.stage_type === 'ai_verbal' && cfg.merge_screening_verbal) {
+        const screening = normalizeAiScreeningRoundConfig(cfg);
+        return {
+          ...s,
+          sort_order: i,
+          round_config: {
+            ...cfg,
+            ...screening,
+            merge_screening_verbal: true,
+          },
+        };
+      }
+      return { ...s, sort_order: i };
+    });
 
     const savedStages = await updateJobProfileStages(id, stagePayload(stagesToSave));
     setStages(savedStages);
@@ -335,12 +426,34 @@ export function JobProfileConfigurePage() {
 
   const publishMutation = useMutation({
     mutationFn: async () => {
+      let currentCompetencies = competencies;
+      if (!currentCompetencies.length) {
+        try {
+          const res = await suggestCompetencies(id);
+          if (res?.suggestions?.length) {
+            const mapped: JobProfileCompetency[] = res.suggestions.map((s, idx) => ({
+              id: `comp-auto-${idx}-${Date.now()}`,
+              name: s.name,
+              category: (s.category === 'soft' ? 'soft' : 'hard') as 'hard' | 'soft',
+              target_score: s.target_score,
+              weight_pct: s.weight_pct,
+              sort_order: idx,
+              stage_id: stages[0]?.id ?? null,
+            }));
+            currentCompetencies = mapped;
+            setCompetencies(mapped);
+          }
+        } catch (err) {
+          console.warn('Auto-suggest competencies fallback:', err);
+        }
+      }
       await saveAll();
       return publishJobProfile(id);
     },
     onSuccess: () => {
-      setMessage('Profile published successfully.');
+      setMessage('Profile published successfully!');
       void queryClient.invalidateQueries({ queryKey: ['job-profile', id] });
+      router.push(`/assessments/job-profiles/${id}/analytics`);
     },
     onError: (e: Error) => setMessage(e.message),
   });
@@ -530,13 +643,6 @@ export function JobProfileConfigurePage() {
 
   const handleStageTypeChange = (idx: number, stageType: JobStageType) => {
     if (
-      stageType === 'take_home' &&
-      stages.some((other, otherIdx) => otherIdx !== idx && other.stage_type === 'take_home')
-    ) {
-      setMessage('Only one Take-home Assessment round is allowed per job profile.');
-      return;
-    }
-    if (
       stageType === 'project_interview' &&
       stages.some((other, otherIdx) => otherIdx !== idx && other.stage_type === 'project_interview')
     ) {
@@ -570,17 +676,12 @@ export function JobProfileConfigurePage() {
           ? 'AI Screening'
           : stageType === 'ai_verbal' && (stage.name === 'New stage' || !stage.name)
             ? 'AI Verbal Interview'
-          : stageType === 'take_home' && (stage.name === 'New stage' || !stage.name)
-            ? 'Take-home Assessment'
             : stageType === 'project_interview' && (stage.name === 'New stage' || !stage.name)
               ? 'Build & Defend'
               : stage.name,
       round_config:
         stageType === 'ai_screening'
           ? (defaultAiScreeningRoundConfig() as unknown as Record<string, unknown>)
-          : stageType === 'take_home'
-            ? (stage.round_config ??
-              (defaultTakeHomeRoundConfig() as unknown as Record<string, unknown>))
             : stageType === 'project_interview'
               ? stage.stage_type === 'project_interview' && stage.round_config
                 ? stage.round_config
@@ -618,7 +719,7 @@ export function JobProfileConfigurePage() {
   };
 
   const isTakeHomeDisabledForIdx = (idx: number, optValue: string) => {
-    if (optValue !== 'take_home' && optValue !== 'project_interview') return false;
+    if (optValue !== 'project_interview') return false;
     return stages.some((other, otherIdx) => otherIdx !== idx && other.stage_type === optValue);
   };
 
@@ -773,82 +874,77 @@ export function JobProfileConfigurePage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* Top Header / Stepper Container */}
-      <div className="nexus-card p-3 px-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Step 1: Job Details (Completed) */}
-          <button
-            type="button"
-            onClick={() => goToSetupStep(1)}
-            className="flex items-center gap-2 text-xs font-semibold text-[var(--assessment-on-surface)] hover:text-[var(--assessment-primary)] transition-colors"
+      {/* Modern Profile Stepper */}
+      <ProfileStepper
+        steps={STEPS}
+        activeStep={viewStep === 3 ? 3 : 2}
+        onStepClick={(stepId) => goToSetupStep(stepId)}
+      />
+
+      {/* Modern CodeVox Action Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-violet-500/20 bg-[#160A30] p-4 shadow-lg">
+        <div className="flex items-center flex-wrap gap-2 text-sm">
+          <Link
+            href="/assessments/job-profiles"
+            className="text-violet-300 hover:text-white transition-colors flex items-center gap-1.5 font-medium"
           >
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+            <AssessmentMaterialIcon name="arrow_back" size={16} />
+            <span>All Job Profiles</span>
+          </Link>
+          <span className="text-violet-500/40">/</span>
+          <span className="font-bold text-white text-base">
+            {profile.title || 'Untitled Profile'}
+          </span>
+          {profile.department ? (
+            <span className="rounded-full bg-violet-950/60 border border-violet-500/30 text-violet-300 font-mono text-xs px-2.5 py-0.5">
+              {profile.department}
             </span>
-            <span>1. Job Details</span>
-          </button>
-
-          <div className="hidden sm:block w-8 h-[1px] bg-[var(--assessment-outline-variant)]" />
-
-          {/* Step 2: Stages Allotment */}
-          {viewStep === 2 ? (
-            <div className="bg-[var(--assessment-primary)] text-[var(--assessment-on-primary)] text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
-              <span className="font-bold">2.</span> Stages Allotment
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => goToSetupStep(2)}
-              className="flex items-center gap-2 text-xs font-semibold text-[var(--assessment-on-surface)] hover:text-[var(--assessment-primary)] transition-colors"
-            >
-              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              <span>2. Stages Allotment</span>
-            </button>
-          )}
-
-          <div className="hidden sm:block w-8 h-[1px] bg-[var(--assessment-outline-variant)]" />
-
-          {/* Step 3: Round Configuration */}
-          {viewStep === 3 ? (
-            <div className="bg-[var(--assessment-primary)] text-[var(--assessment-on-primary)] text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
-              <span className="font-bold">3.</span> Rubric &amp; Round Configuration
-            </div>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] text-xs font-medium px-3.5 py-1.5 rounded-full opacity-60 cursor-not-allowed"
-              title="Please click Continue to Stages at the bottom to proceed"
-            >
-              3. Round Configuration
-            </button>
-          )}
+          ) : null}
+          {profile.seniority_level ? (
+            <span className="rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 font-mono text-xs px-2.5 py-0.5 capitalize">
+              {profile.seniority_level}
+            </span>
+          ) : null}
         </div>
 
-        {/* Right Header Buttons */}
         <div className="flex items-center gap-3 ml-auto">
+          <button
+            type="button"
+            disabled={deleteProfileMutation.isPending}
+            onClick={() => setShowDeleteConfirm(true)}
+            className="border border-rose-500/30 bg-rose-950/20 hover:bg-rose-900/40 text-rose-300 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+            title="Delete Job Profile"
+          >
+            <AssessmentMaterialIcon name="delete" size={16} className="text-rose-400" />
+            <span>DELETE</span>
+          </button>
+
           <button
             type="button"
             disabled={saveMutation.isPending || aiBusy || roundConfigSaveMutation.isPending}
             onClick={() => saveMutation.mutate()}
-            className="border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] hover:bg-[var(--assessment-surface-container-low)] text-[var(--assessment-on-surface)] text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
+            className="border border-violet-500/25 bg-[#120726] hover:bg-[#1C0D3D] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-              />
-            </svg>
+            <AssessmentMaterialIcon name="save" size={16} className="text-violet-400" />
             {saveMutation.isPending ? 'SAVING...' : 'SAVE DRAFT'}
           </button>
+
+          {viewStep === 2 && profile.status === 'draft' ? (
+            <button
+              type="button"
+              disabled={publishMutation.isPending || saveMutation.isPending}
+              onClick={() => {
+                saveMutation.mutate(undefined, {
+                  onSuccess: () => publishMutation.mutate(),
+                });
+              }}
+              className="border border-emerald-500/30 bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-300 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+              title="Publish profile directly with this pipeline"
+            >
+              <AssessmentMaterialIcon name="publish" size={16} className="text-emerald-400" />
+              <span>{publishMutation.isPending ? 'PUBLISHING...' : 'QUICK PUBLISH'}</span>
+            </button>
+          ) : null}
 
           <button
             type="button"
@@ -870,7 +966,7 @@ export function JobProfileConfigurePage() {
                 ? saveMutation.isPending
                 : profile.status === 'draft' && !publishReady
             }
-            className="bg-[var(--assessment-primary)] hover:opacity-90 text-[var(--assessment-on-primary)] text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {viewStep === 2
               ? saveMutation.isPending
@@ -879,38 +975,18 @@ export function JobProfileConfigurePage() {
               : profile.status === 'draft'
                 ? publishMutation.isPending
                   ? 'PUBLISHING...'
-                  : 'PUBLISH'
+                  : 'PUBLISH JOB PROFILE'
                 : 'VIEW ANALYTICS'}
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
+            <AssessmentMaterialIcon name="arrow_forward" size={16} />
           </button>
         </div>
       </div>
 
-      {/* Sub-header Meta Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-[var(--assessment-on-surface-variant)]">
-        <div className="flex items-center flex-wrap gap-2">
-          <Link href="/assessments/job-profiles" className="hover:text-[var(--assessment-primary)] transition-colors">
-            ← All job profiles
-          </Link>
-          <span className="text-[var(--assessment-outline-variant)]">/</span>
-          <span className="font-bold text-[var(--assessment-on-surface)] text-base">
-            {profile.title || 'PHP Developer Junior'}
-          </span>
-          <span className="ml-1.5 bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] border border-[var(--assessment-outline-variant)] font-mono text-xs font-bold px-2.5 py-0.5 rounded tracking-wider">
-            ID: {id}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 ml-auto text-xs font-medium text-[var(--assessment-on-surface-variant)]">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Autosaved 1m ago
-        </div>
-      </div>
+
 
       {/* Publishing draft alert if on Step 3 */}
       {profile.status === 'draft' && !publishReady && viewStep === 3 ? (
-        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+        <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-xs text-amber-300">
           To publish: Complete your round configuration, ensuring all rounds have rubrics and questions configured, then save draft.
         </div>
       ) : null}
@@ -920,6 +996,65 @@ export function JobProfileConfigurePage() {
         <div className="grid grid-cols-12 gap-6 items-start">
           {/* Left Column: Pipeline Stages (8 cols) */}
           <div className="col-span-12 space-y-6 lg:col-span-8">
+            {/* Interview Pipeline Presets */}
+            <section className="nexus-card p-5 shadow-sm border border-violet-500/20 bg-[#100724]">
+              <div className="mb-4">
+                <div className="flex items-center gap-2">
+                  <AssessmentMaterialIcon name="auto_awesome" size={20} className="text-[#55E63B]" />
+                  <h3 className="text-base font-bold text-white">Interview pipeline</h3>
+                </div>
+                <p className="text-xs text-violet-300/70 mt-1">
+                  Choose how candidates progress, or adjust the stages manually below.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {PIPELINE_PRESETS.map((preset) => {
+                  const isCurrent =
+                    (preset.id === 'coding_only' && stages.length === 1 && stages[0]?.stage_type === 'coding') ||
+                    (preset.id === 'unified_voice' && stages.length === 1 && (stages[0]?.stage_type === 'ai_verbal' || stages[0]?.stage_type === 'screening')) ||
+                    (preset.id === 'coding_plus_voice' && stages.some((s) => s.stage_type === 'coding') && stages.some((s) => s.stage_type === 'ai_verbal' || s.stage_type === 'screening') && stages.length === 2) ||
+                    (preset.id === 'screening_plus_full' && stages.length >= 3);
+
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      disabled={applyPresetMutation.isPending}
+                      onClick={() => applyPresetMutation.mutate(preset.id)}
+                      className={`group relative rounded-xl border p-4 text-left transition-all duration-200 ${
+                        isCurrent
+                          ? 'border-[#7C3AED] bg-[#7C3AED]/20 shadow-[0_0_20px_rgba(124,58,237,0.3)] ring-1 ring-[#7C3AED]'
+                          : 'border-violet-500/20 bg-[#160A30]/60 hover:bg-[#160A30] hover:border-violet-500/40'
+                      }`}
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <AssessmentMaterialIcon
+                            name={preset.icon}
+                            size={18}
+                            className={isCurrent ? 'text-[#55E63B]' : 'text-violet-300'}
+                          />
+                          <span className="font-semibold text-sm text-white">{preset.title}</span>
+                        </div>
+                        {isCurrent ? (
+                          <span className="rounded-full bg-[#55E63B]/20 px-2 py-0.5 text-[10px] font-bold text-[#55E63B] border border-[#55E63B]/30">
+                            ACTIVE
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mb-2 text-xs text-violet-300/80 leading-relaxed">
+                        {preset.description}
+                      </p>
+                      <p className="text-xs font-medium text-[#55E63B]/90">
+                        {preset.stages}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
             <section className="nexus-card p-6 shadow-sm">
               {/* Header with Title, Badge, and Add Stage Button */}
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -1572,6 +1707,42 @@ export function JobProfileConfigurePage() {
           </button>
         </div>
       </div>
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-violet-500/30 bg-[#160A30] p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <AssessmentMaterialIcon name="delete_forever" size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Job Profile?</h3>
+                <p className="text-xs text-slate-400">This action will remove this job profile and all its rounds.</p>
+              </div>
+            </div>
+            <p className="mb-6 rounded-xl border border-violet-500/20 bg-[#100724] p-3 text-sm text-violet-200">
+              Are you sure you want to delete <span className="font-bold text-white">{profile.title || 'this profile'}</span>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={deleteProfileMutation.isPending}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-xl border border-violet-500/25 px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-900/30 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteProfileMutation.isPending}
+                onClick={() => deleteProfileMutation.mutate()}
+                className="rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] disabled:opacity-50"
+              >
+                {deleteProfileMutation.isPending ? 'Deleting...' : 'Delete Profile'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

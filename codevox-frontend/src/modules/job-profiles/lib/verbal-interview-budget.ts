@@ -6,6 +6,9 @@
 export const VERBAL_MIN_PRIMARY_KEY = 'verbal_min_primary_questions';
 export const VERBAL_MAX_TOTAL_KEY = 'verbal_max_total_questions';
 export const VERBAL_DURATION_KEY = 'verbal_duration_limit_minutes';
+/** When true, one LiveKit session runs AI Screening then technical verbal. */
+export const MERGE_SCREENING_VERBAL_KEY = 'merge_screening_verbal';
+export const BEHAVIORAL_TAGS_KEY = 'behavioral_competency_tags';
 
 export function verbalBudgetShapeError(minimum: number, maximum: number): string | null {
   if (!Number.isInteger(minimum) || !Number.isInteger(maximum)) {

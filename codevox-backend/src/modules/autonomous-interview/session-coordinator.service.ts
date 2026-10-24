@@ -40,7 +40,6 @@ import {
   ScreeningAnalyzerService,
   type ScreeningVoiceAudit,
 } from './screening-analyzer.service';
-const DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT = 35;
 import { ProjectInterviewService } from '../project-interview/project-interview.service';
 
 @Injectable()
@@ -114,14 +113,6 @@ export class SessionCoordinatorService {
    * Maps Round Config include_take_home_verification → runtime take_home_verification_enabled.
    * Skips (does not crash) when submission/report is missing.
    */
-  private async resolveTakeHomeVerificationContext(_input: unknown): Promise<{
-    enabled: boolean;
-    weightPct: number;
-    payload: Record<string, unknown> | null;
-  }> {
-    return { enabled: false, weightPct: 0, payload: null };
-  }
-
   async recordConsent(candidateToken: string) {
     const row = await this.repo.requireByToken(candidateToken);
     return this.interviewProctor.recordConsent(this.patchProctorSession(candidateToken));
@@ -244,17 +235,27 @@ export class SessionCoordinatorService {
     const recordings = await this.recordings
       .listForApplication(portalFromMeta || row.candidateToken)
       .catch(() => []);
+    const isBehavioral =
+      !!(row.proctorSummary as { isBehavioral?: boolean } | null)?.isBehavioral ||
+      row.currentPhase === AutonomousInterviewPhase.HR_VERBAL;
     return {
       recordings,
       candidateToken: row.candidateToken,
       currentPhase: row.currentPhase,
+      /** Hint for candidate UI phase pill (technical vs behavioral engine). */
+      voicePhase: row.currentPhase,
+      engine: isBehavioral
+        ? 'behavioral'
+        : row.currentPhase === AutonomousInterviewPhase.AI_SCREENING
+          ? 'screening'
+          : 'technical',
       candidateAssessmentId: row.candidateAssessmentId,
       techStack: row.techStack,
       stage1VoiceScore: row.stage1VoiceScore,
       codeQualityScore: row.codeQualityScore,
       finalDecision: row.finalDecision,
       recordingUrl: await toRecordingPlaybackUrl(row.recordingUrl),
-      isBehavioral: !!(row.proctorSummary as any)?.isBehavioral,
+      isBehavioral,
       introAgentTurns,
       introUserTurns,
       introMinTurns,
@@ -372,11 +373,10 @@ export class SessionCoordinatorService {
     let voicePhase: 'ai_verbal' | 'hr_verbal' | 'ai_screening' | 'bnd_assessment' | 'bnd_interview' =
       'ai_verbal';
     let roundConfig: Record<string, unknown> | undefined;
-    let takeHomeVerificationEnabled = false;
-    let takeHomeWeightPct = 0;
-    let takeHomePayload: Record<string, unknown> | null = null;
     let projectInterviewPayload: Record<string, unknown> | null = null;
     let projectBuildPayload: Record<string, unknown> | null = null;
+    /** Merged screening→verbal must stay on one LiveKit room (intro_verbal). */
+    let mergeScreeningVerbal = false;
 
     if (row.jobProfileId) {
       const profile = await this.jobProfilesRepo.findById(row.jobProfileId);
@@ -424,12 +424,55 @@ export class SessionCoordinatorService {
           (isScreeningStage(proctorStage) ? proctorStage : undefined) ??
           stages.find((s) => isScreeningStage(s));
 
-        const useScreening =
-          row.currentPhase === AutonomousInterviewPhase.AI_SCREENING ||
-          isScreeningStage(proctorStage) ||
-          isScreeningStage(appStage);
+        const interviewStageForMerge =
+          (proctorStage?.stageType === 'ai_verbal' ? proctorStage : undefined) ??
+          technicalStage ??
+          stages.find((s) => s.stageType === 'ai_verbal');
+        const mergeCfg =
+          (interviewStageForMerge?.roundConfig as Record<string, unknown> | null) ?? {};
+        mergeScreeningVerbal = Boolean(mergeCfg.merge_screening_verbal);
 
-        if (useScreening && screeningStage) {
+        const useScreening =
+          !mergeScreeningVerbal &&
+          (row.currentPhase === AutonomousInterviewPhase.AI_SCREENING ||
+            isScreeningStage(proctorStage) ||
+            isScreeningStage(appStage));
+
+        // Merged screening→verbal: one agent process with engine=technical +
+        // round_config.merge_screening_verbal. voice_agent runs screening then verbal
+        // in the same LiveKit room. If already INTRO_VERBAL, skip screening (reconnect).
+        if (mergeScreeningVerbal && interviewStageForMerge) {
+          engine = 'technical';
+          roundConfig = { ...mergeCfg };
+          if (row.currentPhase === AutonomousInterviewPhase.INTRO_VERBAL) {
+            voicePhase = 'ai_verbal';
+            roundConfig = { ...roundConfig, merge_screening_verbal: false };
+          } else {
+            voicePhase = 'ai_screening';
+            if (row.currentPhase !== AutonomousInterviewPhase.AI_SCREENING) {
+              await this.repo.patch(candidateToken, {
+                currentPhase: AutonomousInterviewPhase.AI_SCREENING,
+              });
+              row.currentPhase = AutonomousInterviewPhase.AI_SCREENING;
+            }
+          }
+          if (allCompetencies.length > 0) {
+            const uniqueCompetencies = new Map<string, (typeof allCompetencies)[0]>();
+            for (const c of allCompetencies) {
+              if (String(c.stageId) !== String(interviewStageForMerge.id)) continue;
+              uniqueCompetencies.set(c.name.toLowerCase(), c);
+            }
+            rubricCriteria = Array.from(uniqueCompetencies.values()).map((c) => ({
+              id: c.id,
+              label: c.name,
+              description: null,
+              max_marks: 10,
+              target_score: parseFloat(c.targetScore ?? '8'),
+              weight_pct: parseFloat(c.weightPct ?? '0'),
+              question_plan: c.questionPlan ?? null,
+            }));
+          }
+        } else if (useScreening && screeningStage) {
           engine = 'screening';
           voicePhase = 'ai_screening';
           roundConfig = (screeningStage.roundConfig as Record<string, unknown>) ?? {};
@@ -547,35 +590,7 @@ export class SessionCoordinatorService {
               }));
             }
 
-            // Round Config is the source of truth for Take-Home Verification.
-            const includeTh = Boolean(roundConfig?.include_take_home_verification);
-            const rawWeight = roundConfig?.take_home_weight_pct;
-            const parsedWeight =
-              rawWeight === undefined || rawWeight === null || rawWeight === ''
-                ? DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT
-                : Number(rawWeight);
-            const weightPct = Number.isFinite(parsedWeight)
-              ? Math.max(0, Math.min(100, parsedWeight))
-              : DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT;
-            this.logger.log(
-              `Technical interview started token=${candidateToken} take_home_verification_enabled=${includeTh} take_home_weight_pct=${weightPct}`,
-            );
-            if (includeTh && interviewStage) {
-              // Persist default into round_config memory for this session payload consistency
-              if (rawWeight === undefined || rawWeight === null || rawWeight === '') {
-                roundConfig = { ...roundConfig, take_home_weight_pct: weightPct };
-              }
-              const resolved = await this.resolveTakeHomeVerificationContext({
-                stages,
-                interviewStageId: String(interviewStage.id),
-                applicationId: application?.id ? String(application.id) : null,
-                takeHomeWeightPct: weightPct,
-                candidateToken,
-              });
-              takeHomeVerificationEnabled = resolved.enabled;
-              takeHomeWeightPct = resolved.weightPct;
-              takeHomePayload = resolved.payload;
-            }
+
           }
         }
       }
@@ -598,12 +613,16 @@ export class SessionCoordinatorService {
             ? String(recordingMeta.applicationId)
             : null;
 
-    const roundType = resolveRoundType({
-      voicePhase,
-      engine,
-      stageType: typeof recordingMeta.stageType === 'string' ? recordingMeta.stageType : null,
-      currentPhase: row.currentPhase,
-    });
+    // Merge path: keep intro_verbal room even while currentPhase/voicePhase are ai_screening,
+    // so screening handoff → verbal rejoins the same LiveKit room the candidate already joined.
+    const roundType = mergeScreeningVerbal
+      ? AutonomousInterviewRoundType.INTRO_VERBAL
+      : resolveRoundType({
+          voicePhase,
+          engine,
+          stageType: typeof recordingMeta.stageType === 'string' ? recordingMeta.stageType : null,
+          currentPhase: row.currentPhase,
+        });
     const roomName = roomNameForRound(candidateToken, roundType);
     const roundRow = await this.rounds.ensureRound(candidateToken, roundType, {
       livekitRoomName: roomName,
@@ -630,11 +649,9 @@ export class SessionCoordinatorService {
       job_profile_context: jobProfileContext,
       rubric_criteria: rubricCriteria,
       round_config: roundConfig,
-      // Explicit boundary mapping: include_take_home_verification → take_home_verification_enabled
-      take_home_verification_enabled:
-        engine === 'technical' ? takeHomeVerificationEnabled : false,
-      take_home_weight_pct: engine === 'technical' ? takeHomeWeightPct : 0,
-      take_home_payload: engine === 'technical' ? takeHomePayload : null,
+      take_home_verification_enabled: false,
+      take_home_weight_pct: 0,
+      take_home_payload: null,
       project_interview_payload: engine === 'technical' ? projectInterviewPayload : null,
       project_build_payload: engine === 'bnd_build' ? projectBuildPayload : null,
       language_preference:
@@ -865,7 +882,7 @@ export class SessionCoordinatorService {
             ? 'hr_verbal'
             : 'ai_verbal';
     if (voicePhase === 'hr_verbal') {
-      // Persist on both columns so getSession / viewport hydration stay consistent
+      // Persist on both columns so getSession / viewport hydration stay consistent.
       await this.repo.patch(candidateToken, {
         stage3ChatHistory: chatHistory,
         stage1ChatHistory: chatHistory,
@@ -1285,6 +1302,7 @@ export class SessionCoordinatorService {
       round_config?: Record<string, unknown>;
       job_profile_context?: Record<string, unknown>;
       ended_by?: 'candidate';
+      merge_to_verbal?: boolean;
     },
   ) {
     const row = await this.repo.requireByToken(candidateToken);
@@ -1298,15 +1316,40 @@ export class SessionCoordinatorService {
       jobProfileContext: body.job_profile_context,
     });
 
+    const transcriptPatch =
+      Array.isArray(body.transcript) && body.transcript.length
+        ? { stage1ChatHistory: body.transcript }
+        : {};
+
+    // Merged screening→verbal: soft-flag analysis still runs, but do not complete
+    // the interview or advance the job pipeline — verbal continues in the same room.
+    if (body.merge_to_verbal === true && body.ended_by !== 'candidate') {
+      await this.repo.patch(candidateToken, {
+        screeningVoiceAudit: pending,
+        currentPhase: AutonomousInterviewPhase.INTRO_VERBAL,
+        ...transcriptPatch,
+      });
+      this.viewport.emitViewportShift(candidateToken, AutonomousInterviewPhase.INTRO_VERBAL, {
+        screeningComplete: true,
+        mergeToVerbal: true,
+        subPhase: 'transition',
+        analyzerStatus: 'PENDING',
+      });
+      {
+        const portalToken = (row.proctorSummary as any)?.portalToken as string | undefined;
+        void this.roundSnapshots.upsertFromInterviewToken(candidateToken, portalToken);
+      }
+      void this.runScreeningAnalyzer(candidateToken);
+      return this.getSession(candidateToken);
+    }
+
     // Stage-scoped only: do NOT write finalDecision — AI Screening is not a hiring decision.
     // Shared interview row is reused by later HR/tech rounds; leave finalDecision untouched.
     // Mark this LiveKit interview session complete so the candidate UI can leave the room.
     await this.repo.patch(candidateToken, {
       screeningVoiceAudit: pending,
       currentPhase: AutonomousInterviewPhase.COMPLETED,
-      ...(Array.isArray(body.transcript) && body.transcript.length
-        ? { stage1ChatHistory: body.transcript }
-        : {}),
+      ...transcriptPatch,
     });
 
     this.viewport.emitViewportShift(candidateToken, AutonomousInterviewPhase.COMPLETED, {

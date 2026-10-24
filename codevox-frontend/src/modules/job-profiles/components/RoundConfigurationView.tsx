@@ -12,6 +12,7 @@ import { NexusToggleSwitch } from '@/modules/job-profiles/components/NexusToggle
 import {
   allocatePrimaryQuestions,
   VERBAL_DURATION_KEY,
+  MERGE_SCREENING_VERBAL_KEY,
   VERBAL_MAX_TOTAL_KEY,
   VERBAL_MIN_PRIMARY_KEY,
   verbalBudgetCoverageError,
@@ -19,12 +20,11 @@ import {
   verbalDurationError,
 } from '@/modules/job-profiles/lib/verbal-interview-budget';
 import { suggestRubricWeights, suggestCompetencies } from '@/modules/job-profiles/lib/job-profiles-api';
+
 import {
-  parseTakeHomeRoundConfig,
-  DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT,
-  type TakeHomeRoundConfig,
-} from '@/modules/job-profiles/lib/take-home-round.types';
-import type { AiScreeningRoundConfig } from '@/modules/job-profiles/lib/ai-screening-round.types';
+  defaultAiScreeningRoundConfig,
+  type AiScreeningRoundConfig,
+} from '@/modules/job-profiles/lib/ai-screening-round.types';
 import { isProjectInterviewConfigured } from '@/modules/job-profiles/lib/project-interview-round.types';
 import type {
   JobProfileCompetency,
@@ -69,7 +69,7 @@ type Props = {
     stageId: string | null,
   ) => void;
   onMagicGenerate: (stageId: string | null) => void;
-  onRoundConfigChange?: (stageKey: string, config: TakeHomeRoundConfig) => void;
+  onRoundConfigChange?: (stageKey: string, config: any) => void;
   onSaveRound?: () => void;
   onFinish?: () => void;
   seniorityLevel?: string | null;
@@ -78,7 +78,6 @@ type Props = {
 };
 
 function stageIcon(stage: JobProfileStage): string {
-  if (stage.stage_type === 'take_home') return 'home_work';
   if (stage.stage_type === 'project_interview') return 'rocket_launch';
   if (stage.stage_type === 'coding') return 'code';
   if (stage.stage_type === 'ai_screening') return 'person_search';
@@ -233,35 +232,30 @@ export function RoundConfigurationView(props: Props) {
   const isScreening = activeStage?.stage_type === 'screening';
   const isAiScreening =
     activeStage?.stage_type === 'ai_screening' ||
-    (/screen/i.test(activeStage?.name || '') && activeStage?.stage_type !== 'coding' && activeStage?.stage_type !== 'project_interview' && activeStage?.stage_type !== 'take_home');
+    (/screen/i.test(activeStage?.name || '') && activeStage?.stage_type !== 'coding' && activeStage?.stage_type !== 'project_interview' );
   const isHrVerbal = activeStage?.stage_type === 'hr_verbal' || (activeStage?.stage_type === 'verbal' && activeStage?.mode === 'human_led');
   const isCoding = activeStage?.stage_type === 'coding';
-  const isTakeHome = activeStage?.stage_type === 'take_home';
+  const isTakeHome = false;
   const isProjectInterview = activeStage?.stage_type === 'project_interview';
   const isAiVerbal =
     !isAiScreening &&
     !isScreening &&
     (activeStage?.stage_type === 'ai_verbal' ||
       (activeStage?.mode === 'ai_led' &&
-        !['coding', 'take_home', 'project_interview', 'screening', 'ai_screening', 'hr_verbal', 'panel'].includes(
+        !['coding', 'project_interview', 'screening', 'ai_screening', 'hr_verbal', 'panel'].includes(
           activeStage?.stage_type || '',
         )));
+  const mergeScreeningVerbal =
+    isAiVerbal &&
+    Boolean(
+      (activeStage?.round_config as Record<string, unknown> | null | undefined)?.[
+        MERGE_SCREENING_VERBAL_KEY
+      ],
+    );
   // BND (project_interview) handles its own code vs defense evaluation and does not require the separate rubric table
-  const hasRubric = (isScreening && !isAiScreening) || isCoding || isAiVerbal || isTakeHome;
+  const hasRubric = (isScreening && !isAiScreening) || isCoding || isAiVerbal;
 
-  const targetRubricWeight = useMemo(() => {
-    if (isProjectInterview) {
-      // Code vs defense weights live on the round; competency rubric is informational (still sums to 100%).
-      return 100;
-    }
-    if (activeStage?.round_config?.include_take_home_verification) {
-      const thWeight =
-        (activeStage.round_config.take_home_weight_pct as number) ??
-        DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT;
-      return Math.max(0, 100 - thWeight);
-    }
-    return 100;
-  }, [isProjectInterview, activeStage?.round_config?.include_take_home_verification, activeStage?.round_config?.take_home_weight_pct]);
+  const targetRubricWeight = 100;
 
   const unassignedCompetencies = useMemo(
     () => competencies.filter((c) => c.stage_id == null),
@@ -403,14 +397,9 @@ export function RoundConfigurationView(props: Props) {
               (stage.round_config != null && Object.keys(stage.round_config).length > 0);
             const isSaved = savedStages.has(stage.stage_key) || persistedConfigured;
             const configured =
-              stage.stage_type === 'take_home'
-                ? Boolean(
-                  parseTakeHomeRoundConfig(stage.round_config).problem.title.trim() ||
-                  parseTakeHomeRoundConfig(stage.round_config).problem.description_md.trim(),
-                )
-                : stage.stage_type === 'project_interview'
-                  ? isProjectInterviewConfigured(stage.round_config)
-                  : isSaved;
+              stage.stage_type === 'project_interview'
+                ? isProjectInterviewConfigured(stage.round_config)
+                : isSaved;
             return (
               <button
                 key={`${stage.id}-${idx}`}
@@ -509,18 +498,53 @@ export function RoundConfigurationView(props: Props) {
                 </div>
               )}
 
-              {isAiScreening && activeStage && (
-                <AiScreeningRoundConfigForm
-                  config={activeStage.round_config}
-                  onChange={(config: AiScreeningRoundConfig) => {
-                    const next = stages.map((s) =>
-                      s.stage_key === activeStage.stage_key
-                        ? { ...s, round_config: config as unknown as Record<string, unknown> }
-                        : s,
-                    );
-                    props.onStagesChange(next);
-                  }}
-                />
+              {(isAiScreening || mergeScreeningVerbal) && activeStage && (
+                <div className="space-y-3">
+                  {mergeScreeningVerbal ? (
+                    <div className="rounded-xl border border-[var(--assessment-primary)]/30 bg-[var(--assessment-primary-fixed)]/10 px-4 py-3">
+                      <h4 className="text-sm font-bold text-[var(--assessment-on-surface)]">
+                        Part 1 — Screening (notice, logistics, behavioural)
+                      </h4>
+                      <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
+                        These questions run first in the same voice call, before the technical
+                        deep-dive below. Turn topics on/off and fill expected answers as needed.
+                      </p>
+                    </div>
+                  ) : null}
+                  <AiScreeningRoundConfigForm
+                    config={activeStage.round_config}
+                    onChange={(config: AiScreeningRoundConfig) => {
+                      const next = stages.map((s) => {
+                        if (s.stage_key !== activeStage.stage_key) return s;
+                        if (mergeScreeningVerbal) {
+                          return {
+                            ...s,
+                            round_config: {
+                              ...(s.round_config ?? {}),
+                              ...config,
+                              [MERGE_SCREENING_VERBAL_KEY]: true,
+                            },
+                          };
+                        }
+                        return {
+                          ...s,
+                          round_config: config as unknown as Record<string, unknown>,
+                        };
+                      });
+                      props.onStagesChange(next);
+                    }}
+                  />
+                  {mergeScreeningVerbal ? (
+                    <div className="border-t border-[var(--assessment-outline-variant)] pt-6">
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-[var(--assessment-on-surface)]">
+                        Part 2 — Technical verbal
+                      </h4>
+                      <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
+                        Rubrics, question strategy, and time budget for the technical half of the call.
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
               )}
 
               {isHrVerbal && (
@@ -529,22 +553,6 @@ export function RoundConfigurationView(props: Props) {
                   <h4 className="font-title-sm text-sm font-bold text-[var(--assessment-on-surface)]">Human Interview</h4>
                   <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">No configuration required. The human interviewer will evaluate the candidate.</p>
                 </div>
-              )}
-
-              {isTakeHome && (
-                <TakeHomeRoundConfigForm
-                  config={activeStage.round_config}
-                  onChange={(config) => {
-                    if (!activeStage) return;
-                    const next = stages.map((s) =>
-                      s.stage_key === activeStage.stage_key
-                        ? { ...s, round_config: config as unknown as Record<string, unknown> }
-                        : s,
-                    );
-                    props.onStagesChange(next);
-                    props.onRoundConfigChange?.(activeStage.stage_key, config);
-                  }}
-                />
               )}
 
               {isProjectInterview && activeStage && (
@@ -752,89 +760,11 @@ export function RoundConfigurationView(props: Props) {
                       )}
                     </div>
 
-                    {isAiVerbal && stages.findIndex(s => s.stage_type === 'take_home') !== -1 && (
-                      <div className="mt-6 rounded-xl border border-[var(--assessment-outline-variant)] p-4 bg-[var(--assessment-surface-container-lowest)]">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-title-sm text-sm font-bold text-[var(--assessment-on-surface)]">
-                              Take-Home Assessment Verification
-                            </h4>
-                            <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
-                              Optionally allocate a portion of the total rubric weight to verify the candidate's Take-Home submission.
-                            </p>
-                          </div>
-                          <NexusToggleSwitch
-                            checked={Boolean(activeStage?.round_config?.include_take_home_verification)}
-                            onChange={(checked) => {
-                              if (!activeStage) return;
-                              const nextConfig: Record<string, unknown> = {
-                                ...(activeStage.round_config as Record<string, unknown>),
-                                include_take_home_verification: checked,
-                              };
-                              if (checked) {
-                                // Persist default so UI/runtime never diverge (display 20 vs stored unsetâ†’0).
-                                if (
-                                  nextConfig.take_home_weight_pct === undefined ||
-                                  nextConfig.take_home_weight_pct === null
-                                ) {
-                                  nextConfig.take_home_weight_pct =
-                                    DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT;
-                                }
-                              }
-                              const next = stages.map((s) =>
-                                s.stage_key === activeStage.stage_key
-                                  ? { ...s, round_config: nextConfig }
-                                  : s,
-                              );
-                              props.onStagesChange(next);
-                            }}
-                          />
-                        </div>
-                        {Boolean(activeStage?.round_config?.include_take_home_verification) && (
-                          <div className="mt-4 border-t border-[var(--assessment-outline-variant)] pt-4">
-                            <label className="block text-sm font-semibold text-[var(--assessment-on-surface)]">
-                              Verification Rubric Weight %
-                            </label>
-                            <div className="mt-2 flex items-center gap-3">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  className="w-24 rounded border border-[var(--assessment-outline-variant)] px-3 py-1.5 text-sm focus:border-[var(--assessment-primary)] focus:outline-none"
-                                  value={
-                                    (activeStage?.round_config?.take_home_weight_pct as number) ??
-                                    DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT
-                                  }
-                                  onChange={(e) => {
-                                    if (!activeStage) return;
-                                    const parsed = parseInt(e.target.value, 10);
-                                    const nextConfig = {
-                                      ...(activeStage.round_config as Record<string, unknown>),
-                                      take_home_weight_pct: Number.isFinite(parsed)
-                                        ? Math.max(0, Math.min(100, parsed))
-                                        : DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT,
-                                    };
-                                    const next = stages.map((s) =>
-                                      s.stage_key === activeStage.stage_key
-                                        ? { ...s, round_config: nextConfig }
-                                        : s,
-                                    );
-                                    props.onStagesChange(next);
-                                  }}
-                                />
-                                <span className="text-xs text-[var(--assessment-on-surface-variant)]">
-                                  This weight will be factored into the total Technical Interview score. The remaining weight will be distributed among the competencies below.
-                                </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </>
                 )}
 
-                {hasRubric && unassignedCompetencies.length > 0 && (
-                  <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900">
+                    {hasRubric && unassignedCompetencies.length > 0 && (
+                  <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-950/40 p-4 text-xs text-amber-200">
                     <p className="font-semibold">
                       {unassignedCompetencies.length} saved rubric
                       {unassignedCompetencies.length === 1 ? ' is' : 's are'} saved at profile level
@@ -844,7 +774,7 @@ export function RoundConfigurationView(props: Props) {
                         .map((c) => `${c.name} (${Number(c.weight_pct.toFixed(2))}%)`)
                         .join(', ')}
                     </p>
-                    <p className="mt-1 text-amber-800">
+                    <p className="mt-1 text-amber-300/80">
                       This profile was configured before rubrics became per-round. Assign them to the round
                       they belong to; once any round has its own rubric, profile-level rubrics are replaced.
                     </p>
@@ -1095,17 +1025,7 @@ export function RoundConfigurationView(props: Props) {
                               </optgroup>
                             </>
                           )}
-                          {isTakeHome && (
-                            <optgroup label="Take-Home Projects">
-                              <option value="Code Quality & Readability">Code Quality & Readability</option>
-                              <option value="Architecture & System Design">Architecture & System Design</option>
-                              <option value="Testing & Test Coverage">Testing & Test Coverage</option>
-                              <option value="Documentation & README">Documentation & README</option>
-                              <option value="Requirement Fulfillment">Requirement Fulfillment</option>
-                              <option value="Performance & Optimization">Performance & Optimization</option>
-                              <option value="Security Best Practices">Security Best Practices</option>
-                            </optgroup>
-                          )}
+
                           {isProjectInterview && (
                             <optgroup label="Build & Defend">
                               <option value="Tech Stack Understanding">Tech Stack Understanding</option>
@@ -1396,6 +1316,42 @@ function VerbalInterviewBudgetFields(props: {
           ))}
         </ul>
       ) : null}
+
+      <div className="mt-5 border-t border-[var(--assessment-outline-variant)] pt-4">
+        <h5 className="text-sm font-bold text-[var(--assessment-on-surface)]">
+          Merge AI Screening + verbal
+        </h5>
+        <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
+          One LiveKit room: AI Screening questions, organic bridge, then technical verbal deep-dive.
+        </p>
+        <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-[var(--assessment-on-surface)]">
+          <input
+            type="checkbox"
+            checked={Boolean(config[MERGE_SCREENING_VERBAL_KEY])}
+            onChange={(event) => {
+              const next = { ...config };
+              if (event.target.checked) {
+                next[MERGE_SCREENING_VERBAL_KEY] = true;
+                // Seed default screening topics/requirements when missing.
+                if (!Array.isArray(next.topics) || next.topics.length === 0) {
+                  const defaults = defaultAiScreeningRoundConfig();
+                  next.maxQuestions = next.maxQuestions ?? defaults.maxQuestions;
+                  next.maxTimeMinutes = next.maxTimeMinutes ?? defaults.maxTimeMinutes;
+                  next.topics = defaults.topics;
+                  next.screeningRequirements =
+                    next.screeningRequirements ?? defaults.screeningRequirements;
+                }
+                delete next.unified_voice;
+                delete next.tech_hr_split;
+              } else {
+                delete next[MERGE_SCREENING_VERBAL_KEY];
+              }
+              props.onChange(next);
+            }}
+          />
+          Merge AI Screening into this voice round (one continuous session)
+        </label>
+      </div>
     </div>
   );
 }

@@ -13,7 +13,9 @@ import {
 } from '@/modules/recruitment/components/LeadInboxFilterPanel';
 import { RecruitmentOpsShell } from '@/modules/recruitment/components/RecruitmentOpsShell';
 import { AddCandidateDialog } from '@/modules/recruitment/components/AddCandidateDialog';
+import { BulkUploadDialog } from '@/modules/recruitment/components/BulkUploadDialog';
 import {
+  batchInviteLeads,
   getRecruitmentLeadStageCounts,
   inviteLeadToAssessment,
   listRecruitmentLeads,
@@ -53,7 +55,37 @@ export function LeadInboxPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addCandidateOpen, setAddCandidateOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [filters, setFilters] = useState<LeadInboxFilters>(DEFAULT_LEAD_INBOX_FILTERS);
+
+  const invalidateLeads = () => {
+    queryClient.invalidateQueries({ queryKey: ['recruitment-leads'] });
+    queryClient.invalidateQueries({ queryKey: ['recruitment-lead-stage-counts'] });
+    queryClient.invalidateQueries({ queryKey: ['recruitment-interviews-today'] });
+  };
+
+  const inviteSelectedMutation = useMutation({
+    mutationFn: () => batchInviteLeads({ lead_ids: [...selected] }),
+    onSuccess: (data) => {
+      invalidateLeads();
+      setSelected(new Set());
+      alert(`Invited ${data.invited}, skipped ${data.skipped}.`);
+    },
+    onError: (err: Error) => {
+      alert(`Batch invite failed: ${err.message}`);
+    },
+  });
+
+  const inviteStandoutMutation = useMutation({
+    mutationFn: () => batchInviteLeads({ lead_ids: [], min_score: 80 }),
+    onSuccess: (data) => {
+      invalidateLeads();
+      alert(`Invited ${data.invited} standout lead${data.invited === 1 ? '' : 's'}, skipped ${data.skipped}.`);
+    },
+    onError: (err: Error) => {
+      alert(`Standout invite failed: ${err.message}`);
+    },
+  });
 
   const dateBounds = useMemo(
     () => dateRangeToDates(filters.dateRangeDays, filters.startDate, filters.endDate),
@@ -145,10 +177,12 @@ export function LeadInboxPage() {
                 </span>
                 <button
                   type="button"
-                  className="flex items-center gap-1 rounded border border-white/30 px-3 py-1 text-sm hover:bg-white/10"
+                  disabled={inviteSelectedMutation.isPending}
+                  onClick={() => inviteSelectedMutation.mutate()}
+                  className="flex items-center gap-1 rounded border border-white/30 px-3 py-1 text-sm hover:bg-white/10 disabled:opacity-60"
                 >
-                  <span className="material-symbols-outlined text-[18px]">archive</span>
-                  Archive
+                  <span className="material-symbols-outlined text-[18px]">mail</span>
+                  {inviteSelectedMutation.isPending ? 'Inviting…' : 'Invite selected'}
                 </button>
               </div>
               <button
@@ -205,6 +239,33 @@ export function LeadInboxPage() {
                   </button>
                 </div>
               )}
+              <button
+                type="button"
+                disabled={inviteStandoutMutation.isPending}
+                onClick={() => {
+                  if (
+                    confirm(
+                      'Invite all leads with resume match ≥80% who are not already invited?',
+                    )
+                  ) {
+                    inviteStandoutMutation.mutate();
+                  }
+                }}
+                className="flex items-center gap-2 self-center rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-4 py-2.5 text-sm font-semibold text-[var(--assessment-on-surface)] shadow-sm hover:border-[var(--assessment-primary)] disabled:opacity-60"
+              >
+                <span className="material-symbols-outlined text-[20px]">star</span>
+                {inviteStandoutMutation.isPending
+                  ? 'Inviting…'
+                  : 'Invite all Standout (≥80%)'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkUploadOpen(true)}
+                className="flex items-center gap-2 self-center rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-4 py-2.5 text-sm font-semibold text-[var(--assessment-on-surface)] shadow-sm hover:border-[var(--assessment-primary)]"
+              >
+                <span className="material-symbols-outlined text-[20px]">upload_file</span>
+                Bulk Upload
+              </button>
               <button
                 type="button"
                 onClick={() => setAddCandidateOpen(true)}
@@ -428,8 +489,14 @@ export function LeadInboxPage() {
           open={addCandidateOpen}
           onClose={() => setAddCandidateOpen(false)}
           onCreated={() => {
-            void queryClient.invalidateQueries({ queryKey: ['recruitment-leads'] });
-            void queryClient.invalidateQueries({ queryKey: ['recruitment-interviews-today'] });
+            invalidateLeads();
+          }}
+        />
+        <BulkUploadDialog
+          open={bulkUploadOpen}
+          onClose={() => setBulkUploadOpen(false)}
+          onCreated={() => {
+            invalidateLeads();
           }}
         />
       </div>
@@ -547,6 +614,28 @@ function Pager(props: {
   );
 }
 
+function matchTier(score: number): { label: string; className: string } | null {
+  if (score >= 90) {
+    return {
+      label: 'Standout',
+      className: 'bg-emerald-100 text-emerald-800',
+    };
+  }
+  if (score >= 80) {
+    return {
+      label: 'Strong',
+      className: 'bg-sky-100 text-sky-800',
+    };
+  }
+  if (score >= 65) {
+    return {
+      label: 'Moderate',
+      className: 'bg-amber-100 text-amber-800',
+    };
+  }
+  return null;
+}
+
 function ResumeMatchCell({ lead }: { lead: RecruitmentLeadListItem }) {
   const status = lead.resume_match_status;
   const score = lead.resume_match_score;
@@ -558,17 +647,27 @@ function ResumeMatchCell({ lead }: { lead: RecruitmentLeadListItem }) {
     );
   }
   if (status === 'COMPLETED' && score != null) {
+    const tier = matchTier(score);
     return (
-      <span
-        className="font-mono-data text-sm font-bold text-[var(--assessment-primary)]"
-        title={
-          lead.resume_match_confidence != null
-            ? `Confidence ${lead.resume_match_confidence}`
-            : undefined
-        }
-      >
-        {Math.round(score)}
-      </span>
+      <div className="flex flex-col items-start gap-1">
+        <span
+          className="font-mono-data text-sm font-bold text-[var(--assessment-primary)]"
+          title={
+            lead.resume_match_confidence != null
+              ? `Confidence ${lead.resume_match_confidence}`
+              : undefined
+          }
+        >
+          {Math.round(score)}
+        </span>
+        {tier ? (
+          <span
+            className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tier.className}`}
+          >
+            {tier.label}
+          </span>
+        ) : null}
+      </div>
     );
   }
   if (status === 'UNAVAILABLE') {
@@ -639,16 +738,23 @@ function InviteCell({ lead }: { lead: RecruitmentLeadListItem }) {
   }
 
   return (
-    <button
-      type="button"
-      disabled={mutation.isPending}
-      onClick={(e) => {
-        e.stopPropagation();
-        mutation.mutate();
-      }}
-      className="flex items-center justify-center rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-2 py-1 text-xs font-semibold text-[var(--assessment-primary)] transition-colors hover:bg-[var(--assessment-surface-container-low)] disabled:opacity-50"
-    >
-      {mutation.isPending ? 'Sending...' : 'Send Magic Link'}
-    </button>
+    <div className="flex flex-col items-center gap-1">
+      {lead.invite_status === 'PENDING' ? (
+        <span className="rounded bg-[var(--assessment-surface-container-high)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--assessment-on-surface-variant)]">
+          Pending review
+        </span>
+      ) : null}
+      <button
+        type="button"
+        disabled={mutation.isPending}
+        onClick={(e) => {
+          e.stopPropagation();
+          mutation.mutate();
+        }}
+        className="flex items-center justify-center rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-2 py-1 text-xs font-semibold text-[var(--assessment-primary)] transition-colors hover:bg-[var(--assessment-surface-container-low)] disabled:opacity-50"
+      >
+        {mutation.isPending ? 'Sending...' : 'Send Magic Link'}
+      </button>
+    </div>
   );
 }

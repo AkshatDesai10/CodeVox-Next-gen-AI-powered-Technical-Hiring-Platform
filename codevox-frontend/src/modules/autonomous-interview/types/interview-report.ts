@@ -227,6 +227,19 @@ export type InterviewReportResponse = {
   filename: string;
   enrichment: InterviewReportEnrichment | null;
   versions: InterviewAuditSummary[];
+  /** HMAC token for public `/interview-report/[shareToken]` page. */
+  shareToken?: string;
+};
+
+export type SharedInterviewExecutiveCard = {
+  shareToken: string;
+  candidateName: string | null;
+  techStack: string | null;
+  depthScore: number | null;
+  executiveSummary: string;
+  finalizedAt: string | null;
+  recommendation: string | null;
+  turnCount: number;
 };
 
 export type HiringRecommendation = 'STRONG_HIRE' | 'HIRE' | 'BORDERLINE' | 'NO_HIRE' | 'DISQUALIFIED';

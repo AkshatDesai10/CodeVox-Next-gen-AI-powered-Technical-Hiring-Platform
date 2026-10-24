@@ -2,7 +2,9 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { readdir, readFile } from 'fs/promises';
 import * as path from 'path';
 import { AssessmentExecutionRepository } from '../assessment-execution/assessment-execution.repository';
@@ -85,7 +87,28 @@ export type InterviewReportResponse = {
   filename: string;
   enrichment: InterviewReportEnrichment | null;
   versions: InterviewAuditSummary[];
+  /** HMAC share token for the public executive-summary page (no admin JWT). */
+  shareToken?: string;
 };
+
+export type SharedInterviewExecutiveCard = {
+  shareToken: string;
+  candidateName: string | null;
+  techStack: string | null;
+  depthScore: number | null;
+  executiveSummary: string;
+  finalizedAt: string | null;
+  recommendation: string | null;
+  turnCount: number;
+};
+
+function shareSigningKey(): string {
+  return (
+    process.env.AUTONOMOUS_INTERVIEW_SERVICE_KEY?.trim() ||
+    process.env.JWT_SECRET?.trim() ||
+    'codevox-interview-share'
+  );
+}
 
 @Injectable()
 export class InterviewAuditService {
@@ -1185,7 +1208,114 @@ export class InterviewAuditService {
       filename: selected.filename,
       enrichment,
       versions,
+      shareToken: this.createShareToken(reportToken),
     };
+  }
+
+  /** Signed share token = base64url(interviewToken).hmac — no DB migration. */
+  createShareToken(interviewToken: string): string {
+    const payload = Buffer.from(interviewToken, 'utf8').toString('base64url');
+    const sig = createHmac('sha256', shareSigningKey())
+      .update(interviewToken)
+      .digest('base64url');
+    return `${payload}.${sig}`;
+  }
+
+  verifyShareToken(shareToken: string): string {
+    const parts = String(shareToken ?? '').split('.');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      throw new UnauthorizedException('Invalid share token');
+    }
+    let interviewToken: string;
+    try {
+      interviewToken = Buffer.from(parts[0], 'base64url').toString('utf8');
+    } catch {
+      throw new UnauthorizedException('Invalid share token');
+    }
+    if (!interviewToken.trim()) {
+      throw new UnauthorizedException('Invalid share token');
+    }
+    const expected = createHmac('sha256', shareSigningKey())
+      .update(interviewToken)
+      .digest('base64url');
+    const a = Buffer.from(parts[1]);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      throw new UnauthorizedException('Invalid share token');
+    }
+    return interviewToken;
+  }
+
+  /**
+   * Public (token-gated) executive summary — no full transcript / admin enrichment.
+   */
+  async getSharedExecutiveCard(shareToken: string): Promise<SharedInterviewExecutiveCard> {
+    const interviewToken = this.verifyShareToken(shareToken);
+    const full = await this.getReport(interviewToken);
+    const report = full.report ?? {};
+    const candidateName =
+      (typeof report.candidate_name === 'string' && report.candidate_name.trim()
+        ? report.candidate_name.trim()
+        : null) ||
+      full.versions.find((v) => v.candidateName)?.candidateName ||
+      null;
+    const techStack =
+      typeof report.tech_stack === 'string' ? report.tech_stack : full.versions[0]?.techStack ?? null;
+    const depthScore =
+      typeof report.depth_score === 'number'
+        ? report.depth_score
+        : typeof report.weighted_overall_10 === 'number'
+          ? report.weighted_overall_10
+          : full.versions[0]?.depthScore ?? null;
+    const finalizedAt =
+      typeof report.finalized_at === 'string'
+        ? report.finalized_at
+        : full.versions[0]?.finalizedAt ?? null;
+    const turns = Array.isArray(report.turns) ? report.turns : [];
+    const executiveSummary =
+      (typeof report.executive_summary === 'string' && report.executive_summary.trim()
+        ? report.executive_summary.trim()
+        : null) ||
+      this.fallbackExecutiveSummary({
+        candidateName,
+        techStack,
+        depthScore,
+        turnCount: turns.length,
+        finalDecision: full.enrichment?.finalDecision ?? null,
+      });
+    const recommendation =
+      full.enrichment?.finalDecision ??
+      (typeof report.recommendation === 'string' ? report.recommendation : null);
+
+    return {
+      shareToken: full.shareToken ?? this.createShareToken(interviewToken),
+      candidateName,
+      techStack,
+      depthScore,
+      executiveSummary,
+      finalizedAt,
+      recommendation,
+      turnCount: turns.length,
+    };
+  }
+
+  private fallbackExecutiveSummary(input: {
+    candidateName: string | null;
+    techStack: string | null;
+    depthScore: number | null;
+    turnCount: number;
+    finalDecision: string | null;
+  }): string {
+    const name = input.candidateName ?? 'The candidate';
+    const stack = input.techStack ? ` for ${input.techStack}` : '';
+    const score =
+      input.depthScore != null ? ` Depth score: ${input.depthScore}/10.` : '';
+    const decision = input.finalDecision
+      ? ` Decision: ${String(input.finalDecision).replace(/_/g, ' ')}.`
+      : '';
+    return `${name} completed an AI interview${stack} covering ${input.turnCount} exchange${
+      input.turnCount === 1 ? '' : 's'
+    }.${score}${decision}`.trim();
   }
 }
 
