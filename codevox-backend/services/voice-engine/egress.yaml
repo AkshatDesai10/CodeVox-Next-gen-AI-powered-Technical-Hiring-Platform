@@ -1,0 +1,8 @@
+# LiveKit Egress worker — local disk recordings via /out mount
+log_level: info
+api_key: devkey
+api_secret: "devlocal_livekit_secret_minimum_32b"
+ws_url: ws://livekit:7880
+insecure: true
+redis:
+  address: redis:6379

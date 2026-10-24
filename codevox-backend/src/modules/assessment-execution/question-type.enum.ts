@@ -1,0 +1,7 @@
+export enum QuestionType {
+  CODING = 'CODING',
+  MCQ = 'MCQ',
+  SHORT_ANSWER = 'SHORT_ANSWER',
+  SYSTEM_DESIGN = 'SYSTEM_DESIGN',
+  INTERVIEW = 'INTERVIEW',
+}

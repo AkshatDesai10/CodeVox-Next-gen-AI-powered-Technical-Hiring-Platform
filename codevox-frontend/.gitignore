@@ -1,0 +1,66 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.env.local
+node_modules
+
+package.json
+package-lock.json
+.env.production
+.env.local.dev.bak
+ecosystem.config.cjs
+next.config.js
+
+# Build output
+dist
+dist-ssr
+.next
+tsconfig.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.gemini
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Graphify (AI code-analysis output)
+graphify-out/
+.agents/skills/graphify/
+.cursor/skills/graphify/
+
+.env
+.env.*
+!.env.example
+**/audit_logs/
+
+docker_logs*.txt
+extracted.jsonl
+jsonl_events.txt
+log_dump.txt
+logs.txt
+parsed_events.jsonl
+parsed_turns.txt
+phase0_wrapup_events.jsonl

@@ -1,0 +1,62 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command: ["--config", "/etc/livekit.yaml"]
+    ports:
+      - "7885:7880"
+      - "7886:7881"
+      - "7887:7882/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  egress:
+    image: livekit/egress:latest
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./egress.yaml:/etc/egress.yaml:ro
+      # Host folder ↔ container /out — Nest serves the same dir as /local-recordings
+      - ../../local-recordings:/out
+    depends_on:
+      - redis
+      - livekit
+    restart: unless-stopped
+
+  voice_engine:
+    build: .
+    ports:
+      - "8001:8001"
+    # Voice-engine .env keeps service-only vars; backend root .env is shared config.
+    env_file:
+      - ../../.env
+      - .env
+    environment:
+      PORT: "8001"
+      VIVA_SARVAM_LLM_MODEL: "sarvam-105b-conversations"
+      LIVEKIT_URL: "ws://host.docker.internal:7885"
+      LIVEKIT_API_KEY: "devkey"
+      LIVEKIT_API_SECRET: "devlocal_livekit_secret_minimum_32b"
+      NESTJS_CALLBACK_URL: "http://host.docker.internal:4000"
+      AUTONOMOUS_INTERVIEW_SERVICE_KEY: ${AUTONOMOUS_INTERVIEW_SERVICE_KEY:-dev_service_key}
+      AI_EVALUATION_SERVICE_URL: ${AI_EVALUATION_SERVICE_URL:-http://host.docker.internal:8000}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      SARVAM_API_KEY: ${SARVAM_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      INTERVIEW_TRACE: ${INTERVIEW_TRACE:-true}
+      TURN_EVENT_JSONL: ${TURN_EVENT_JSONL:-true}
+      RECORDING_MODE: "track"
+      RECORDING_STORAGE: "local"
+      RECORDING_S3_PREFIX: "icloudemsapps/interview-recordings"
+    depends_on:
+      - redis
+      - livekit
+    restart: unless-stopped

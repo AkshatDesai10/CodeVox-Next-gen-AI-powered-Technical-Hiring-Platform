@@ -1,0 +1,171 @@
+import type { SectionDefinition } from '../types';
+
+export const CODING_SECTIONS: SectionDefinition[] = [
+  {
+    id: 'problem_statement',
+    label: 'Problem Statement',
+    promptLine: 'problem statement (with input/output format, examples, edge cases)',
+    generators: ['coding'],
+    defaultEnabled: (flags) => flags.problem_statement !== false,
+    schema: {
+      title: 'Concise professional title',
+      difficulty: 'easy | medium | hard',
+      topic_tags: ['tag1', 'tag2'],
+      problemStatement: 'Business scenario, objective, and requirements in plain English. DO NOT include the Title, Constraints, or Examples in this string.',
+      input_format: 'Exact structure the solution receives',
+      output_format: 'Exact structure the solution must return',
+      constraints: {
+        inputSize: 'e.g. 1 ≤ n ≤ 10^5',
+        valueRange: 'e.g. 1 ≤ val ≤ 10^9',
+        timeLimitMs: 2000,
+        memoryLimitMb: 256,
+        efficiency_note: 'Why these limits require an efficient algorithm',
+      },
+      examples: [{ input: 'complete input', output: 'complete output', explanation: 'step-by-step' }],
+      edge_cases: ['edge case 1', 'edge case 2'],
+    },
+  },
+  {
+    id: 'starterCode',
+    label: 'Starter Code',
+    promptLine: 'starterCode',
+    generators: ['coding'],
+    defaultEnabled: (flags) => flags.starter_code !== false,
+    schema: {
+      starterCode: {
+        python: [
+          '# EXAMPLE STRUCTURE for Python — adapt input parsing to match YOUR problem inputs',
+          'import sys',
+          'import json',
+          '',
+          'def solve(/* your params */):',
+          '    # TODO: write your solution here',
+          '    pass',
+          '',
+          'if __name__ == "__main__":',
+          '    raw = sys.stdin.read().strip()',
+          '    # Parse input from raw (e.g. JSON, space-separated ints, etc.)',
+          '    # input_data = json.loads(raw)',
+          '    result = solve(/* parsed args */)',
+          '    print(result)',
+        ].join('\\n'),
+        javascript: [
+          '// EXAMPLE STRUCTURE for Node.js — adapt input parsing to match YOUR problem inputs',
+          'process.stdin.resume();',
+          'process.stdin.setEncoding("utf8");',
+          'let input = "";',
+          'process.stdin.on("data", d => input += d);',
+          'process.stdin.on("end", () => {',
+          '    const raw = input.trim();',
+          '    // Parse input from raw (e.g. JSON, split by lines/spaces)',
+          '    // const data = JSON.parse(raw);',
+          '    function solve(/* your params */) {',
+          '        // TODO: write your solution here',
+          '    }',
+          '    const result = solve(/* parsed args */);',
+          '    console.log(result);',
+          '});',
+        ].join('\\n'),
+        php: [
+          '<?php',
+          '// EXAMPLE STRUCTURE for PHP — adapt input parsing to match YOUR problem inputs',
+          '$raw = trim(stream_get_contents(STDIN));',
+          '// Parse input from $raw (e.g. json_decode, explode, etc.)',
+          '// $data = json_decode($raw, true);',
+          '',
+          'function solve(/* your params */) {',
+          '    // TODO: write your solution here',
+          '}',
+          '',
+          '$result = solve(/* parsed args */);',
+          'echo $result . PHP_EOL;',
+          '?>',
+        ].join('\\n'),
+      },
+    },
+  },
+  {
+    id: 'referenceSolution',
+    label: 'Reference Solution',
+    promptLine: 'referenceSolution',
+    generators: ['coding'],
+    defaultEnabled: () => false, // disabled — we don't send internal solutions
+    schema: {
+      referenceSolution: {
+        javascript: 'complete optimal solution for javascript',
+        python: 'complete optimal solution for python (include only requested languages)',
+      },
+      solution_explanation: 'Optimal algorithm and approach',
+    },
+  },
+  {
+    id: 'test_cases',
+    label: 'Test Cases',
+    promptLine: 'Generate visibleTestCases and hiddenTestCases arrays separately',
+    generators: ['coding'],
+    defaultEnabled: (flags) => flags.test_cases !== false,
+    schema: {
+      visibleTestCases: [
+        { input: 'For multiple variables, separate them with \\n (e.g. "hello world\\nworld")', expectedOutput: '42', explanation: 'Sample explanation' }
+      ],
+      hiddenTestCases: [
+        { input: 'actual boundary min (use \\n for multiple vars)', expectedOutput: 'actual' },
+        { input: 'actual boundary max', expectedOutput: 'actual' },
+        { input: 'actual stress case', expectedOutput: 'actual' }
+      ]
+    },
+  },
+  {
+    id: 'complexity_analysis',
+    label: 'Complexity Analysis',
+    promptLine: 'complexity expectations',
+    generators: ['coding'],
+    defaultEnabled: (flags) => flags.complexity_analysis !== false,
+    schema: { time_complexity: 'e.g. O(n log n)', space_complexity: 'e.g. O(n)' },
+  },
+  {
+    id: 'hints',
+    label: 'Hints',
+    promptLine: 'three progressive hints',
+    generators: ['coding'],
+    defaultEnabled: (flags) => Boolean(flags.hints),
+    schema: { hints: ['Subtle hint 1', 'Approach hint 2', 'Near-algorithm hint 3'] },
+  },
+  {
+    id: 'database_schema',
+    label: 'Sandbox Database Schema',
+    promptLine: 'in-sandbox CREATE TABLE DDL for the pre-loaded database the code will use',
+    generators: ['coding'],
+    defaultEnabled: (flags) => flags.requires_sandbox_database === true || flags.database_schema === true,
+    schema: {
+      requires_sandbox_database: true,
+      database_schema: {
+        ddl_sql: '-- CREATE TABLE statements with PK, FK, UNIQUE, CHECK, INDEX',
+        tables: [{ name: 'table_name', purpose: 'what this table stores' }],
+      },
+    },
+  },
+  {
+    id: 'seed_data',
+    label: 'Sandbox Seed Data',
+    promptLine: 'executable INSERT seed SQL for the in-sandbox database',
+    generators: ['coding'],
+    defaultEnabled: (flags) => flags.requires_sandbox_database === true || flags.seed_data === true,
+    schema: {
+      seed_data: {
+        random_seed: 42,
+        size: 'small | medium | large',
+        insert_sql: '-- executable INSERT statements aligned with test cases',
+        row_counts: { table_name: 10 },
+      },
+    },
+  },
+  {
+    id: 'quality_checklist',
+    label: 'Quality Checklist',
+    promptLine: 'quality verification',
+    generators: ['coding', 'database'],
+    defaultEnabled: true,
+    schema: { quality_checklist_passed: true },
+  },
+];

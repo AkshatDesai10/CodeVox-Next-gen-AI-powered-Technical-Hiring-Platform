@@ -1,0 +1,108 @@
+# compiled output
+/dist
+/node_modules
+/build
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+package.json
+.env.local
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Local LiveKit interview recordings (egress /out mount)
+/local-recordings/*
+!/local-recordings/.gitkeep
+
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.example
+.env.local
+package-lock.json
+
+# temp directory
+.temp
+.tmp
+
+# Uploaded project files (local dev)
+/upload-data
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Scratch / one-off scripts (not production code)
+alter-db.js
+alter-table.ts
+check-catalog.ts
+check.js
+dump_logs.js
+extract.js
+extract_turn7.js
+find_turn7.js
+parse.js
+scratch-check-interviews.ts
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Voice-engine scratch data
+services/voice-engine/scratch/
+services/voice-engine/scratch_events.jsonl
+services/voice-engine/.venv/
+# Audit logs (generated at runtime)
+/audit_logs
+
+# Graphify (AI code-analysis output)
+graphify-out/
+.agents/skills/graphify/
+.cursor/skills/graphify/
+
+.env
+.env.*
+!.env.example
+**/audit_logs/
+docker_logs*.txt
+extracted.jsonl
+jsonl_events.txt
+log_dump.txt
+logs.txt
+parsed_events.jsonl
+parsed_turns.txt
+phase0_wrapup_events.jsonl

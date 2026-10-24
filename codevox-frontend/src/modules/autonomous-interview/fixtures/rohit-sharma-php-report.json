@@ -1,0 +1,317 @@
+{
+  "session_id": "rohit-sharma-php",
+  "tech_stack": "PHP",
+  "resume_skills": [
+    "PHP",
+    "Laravel",
+    "MySQL",
+    "REST APIs",
+    "Redis",
+    "System Design",
+    "SQL"
+  ],
+  "covered_topics": [
+    "PHP",
+    "MySQL"
+  ],
+  "skipped_topics": [
+    "Laravel",
+    "MySQL",
+    "REST APIs",
+    "Redis"
+  ],
+  "turns": [
+    {
+      "turn_index": 1,
+      "topic_domain": "php",
+      "level": "MID",
+      "question_asked": "Hi Rohit, nice to meet you. Could you tell me a bit about your background, your journey in tech, and what types of projects you enjoy working on?",
+      "candidate_reply": "",
+      "intent_label": "OPENING",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "icebreaker",
+      "resume_tech": "PHP",
+      "strike_count": 0,
+      "tech_index": 0
+    },
+    {
+      "turn_index": 2,
+      "topic_domain": "php",
+      "level": "MID",
+      "question_asked": "That’s great, Rohit. Working on projects at Policybazaar sounds like a challenging and rewarding experience. Can you share more about the architecture and design decisions you made for the ERP system project? How did you approach scaling and performance optimizations?",
+      "candidate_reply": "Uh, sure. Uh, I have 12 years of experience in PHP, MySQL, Postgres, MongoDB, and Node.js, React.js, and I have worked on many projects like uh Um ಹ್ಞೂ software like that Policybazaar and ERP system also.",
+      "intent_label": "ANSWERED",
+      "confidence_delta": 1,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "ask",
+      "resume_tech": "PHP",
+      "strike_count": 0,
+      "tech_index": 0
+    },
+    {
+      "turn_index": 3,
+      "topic_domain": "php",
+      "level": "MID",
+      "question_asked": "Using a load balancer is a good start. Could you elaborate on how you integrated the load balancer with the rest of the system? What other techniques or tools did you use to ensure high availability and performance?",
+      "candidate_reply": "For scaling and performance optimization, I have used load balancer.",
+      "intent_label": "ANSWERED",
+      "confidence_delta": 1,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "ask",
+      "resume_tech": "PHP",
+      "strike_count": 0,
+      "tech_index": 0
+    },
+    {
+      "turn_index": 4,
+      "topic_domain": "php",
+      "level": "JUNIOR",
+      "question_asked": "That’s helpful. Can you explain how you optimized the database queries and indexes for better performance? Did you encounter any specific challenges during this process, and how did you address them?",
+      "candidate_reply": "For performance, I have used MySQL database connection and the indexing of the tables.",
+      "intent_label": "UNKNOWN",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "recovery",
+      "resume_tech": "PHP",
+      "strike_count": 1,
+      "tech_index": 0
+    },
+    {
+      "turn_index": 5,
+      "topic_domain": "laravel",
+      "level": "MID",
+      "question_asked": "That’s great to hear that you didn’t face any challenges. Do you have any examples of performance metrics or benchmarks you achieved through these optimizations? How did you measure the effectiveness of your changes?",
+      "candidate_reply": "I did not face any challenges",
+      "intent_label": "ANSWERED",
+      "confidence_delta": 1,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "tech_pivot",
+      "resume_tech": "Laravel",
+      "strike_count": 0,
+      "tech_index": 1
+    },
+    {
+      "turn_index": 6,
+      "topic_domain": "laravel",
+      "level": "JUNIOR",
+      "question_asked": "Understood. Let’s simplify it a bit. Can you tell me how you would approach optimizing a Laravel application for performance, especially in terms of database queries and indexing? What tools or methods would you use to measure and improve performance?",
+      "candidate_reply": "No idea",
+      "intent_label": "UNKNOWN",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "recovery",
+      "resume_tech": "Laravel",
+      "strike_count": 1,
+      "tech_index": 1
+    },
+    {
+      "turn_index": 7,
+      "topic_domain": "mysql",
+      "level": "MID",
+      "question_asked": "Got it. Let’s try a different angle then. How would you go about identifying and optimizing slow queries in a MySQL database? What tools or methods would you use to diagnose and improve performance in a production environment?",
+      "candidate_reply": "No idea",
+      "intent_label": "UNKNOWN",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "tech_pivot",
+      "resume_tech": "MySQL",
+      "strike_count": 0,
+      "tech_index": 2
+    },
+    {
+      "turn_index": 8,
+      "topic_domain": "mysql",
+      "level": "MID",
+      "question_asked": "That’s a good start. Can you explain the process of identifying slow queries in MySQL? What tools or methods would you use to pinpoint slow queries, and how do you go about optimizing them?",
+      "candidate_reply": "Uh, in slow care is instead of selecting select star, I will use the uh select columns which I required.",
+      "intent_label": "ANSWERED",
+      "confidence_delta": 1,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "ask",
+      "resume_tech": "MySQL",
+      "strike_count": 0,
+      "tech_index": 2
+    },
+    {
+      "turn_index": 9,
+      "topic_domain": "mysql",
+      "level": "JUNIOR",
+      "question_asked": "Using AWS EC2 can help, but let’s focus more on MySQL tools and methods. How would you use MySQL’s built-in tools or third-party tools like `EXPLAIN`, `SHOW PROFILES`, or `pt-query-digest` from Percona Toolkit to identify and optimize slow queries? Can you walk me through the process?",
+      "candidate_reply": "Using AWS EC2, I will identify the slow queries.",
+      "intent_label": "OFFTOPIC",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "recovery",
+      "resume_tech": "MySQL",
+      "strike_count": 1,
+      "tech_index": 2
+    },
+    {
+      "turn_index": 10,
+      "topic_domain": "rest_apis",
+      "level": "MID",
+      "question_asked": "I understand. Let’s break it down. Can you explain the basic steps you would take to use `EXPLAIN` to analyze a query and identify potential issues? What kind of information does `EXPLAIN` provide, and how can you use it to improve query performance?",
+      "candidate_reply": "No idea",
+      "intent_label": "UNKNOWN",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "tech_pivot",
+      "resume_tech": "REST APIs",
+      "strike_count": 0,
+      "tech_index": 3
+    },
+    {
+      "turn_index": 11,
+      "topic_domain": "rest_apis",
+      "level": "JUNIOR",
+      "question_asked": "No problem. `EXPLAIN` is a powerful tool in MySQL that helps you understand how a query is executed. It provides information about the query execution plan, which can help you identify potential bottlenecks and optimize your queries.\n\nCan you explain what `EXPLAIN` does and how you would use it to analyze a query? What kind of information does it provide, and how can you use that information to improve performance?",
+      "candidate_reply": "I have no idea about the explain",
+      "intent_label": "UNKNOWN",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "recovery",
+      "resume_tech": "REST APIs",
+      "strike_count": 1,
+      "tech_index": 3
+    },
+    {
+      "turn_index": 12,
+      "topic_domain": "redis",
+      "level": "MID",
+      "question_asked": "Sure, let's move on to Redis then. Can you tell me about your experience with Redis? What kinds of tasks or use cases have you used Redis for in your projects?",
+      "candidate_reply": "Okay skip please",
+      "intent_label": "SKIP",
+      "confidence_delta": -1,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "tech_pivot",
+      "resume_tech": "Redis",
+      "strike_count": 0,
+      "tech_index": 4
+    },
+    {
+      "turn_index": 13,
+      "topic_domain": "redis",
+      "level": "MID",
+      "question_asked": "We are approaching the conclusion of our verbal screening phase. Is there anything you would like to clarify, add, or revisit about your past answers before we shift gears?",
+      "candidate_reply": "I have used Redis for the data storage for fast retrieving.",
+      "intent_label": "ANSWERED",
+      "confidence_delta": 1,
+      "active_provider": "unknown",
+      "model": "unknown",
+      "action_mode": "closing",
+      "resume_tech": "Redis",
+      "strike_count": 0,
+      "tech_index": 4
+    },
+    {
+      "turn_index": 14,
+      "topic_domain": "redis",
+      "level": "JUNIOR",
+      "question_asked": "Got it. Let's try a different approach then. How about this: Can you describe a time when you had to use Redis in a project? What specific problem were you trying to solve, and how did Redis help you address that problem?",
+      "candidate_reply": "नहीं नहीं repeat करना है",
+      "intent_label": "SKIP",
+      "confidence_delta": 0,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "recovery",
+      "resume_tech": "Redis",
+      "strike_count": 1,
+      "tech_index": 4
+    },
+    {
+      "turn_index": 15,
+      "topic_domain": "system_design",
+      "level": "MID",
+      "question_asked": "No problem. Let's jump to the next skill on your resume: System Design. Can you describe a large-scale system you have designed or worked on, and what were the key challenges you faced? How did you address those challenges?",
+      "candidate_reply": "skip",
+      "intent_label": "SKIP",
+      "confidence_delta": -1,
+      "active_provider": "huggingface",
+      "model": "Qwen/Qwen2.5-7B-Instruct:fastest",
+      "action_mode": "tech_pivot",
+      "resume_tech": "System Design",
+      "strike_count": 0,
+      "tech_index": 5
+    }
+  ],
+  "depth_score": 3,
+  "provider_summary": {
+    "huggingface": 14,
+    "unknown": 1
+  },
+  "finalized_at": "2026-06-25T07:07:19.840650+00:00",
+  "resume_alignment": {
+    "resume_skills": [
+      "PHP",
+      "Laravel",
+      "MySQL",
+      "REST APIs",
+      "Redis",
+      "System Design",
+      "SQL"
+    ],
+    "verified": [
+      "PHP",
+      "MySQL"
+    ],
+    "skipped_due_to_struggles": [
+      "Laravel",
+      "REST APIs",
+      "Redis"
+    ],
+    "un_assessed_due_to_time": [
+      "System Design",
+      "SQL"
+    ],
+    "per_skill": {
+      "PHP": {
+        "status": "verified",
+        "strikes": 1,
+        "turns": 4
+      },
+      "Laravel": {
+        "status": "skipped",
+        "strikes": 2,
+        "turns": 2
+      },
+      "MySQL": {
+        "status": "verified",
+        "strikes": 2,
+        "turns": 3
+      },
+      "REST APIs": {
+        "status": "skipped",
+        "strikes": 2,
+        "turns": 2
+      },
+      "Redis": {
+        "status": "skipped",
+        "strikes": 2,
+        "turns": 3
+      },
+      "System Design": {
+        "status": "un_assessed",
+        "strikes": 0,
+        "turns": 1
+      },
+      "SQL": {
+        "status": "un_assessed",
+        "strikes": 0,
+        "turns": 0
+      }
+    }
+  }
+}

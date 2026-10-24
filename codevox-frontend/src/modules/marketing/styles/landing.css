@@ -1,0 +1,198 @@
+/* CodeVox marketing / landing — Sheryians Kodr Dark Violet & Electric Lime */
+
+.cvx-landing {
+  --landing-ink: #090414;
+  --landing-glow: #3B1270;
+  color: #FFFFFF;
+  background: var(--landing-ink);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle violet grid mesh overlay */
+.cvx-landing::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(139, 92, 246, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 92, 246, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, black 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, black 30%, transparent 85%);
+  opacity: 0.85;
+  z-index: 0;
+}
+
+.cvx-landing > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Atmospheric Sheryians hero glow */
+.cvx-hero-glow {
+  background:
+    radial-gradient(ellipse 75% 55% at 50% 25%, rgba(124, 58, 237, 0.45) 0%, rgba(60, 18, 114, 0.25) 55%, transparent 80%),
+    radial-gradient(ellipse 95% 75% at 50% -10%, rgba(35, 12, 70, 0.85) 0%, transparent 75%);
+}
+
+.cvx-nav-glass {
+  background: rgba(14, 6, 32, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.cvx-nav-capsule {
+  background: rgba(30, 14, 62, 0.6);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 9999px;
+  padding: 0.45rem 1.4rem;
+}
+
+.cvx-glass-panel {
+  background: rgba(22, 10, 44, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(139, 92, 246, 0.26);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(9, 4, 20, 0.75);
+}
+
+.cvx-text-gradient {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E9D5FF 45%, #C084FC 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Electric lime highlight */
+.cvx-lime-text {
+  color: #55E63B;
+  text-shadow: 0 0 24px rgba(85, 230, 59, 0.55);
+}
+
+/* Primary pill button */
+.cvx-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 60%, #9333EA 100%);
+  color: #FFFFFF;
+  padding: 0.8rem 1.8rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 0 28px rgba(124, 58, 237, 0.55);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.cvx-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 38px rgba(168, 85, 247, 0.7);
+  background: linear-gradient(135deg, #8B5CF6 0%, #A855F7 60%, #A21CAF 100%);
+}
+
+/* Ghost pill button */
+.cvx-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: rgba(30, 14, 62, 0.6);
+  color: #C4B5FD;
+  padding: 0.8rem 1.8rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  backdrop-filter: blur(12px);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cvx-btn-ghost:hover {
+  border-color: rgba(168, 85, 247, 0.65);
+  background: rgba(45, 20, 95, 0.8);
+  color: #FFFFFF;
+}
+
+/* Stat card */
+.cvx-stat-capsule {
+  background: rgba(20, 9, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  border-radius: 20px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 10px 30px rgba(9, 4, 20, 0.6);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.cvx-stat-capsule:hover {
+  transform: translateY(-2px);
+  border-color: rgba(168, 85, 247, 0.55);
+}
+
+.cvx-waveform {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 68px;
+}
+
+.cvx-waveform span {
+  width: 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #55E63B, #7C3AED);
+  animation: cvx-wave 1.2s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(85, 230, 59, 0.4);
+}
+
+.cvx-waveform span:nth-child(1) { height: 28%; animation-delay: 0s; }
+.cvx-waveform span:nth-child(2) { height: 55%; animation-delay: 0.08s; }
+.cvx-waveform span:nth-child(3) { height: 80%; animation-delay: 0.16s; }
+.cvx-waveform span:nth-child(4) { height: 42%; animation-delay: 0.24s; }
+.cvx-waveform span:nth-child(5) { height: 95%; animation-delay: 0.32s; }
+.cvx-waveform span:nth-child(6) { height: 60%; animation-delay: 0.4s; }
+.cvx-waveform span:nth-child(7) { height: 38%; animation-delay: 0.48s; }
+.cvx-waveform span:nth-child(8) { height: 72%; animation-delay: 0.56s; }
+.cvx-waveform span:nth-child(9) { height: 50%; animation-delay: 0.64s; }
+.cvx-waveform span:nth-child(10) { height: 88%; animation-delay: 0.72s; }
+.cvx-waveform span:nth-child(11) { height: 35%; animation-delay: 0.8s; }
+.cvx-waveform span:nth-child(12) { height: 65%; animation-delay: 0.88s; }
+.cvx-waveform span:nth-child(13) { height: 45%; animation-delay: 0.96s; }
+.cvx-waveform span:nth-child(14) { height: 75%; animation-delay: 1.04s; }
+
+@keyframes cvx-wave {
+  0%, 100% { transform: scaleY(0.55); opacity: 0.7; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+.cvx-fade-up {
+  animation: cvx-fade-up 0.7s ease both;
+}
+
+.cvx-fade-up-delay {
+  animation: cvx-fade-up 0.7s ease 0.12s both;
+}
+
+.cvx-fade-up-delay-2 {
+  animation: cvx-fade-up 0.7s ease 0.24s both;
+}
+
+@keyframes cvx-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cvx-timeline-line {
+  background: linear-gradient(180deg, #55E63B, #A855F7, #7C3AED);
+}

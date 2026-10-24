@@ -1,0 +1,13 @@
+port: 7880
+log_level: info
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: false
+redis:
+  address: redis:6379
+keys:
+  # Must match LIVEKIT_API_KEY / LIVEKIT_API_SECRET used by Nest + voice-engine
+  devkey: "devlocal_livekit_secret_minimum_32b"

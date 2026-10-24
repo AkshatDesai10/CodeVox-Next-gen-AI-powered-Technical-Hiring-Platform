@@ -1,0 +1,35 @@
+  private async loadProblemsFromStage(stageId: string) {
+    const questions = await this.dataSource.query('SELECT * FROM job_profile_questions WHERE stage_id = ? ORDER BY sort_order ASC', [stageId]);
+    const problems = [];
+    for (const q of questions) {
+       let pId = null;
+       try { pId = typeof q.metadata === 'string' ? JSON.parse(q.metadata).problem_bank_id : (q.metadata?.problem_bank_id); } catch(e){}
+       if (!pId) continue;
+       
+       const [pb] = await this.dataSource.query('SELECT * FROM problem_bank_problems WHERE id = ?', [pId]);
+       if (!pb) continue;
+       
+       const tcs = await this.dataSource.query('SELECT * FROM problem_bank_test_cases WHERE problem_id = ? AND inactive=0 ORDER BY sort_order ASC', [pId]);
+       const langs = await this.dataSource.query('SELECT * FROM problem_bank_language_templates WHERE problem_id = ? AND inactive=0', [pId]);
+       
+       const starter_code: Record<string, string> = {};
+       for (const l of langs) starter_code[l.language_code] = l.starter_code;
+       
+       problems.push({
+         id: pb.id.toString(),
+         title: pb.title,
+         description_md: pb.statement_md,
+         constraints: '',
+         examples: [],
+         starter_code,
+         test_cases: tcs.map((t: any) => ({
+            id: t.id.toString(),
+            name: t.description || 'Test Case',
+            input: t.input_value,
+            expected_output: t.expected_output,
+            is_visible: t.is_visible ? true : false
+         }))
+       });
+    }
+    return problems;
+  }

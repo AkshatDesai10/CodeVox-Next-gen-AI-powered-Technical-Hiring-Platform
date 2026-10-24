@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-text-primary: var(--color-text, #FFFFFF);
+    --color-text-secondary: var(--color-text-muted, #C4B5FD);
+    --color-background-primary: var(--color-bg, #090414);
+    --color-background-secondary: var(--color-surface-container, #160A30);
+    --color-border-secondary: var(--color-border-strong, rgba(168, 85, 247, 0.35));
+    --color-border-tertiary: var(--color-border, rgba(139, 92, 246, 0.22));
+  }
+}
+
+/* TipTap / ProseMirror (third-party class names) */
+.ProseMirror {
+  @apply min-h-[44px] text-[11px] leading-normal text-on-surface outline-none;
+}
+.ProseMirror p {
+  @apply m-0;
+}
+.ProseMirror p + p {
+  @apply mt-2;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  @apply my-1.5 pl-[18px];
+}
+.ProseMirror li {
+  @apply my-0.5;
+}
+.ProseMirror a {
+  @apply text-brand no-underline hover:underline;
+}
+.ProseMirror img {
+  @apply h-auto max-w-full rounded-[10px] border border-outline-variant;
+}
+.ProseMirror blockquote {
+  @apply my-1.5 border-l-[3px] border-primary pl-2.5 text-on-surface-variant;
+}
+.ProseMirror pre {
+  @apply overflow-auto rounded-lg bg-surface-container-lowest p-2.5 text-[10px] text-on-surface;
+}
+.ProseMirror code {
+  @apply rounded-md bg-surface-container-high px-1 py-px text-[10px] text-on-surface;
+}
+.ProseMirror .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+  height: 0;
+}
+
+@layer components {
+  .app-card {
+    @apply overflow-hidden rounded-md border border-outline-variant bg-surface-container text-on-surface shadow-card;
+  }
+  .app-card-header {
+    @apply flex items-center justify-between border-b border-outline-variant bg-surface-container px-3.5 py-2.5;
+  }
+  .app-card-title {
+    @apply text-xs font-bold text-on-surface;
+  }
+  .app-table {
+    @apply w-full table-fixed border-collapse;
+  }
+  .app-table th {
+    @apply border-b border-outline-variant bg-surface-container-low px-2.5 py-1.5 text-left text-[8px] font-bold uppercase tracking-wider text-on-surface-variant;
+  }
+  .app-table td {
+    @apply overflow-hidden text-ellipsis whitespace-nowrap border-b border-outline-variant bg-surface-container px-2.5 py-2 text-[11px] text-on-surface;
+  }
+  .app-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .app-table tbody tr:hover td {
+    @apply cursor-pointer bg-primary-container/40;
+  }
+  .app-table.app-table-issues {
+    @apply table-auto;
+  }
+  .app-table-issues td.app-table-issues__key {
+    width: auto;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+  .app-table-issues td.app-table-issues__summary {
+    max-width: 24rem;
+  }
+  .app-issue-key {
+    @apply font-mono text-[11px] font-bold text-brand whitespace-nowrap;
+  }
+  .app-badge {
+    @apply inline-flex items-center gap-0.5 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-semibold;
+  }
+  .app-input {
+    @apply w-full rounded-sm border border-outline-variant bg-page px-2.5 py-1.5 text-[11px] text-on-surface outline-none focus:border-brand focus:ring-2 focus:ring-brand/15;
+  }
+  .app-select {
+    @apply w-full cursor-pointer rounded-sm border border-outline-variant bg-page px-2.5 py-1.5 text-[11px] text-on-surface outline-none focus:border-brand focus:ring-2 focus:ring-brand/15;
+  }
+  .app-label {
+    @apply text-[8px] font-bold uppercase tracking-wide text-on-surface-variant;
+  }
+  .app-field {
+    @apply flex flex-col gap-1;
+  }
+  .app-form {
+    @apply flex flex-col gap-3 p-3.5;
+  }
+  .app-form-2col {
+    @apply grid grid-cols-2 gap-2.5;
+  }
+  .app-modal-overlay {
+    @apply fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm sm:items-center sm:py-10;
+  }
+  .app-modal-panel {
+    @apply w-full shrink-0 overflow-hidden rounded-xl border border-outline-variant bg-surface-container text-on-surface shadow-xl;
+  }
+  .app-modal-header {
+    @apply flex items-center justify-between border-b border-outline-variant px-4 py-3;
+  }
+  .app-modal-body {
+    @apply flex flex-col gap-2.5 px-4 py-3.5;
+  }
+  .app-modal-footer {
+    @apply flex items-center justify-end gap-1.5 border-t border-outline-variant px-4 py-2.5;
+  }
+  .app-compact-btn {
+    @apply inline-flex items-center rounded-md border border-outline-variant bg-surface-container-high px-2 py-1 text-[9px] font-semibold text-on-surface no-underline transition-colors hover:bg-surface-container-highest;
+  }
+  .app-btn-outline {
+    @apply rounded-sm border border-brand bg-transparent px-3 py-1.5 text-[11px] font-semibold text-brand hover:bg-primary-container;
+  }
+  .app-btn-primary {
+    @apply rounded-sm border-0 bg-brand px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-hover;
+  }
+  .app-primary-btn {
+    @apply rounded-sm border-0 bg-brand px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .app-icon-btn {
+    @apply flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded border-0 bg-transparent text-sm text-on-surface-variant hover:bg-surface-container-high;
+  }
+  .app-danger-zone {
+    @apply mt-1 rounded-lg border border-red-500/30 bg-red-950/20 p-3;
+  }
+  .app-pagination-bar {
+    @apply flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant bg-surface-container-low px-3.5 py-2.5 text-on-surface;
+  }
+  .app-settings-nav {
+    @apply flex w-[220px] flex-col gap-1 p-2.5;
+  }
+  .app-settings-nav-item {
+    @apply flex items-center rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-on-surface no-underline transition-colors hover:bg-surface-container-high;
+  }
+  .app-settings-nav-item-active {
+    @apply border border-brand/25 bg-primary-container text-on-primary-container;
+  }
+}

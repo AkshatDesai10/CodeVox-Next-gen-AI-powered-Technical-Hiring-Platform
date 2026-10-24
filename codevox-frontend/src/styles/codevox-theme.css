@@ -1,0 +1,45 @@
+/* CodeVox Global Design System & Variables */
+:root,
+.codevox-theme-root,
+.viva-theme-root {
+  --color-page: #090414;
+  --color-bg: #090414;
+  --color-sidebar: #0E0620;
+  --color-surface-container: #180B35;
+  --color-surface-elevated: #220F4B;
+  --color-surface-low: #110726;
+  --color-surface-solid: #0A0417;
+  --color-surface-highest: #2E1562;
+  
+  --color-primary: #7C3AED;
+  --color-primary-hover: #8B5CF6;
+  --color-primary-container: rgba(124, 58, 237, 0.22);
+  --color-primary-fixed: rgba(124, 58, 237, 0.3);
+  
+  --color-secondary: #A855F7;
+  --color-secondary-container: rgba(168, 85, 247, 0.18);
+  
+  --color-highlight: #55E63B;
+  --color-accent: #55E63B;
+  
+  --color-text: #FFFFFF;
+  --color-on-surface: #FFFFFF;
+  --color-text-muted: #C4B5FD;
+  --color-on-surface-variant: #C4B5FD;
+  
+  --color-border: rgba(139, 92, 246, 0.2);
+  --color-border-strong: rgba(168, 85, 247, 0.35);
+  --color-outline: #7C68A6;
+  --color-outline-variant: rgba(139, 92, 246, 0.2);
+  
+  --color-error: #F43F5E;
+  --color-error-container: rgba(244, 63, 94, 0.14);
+}
+
+body {
+  background-color: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+}

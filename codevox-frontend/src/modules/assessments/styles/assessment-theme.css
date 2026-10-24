@@ -1,0 +1,156 @@
+/* Assessment module — Sheryians Kodr Dark Violet & Electric Lime glass theme */
+.assessments-root {
+  --assessment-primary: var(--color-primary, #7C3AED);
+  --assessment-primary-container: var(--color-primary-container, rgba(124, 58, 237, 0.22));
+  --assessment-on-primary: var(--color-on-primary, #ffffff);
+  --assessment-on-primary-container: var(--color-on-primary-container, #DDD6FE);
+  --assessment-surface: var(--color-bg, #090414);
+  --assessment-surface-container: var(--color-surface-container, #160A30);
+  --assessment-surface-container-high: var(--color-surface-elevated, #1C0D3D);
+  --assessment-surface-container-low: var(--color-surface-low, #0D051C);
+  --assessment-surface-container-lowest: var(--color-surface-solid, #100724);
+  --assessment-surface-container-highest: var(--color-surface-highest, #2C135E);
+  --assessment-on-surface: var(--color-on-surface, #FFFFFF);
+  --assessment-on-surface-variant: var(--color-text-muted, #C4B5FD);
+  --assessment-outline: var(--color-outline, #7C68A6);
+  --assessment-outline-variant: var(--color-border, rgba(139, 92, 246, 0.22));
+  --assessment-error: var(--color-error, #F43F5E);
+  --assessment-error-container: var(--color-error-container, rgba(244, 63, 94, 0.14));
+  font-family: var(--font-family-base);
+  color: var(--assessment-on-surface);
+  background: var(--assessment-surface);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.assessments-root .material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.assessment-card {
+  border: 1px solid var(--color-border);
+  background: rgba(26, 13, 50, 0.7);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 18px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.assessment-card:hover {
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.25);
+}
+
+.assessment-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.18rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.assessment-badge-assigned {
+  background: rgba(124, 58, 237, 0.25);
+  color: #DDD6FE;
+}
+
+.assessment-badge-in_progress {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.assessment-badge-submitted,
+.assessment-badge-graded {
+  background: rgba(85, 230, 59, 0.15);
+  color: #55E63B;
+}
+
+.assessment-badge-not_assigned,
+.assessment-badge-pending,
+.assessment-badge-draft {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-muted);
+}
+
+.assessment-badge-running {
+  background: rgba(85, 230, 59, 0.2);
+  color: #55E63B;
+}
+
+.assessment-badge-passed {
+  background: rgba(85, 230, 59, 0.15);
+  color: #55E63B;
+}
+
+.assessment-badge-partial {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.assessment-badge-failed,
+.assessment-badge-error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+.assessment-badge-published {
+  background: rgba(168, 85, 247, 0.2);
+  color: #DDD6FE;
+}
+
+.cvx-text-gradient {
+  background: var(--color-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cvx-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  background: var(--color-btn-gradient, linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%));
+  color: #fff;
+  padding: 0.65rem 1.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 0 24px rgba(124, 58, 237, 0.5);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.cvx-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 35px rgba(168, 85, 247, 0.65);
+}
+
+.cvx-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  background: rgba(30, 14, 62, 0.65);
+  color: var(--color-text-muted);
+  padding: 0.65rem 1.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.cvx-btn-ghost:hover {
+  border-color: rgba(168, 85, 247, 0.6);
+  background: rgba(45, 20, 95, 0.85);
+  color: var(--color-text);
+}
+
+.cvx-gold-accent {
+  color: #55E63B;
+  border-color: rgba(85, 230, 59, 0.35);
+}

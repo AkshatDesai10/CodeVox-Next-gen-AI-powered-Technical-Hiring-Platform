@@ -1,0 +1,22 @@
+.interview-report-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.interview-report-scroll::-webkit-scrollbar-track {
+  background: var(--color-surface-container, #f1f5f9);
+}
+
+.interview-report-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant, #e5e7eb);
+  border-radius: 10px;
+}
+
+.interview-report-transcript-panel {
+  height: 500px;
+}
+
+@media (max-width: 1024px) {
+  .interview-report-transcript-panel {
+    height: 420px;
+  }
+}
