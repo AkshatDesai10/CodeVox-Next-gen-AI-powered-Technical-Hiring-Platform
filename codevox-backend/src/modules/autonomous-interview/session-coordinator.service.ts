@@ -41,7 +41,8 @@ import {
   type ScreeningVoiceAudit,
 } from './screening-analyzer.service';
 import { TakeHomeService } from '../take-home/take-home.service';
-const DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT = 35;\nimport { ProjectInterviewService } from '../project-interview/project-interview.service';
+const DEFAULT_TAKE_HOME_VERIFICATION_WEIGHT_PCT = 35;
+import { ProjectInterviewService } from '../project-interview/project-interview.service';
 
 @Injectable()
 export class SessionCoordinatorService {
