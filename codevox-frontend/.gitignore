@@ -9,7 +9,6 @@ lerna-debug.log*
 .env.local
 node_modules
 
-package.json
 package-lock.json
 .env.production
 .env.local.dev.bak
