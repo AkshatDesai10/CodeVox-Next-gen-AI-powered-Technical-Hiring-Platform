@@ -1,25 +1,14 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { Code2, Sparkles, Scale } from 'lucide-react';
+import { Code2 } from 'lucide-react';
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 import { RoundQuestionProblemPicker } from '@/modules/job-profiles/components/RoundQuestionProblemPicker';
 import { ProjectInterviewRoundConfigForm } from '@/modules/job-profiles/components/project-interview/ProjectInterviewRoundConfigForm';
 import { AiScreeningRoundConfigForm } from '@/modules/job-profiles/components/AiScreeningRoundConfigForm';
-import { CompetencyWeightRow } from '@/modules/job-profiles/components/CompetencyWeightRow';
-import { NexusToggleSwitch } from '@/modules/job-profiles/components/NexusToggleSwitch';
 import {
-  allocatePrimaryQuestions,
-  VERBAL_DURATION_KEY,
   MERGE_SCREENING_VERBAL_KEY,
-  VERBAL_MAX_TOTAL_KEY,
-  VERBAL_MIN_PRIMARY_KEY,
-  verbalBudgetCoverageError,
-  verbalBudgetShapeError,
-  verbalDurationError,
 } from '@/modules/job-profiles/lib/verbal-interview-budget';
-import { suggestRubricWeights, suggestCompetencies } from '@/modules/job-profiles/lib/job-profiles-api';
 
 import {
   defaultAiScreeningRoundConfig,
@@ -129,93 +118,7 @@ export function RoundConfigurationView(props: Props) {
   const savedStages = props.savedStages ?? localSavedStages;
   const setSavedStages = props.onSavedStagesChange ?? setLocalSavedStages;
   const [dragQIdx, setDragQIdx] = useState<number | null>(null);
-  const [aiWeights, setAiWeights] = useState(true);
   const [justSaved, setJustSaved] = useState(false);
-
-  const applyAiCompetencies = (
-    suggestions: Array<{ id?: string; name: string; category: string; weight_pct?: number; target_score?: number }>,
-    replace = false,
-  ) => {
-    if (!activeStageIdResolved) return;
-    const stageId = activeStageIdResolved;
-    let next = replace ? competencies.filter(c => c.stage_id !== stageId) : [...competencies];
-    for (const s of suggestions) {
-      if (!next.some((existing) => existing.stage_id === stageId && existing.name.toLowerCase() === s.name.toLowerCase())) {
-        next.push({
-          id: s.id ?? `ai-${Date.now()}-${Math.random()}`,
-          stage_id: stageId,
-          name: s.name,
-          category: (s.category as 'hard' | 'soft') ?? 'hard',
-          target_score: s.target_score ?? 8,
-          weight_pct: s.weight_pct ?? 0,
-          sort_order: next.length,
-        });
-      } else if (s.weight_pct != null) {
-        next = next.map((existing) =>
-          existing.stage_id === stageId && existing.name.toLowerCase() === s.name.toLowerCase()
-            ? { ...existing, weight_pct: s.weight_pct! }
-            : existing,
-        );
-      }
-    }
-    props.onCompetenciesChange(next);
-  };
-
-  const aiRubricMutation = useMutation({
-    mutationFn: () => suggestCompetencies(props.profileId, activeStage?.stage_type),
-    onSuccess: (data) => {
-      if (data.suggestions?.length) {
-        let runningTotal = 0;
-        data.suggestions.forEach((s: any, i: number) => {
-          if (s.weight_pct != null) {
-            if (i === data.suggestions.length - 1) {
-              s.weight_pct = Math.max(0, targetRubricWeight - runningTotal);
-            } else {
-              const scaled = Math.round(s.weight_pct * (targetRubricWeight / 100.0));
-              s.weight_pct = scaled;
-              runningTotal += scaled;
-            }
-          }
-        });
-        applyAiCompetencies(data.suggestions, true);
-      }
-    },
-  });
-
-  const aiBalanceMutation = useMutation({
-    mutationFn: () => suggestRubricWeights(props.profileId),
-    onSuccess: (data) => {
-      if (data.suggestions) {
-        const nextList = [...competencies];
-        let runningTotal = 0;
-        const matches: any[] = [];
-
-        data.suggestions.forEach((w: any) => {
-          const match = nextList.find(
-            (c) =>
-              c.stage_id === activeStageIdResolved &&
-              c.name.toLowerCase() === w.name.toLowerCase()
-          );
-          if (match) {
-            matches.push({ match, w });
-          }
-        });
-
-        matches.forEach(({ match, w }, index) => {
-          if (index === matches.length - 1) {
-            match.weight_pct = Math.max(0, targetRubricWeight - runningTotal);
-          } else {
-            const scaled = Math.round(w.weight_pct * (targetRubricWeight / 100.0));
-            match.weight_pct = scaled;
-            runningTotal += scaled;
-          }
-          match.target_score = w.target_score;
-        });
-        
-        props.onCompetenciesChange(nextList);
-      }
-    },
-  });
 
   useEffect(() => {
     if (!stages.length) {
@@ -252,29 +155,6 @@ export function RoundConfigurationView(props: Props) {
         MERGE_SCREENING_VERBAL_KEY
       ],
     );
-  // BND (project_interview) handles its own code vs defense evaluation and does not require the separate rubric table
-  const hasRubric = (isScreening && !isAiScreening) || isCoding || isAiVerbal;
-
-  const targetRubricWeight = 100;
-
-  const unassignedCompetencies = useMemo(
-    () => competencies.filter((c) => c.stage_id == null),
-    [competencies],
-  );
-
-  const assignUnassignedToActiveStage = () => {
-    if (!activeStageIdResolved || !unassignedCompetencies.length) return;
-    const ids = new Set(unassignedCompetencies.map((c) => c.id));
-    props.onCompetenciesChange(
-      competencies.map((c) => (ids.has(c.id) ? { ...c, stage_id: activeStageIdResolved } : c)),
-    );
-  };
-
-  const stageCompetencies = useMemo(
-    () => (activeStageIdResolved ? competencies.filter(c => c.stage_id === activeStageIdResolved) : []),
-    [competencies, activeStageIdResolved],
-  );
-
   const stageQuestions = useMemo(
     () => (activeStageIdResolved ? questionsForStage(questions, activeStageIdResolved) : []),
     [questions, activeStageIdResolved],
@@ -484,7 +364,7 @@ export function RoundConfigurationView(props: Props) {
                   {activeStage?.name ?? 'Round'} Configuration
                 </h3>
                 <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
-                  Define how questions are sourced and which rubrics are evaluated.
+                  Define how questions are sourced and evaluated.
                 </p>
               </div>
             </div>
@@ -540,7 +420,7 @@ export function RoundConfigurationView(props: Props) {
                         Part 2 — Technical verbal
                       </h4>
                       <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
-                        Rubrics, question strategy, and time budget for the technical half of the call.
+                        Question strategy and time budget for the technical half of the call.
                       </p>
                     </div>
                   ) : null}
@@ -575,7 +455,7 @@ export function RoundConfigurationView(props: Props) {
                     <div className="space-y-4">
                       <div>
                         <h4 className="font-title-sm text-sm font-bold text-[var(--assessment-on-surface)] uppercase tracking-wide">
-                          1. Question Strategy
+                          Question Strategy
                         </h4>
                         <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
                           How should the AI engine source questions for this round?
@@ -763,291 +643,12 @@ export function RoundConfigurationView(props: Props) {
                   </>
                 )}
 
-                    {hasRubric && unassignedCompetencies.length > 0 && (
-                  <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-950/40 p-4 text-xs text-amber-200">
-                    <p className="font-semibold">
-                      {unassignedCompetencies.length} saved rubric
-                      {unassignedCompetencies.length === 1 ? ' is' : 's are'} saved at profile level
-                    </p>
-                    <p className="mt-1">
-                      {unassignedCompetencies
-                        .map((c) => `${c.name} (${Number(c.weight_pct.toFixed(2))}%)`)
-                        .join(', ')}
-                    </p>
-                    <p className="mt-1 text-amber-300/80">
-                      This profile was configured before rubrics became per-round. Assign them to the round
-                      they belong to; once any round has its own rubric, profile-level rubrics are replaced.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={assignUnassignedToActiveStage}
-                      className="mt-3 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700"
-                    >
-                      Assign to {activeStage?.name?.trim() || 'this round'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Competency Rubric Section */}
-                {hasRubric && (
-                  <div className="space-y-4 pt-6 border-t border-[var(--assessment-outline-variant)]">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-title-sm text-sm font-bold text-[var(--assessment-on-surface)] uppercase tracking-wide">
-                            2. Competency Rubric
-                          </h4>
-                          <div className="rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] px-2 py-0.5 text-[10px] font-bold text-[var(--assessment-on-surface-variant)] uppercase tracking-wider">
-                            Total Weight: <span className={
-                              Math.round(stageCompetencies.reduce((sum, c) => sum + c.weight_pct, 0)) === targetRubricWeight
-                                ? 'text-green-600'
-                                : 'text-[var(--assessment-primary)]'
-                            }>{Number(stageCompetencies.reduce((sum, c) => sum + c.weight_pct, 0).toFixed(2))}% / {targetRubricWeight}%</span>
-                          </div>
-                        </div>
-                        <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
-                          Define the skills and score weights evaluated by the AI in this round. The same weights also decide how many primary questions each rubric receives.
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                        <button
-                          type="button"
-                          disabled={aiBusy || aiRubricMutation.isPending}
-                          onClick={() => aiRubricMutation.mutate()}
-                          className="flex items-center gap-1.5 rounded-sm border border-[var(--color-primary-container)] bg-[var(--color-primary-container)] px-3 py-2 text-xs font-semibold text-[var(--color-on-primary-container)] hover:bg-[var(--color-primary-fixed-dim)] disabled:opacity-50"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                          {aiRubricMutation.isPending ? 'Generating...' : 'AI suggest skills'}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={aiBusy || aiBalanceMutation.isPending || !stageCompetencies.length}
-                          onClick={() => aiBalanceMutation.mutate()}
-                          className="flex items-center gap-1.5 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-xs font-semibold text-[var(--assessment-on-surface-variant)] hover:border-[var(--assessment-primary)] hover:text-[var(--assessment-primary)] disabled:opacity-50"
-                        >
-                          <Scale className="h-4 w-4" />
-                          {aiBalanceMutation.isPending ? 'Balancing...' : 'AI suggest weights'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {isAiVerbal && activeStage ? (
-                      <VerbalInterviewBudgetFields
-                        rubricCount={stageCompetencies.length}
-                        weights={stageCompetencies.map((c) => c.weight_pct ?? 0)}
-                        names={stageCompetencies.map((c) => c.name)}
-                        roundConfig={(activeStage.round_config as Record<string, unknown> | null) ?? null}
-                        onChange={(nextConfig) => {
-                          const next = stages.map((s) =>
-                            s.stage_key === activeStage.stage_key ? { ...s, round_config: nextConfig } : s,
-                          );
-                          props.onStagesChange(next);
-                        }}
-                      />
-                    ) : null}
-
-                    <div className="overflow-x-auto rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]">
-                      <table className="nexus-table-dense w-full">
-                        <thead>
-                          <tr className="border-b border-[var(--assessment-outline-variant)]">
-                            <th className="font-label-caps text-[var(--assessment-on-surface-variant)]">Competency</th>
-                            <th className="font-label-caps text-[var(--assessment-on-surface-variant)]">Target score</th>
-                            <th className="text-right font-label-caps text-[var(--assessment-on-surface-variant)]">Weight %</th>
-                            <th className="text-right font-label-caps text-[var(--assessment-on-surface-variant)]">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stageCompetencies.map((c) => (
-                            <CompetencyWeightRow
-                              key={c.id}
-                              name={c.name}
-                              category={c.category}
-                              targetScore={c.target_score ?? 8}
-                              weightPct={c.weight_pct ?? 0}
-                              aiIdentified={aiWeights && c.id.startsWith('ai-')}
-                              onWeightChange={(val) => {
-                                props.onCompetenciesChange(
-                                  competencies.map((x) =>
-                                    x.id === c.id ? { ...x, weight_pct: val } : x
-                                  )
-                                );
-                              }}
-                              onDelete={() => {
-                                props.onCompetenciesChange(competencies.filter((x) => x.id !== c.id));
-                              }}
-                            />
-                          ))}
-                          {stageCompetencies.length === 0 && (
-                            <tr>
-                              <td colSpan={4} className="py-4 text-center text-xs italic text-[var(--assessment-on-surface-variant)]">
-                                No rubrics defined. Use AI to suggest skills or add from library.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="flex rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] overflow-hidden focus-within:border-[var(--assessment-primary)] focus-within:ring-1 focus-within:ring-[var(--assessment-primary)]">
-                          <input
-                            id="custom-skill-input"
-                            type="text"
-                            placeholder="Type custom skill(s) separated by commas..."
-                            className="w-64 border-none px-3 py-1.5 text-sm focus:outline-none focus:ring-0"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                const input = e.currentTarget;
-                                const val = input.value;
-                                if (!val.trim()) return;
-                                const newSkills = val.split(',').map(s => s.trim()).filter(Boolean);
-                                if (!newSkills.length) return;
-                                
-                                const newComps = newSkills.map((skillName, i) => ({
-                                  id: `man-${Date.now()}-${i}`,
-                                  stage_id: activeStageIdResolved,
-                                  name: skillName,
-                                  category: 'hard' as const,
-                                  target_score: 8,
-                                  weight_pct: 0,
-                                  sort_order: competencies.length + i,
-                                }));
-                                
-                                props.onCompetenciesChange([...competencies, ...newComps]);
-                                input.value = '';
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="bg-[var(--assessment-surface-container-high)] px-3 py-1.5 text-xs font-bold text-[var(--assessment-on-surface-variant)] hover:bg-[var(--assessment-outline-variant)]/30 hover:text-[var(--assessment-primary)] transition-colors border-l border-[var(--assessment-outline-variant)]"
-                            onClick={() => {
-                              const input = document.getElementById('custom-skill-input') as HTMLInputElement;
-                              if (!input) return;
-                              const val = input.value;
-                              if (!val.trim()) return;
-                              const newSkills = val.split(',').map(s => s.trim()).filter(Boolean);
-                              if (!newSkills.length) return;
-                              
-                              const newComps = newSkills.map((skillName, i) => ({
-                                id: `man-${Date.now()}-${i}`,
-                                stage_id: activeStageIdResolved,
-                                name: skillName,
-                                category: 'hard' as const,
-                                target_score: 8,
-                                weight_pct: 0,
-                                sort_order: competencies.length + i,
-                              }));
-                              
-                              props.onCompetenciesChange([...competencies, ...newComps]);
-                              input.value = '';
-                            }}
-                          >
-                            Add
-                          </button>
-                        </div>
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            const selectedName = e.target.value;
-                            if (!selectedName) return;
-                            props.onCompetenciesChange([
-                              ...competencies,
-                              {
-                                id: `lib-${Date.now()}`,
-                                stage_id: activeStageIdResolved,
-                                name: selectedName,
-                                category: 'hard' as const,
-                                target_score: 8,
-                                weight_pct: 0,
-                                sort_order: competencies.length,
-                              },
-                            ]);
-                          }}
-                          className="rounded border border-[var(--assessment-primary)] bg-[var(--assessment-surface-container)] px-3 py-1.5 text-sm font-semibold text-[var(--assessment-primary)]"
-                        >
-                          <option value="">+ Add from Library</option>
-                          {isScreening && (
-                            <optgroup label="Screening & General">
-                              <option value="Keyword & Tech Stack Match">Keyword & Tech Stack Match</option>
-                              <option value="Work Experience Relevance">Work Experience Relevance</option>
-                              <option value="Education & Certifications">Education & Certifications</option>
-                              <option value="Project Quality">Project Quality</option>
-                              <option value="Tenure & Stability">Tenure & Stability</option>
-                            </optgroup>
-                          )}
-                          {isCoding && (
-                            <optgroup label="Coding & Technical">
-                              <option value="Code Correctness">Code Correctness</option>
-                              <option value="Algorithm Efficiency">Algorithm Efficiency</option>
-                              <option value="Code Readability & Style">Code Readability & Style</option>
-                              <option value="Edge Case Handling">Edge Case Handling</option>
-                              <option value="Modular Design & Reusability">Modular Design & Reusability</option>
-                              <option value="React">React</option>
-                              <option value="Angular">Angular</option>
-                              <option value="Vue">Vue</option>
-                              <option value="Node.js">Node.js</option>
-                              <option value="Python">Python</option>
-                              <option value="Java">Java</option>
-                              <option value="C++">C++</option>
-                              <option value="C#">C#</option>
-                              <option value="Spring Boot">Spring Boot</option>
-                              <option value="Django">Django</option>
-                              <option value="System Design">System Design</option>
-                              <option value="Database / SQL">Database / SQL</option>
-                              <option value="AWS / Cloud">AWS / Cloud</option>
-                              <option value="Docker / Kubernetes">Docker / Kubernetes</option>
-                            </optgroup>
-                          )}
-                          {isAiVerbal && (
-                            <>
-                              <optgroup label="Technical & Frameworks">
-                                <option value="React">React</option>
-                                <option value="Angular">Angular</option>
-                                <option value="Vue">Vue</option>
-                                <option value="Python">Python</option>
-                                <option value="Node.js">Node.js</option>
-                                <option value="Java">Java</option>
-                                <option value="C++">C++</option>
-                                <option value="C#">C#</option>
-                                <option value="Spring Boot">Spring Boot</option>
-                                <option value="Django">Django</option>
-                                <option value="AWS / Cloud">AWS / Cloud</option>
-                                <option value="Docker / Kubernetes">Docker / Kubernetes</option>
-                                <option value="SQL / MongoDB">SQL / MongoDB</option>
-                                <option value="System Design">System Design</option>
-                              </optgroup>
-                              <optgroup label="Behavioral & Communication">
-                                <option value="Spoken Communication">Spoken Communication</option>
-                                <option value="Concept Articulation">Concept Articulation</option>
-                                <option value="Spontaneous Problem Solving">Spontaneous Problem Solving</option>
-                                <option value="Leadership & Mentorship">Leadership & Mentorship</option>
-                              </optgroup>
-                            </>
-                          )}
-
-                          {isProjectInterview && (
-                            <optgroup label="Build & Defend">
-                              <option value="Tech Stack Understanding">Tech Stack Understanding</option>
-                              <option value="Business Logic & Roles">Business Logic & Roles</option>
-                              <option value="Project Setup & Tooling">Project Setup & Tooling</option>
-                              <option value="Architecture Decisions">Architecture Decisions</option>
-                              <option value="Ownership & Authenticity">Ownership & Authenticity</option>
-                              <option value="Spoken Communication">Spoken Communication</option>
-                            </optgroup>
-                          )}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Legacy UI: Only show if strategy is Manual */}
                 {(activeStage?.round_config?.question_strategy === 'manual') && (
                   <div className="space-y-6 pt-6 border-t border-[var(--assessment-outline-variant)]">
                     <div className="flex items-center justify-between">
                       <h4 className="font-title-sm text-sm font-bold text-[var(--assessment-primary)]">
-                        3. Specific Questions (Manual Mode)
+                        Specific Questions (Manual Mode)
                       </h4>
                       <button
                         type="button"
@@ -1092,25 +693,16 @@ export function RoundConfigurationView(props: Props) {
 
                 <div className="pt-6 mt-6 border-t border-[var(--assessment-outline-variant)] flex flex-col sm:flex-row justify-between items-center gap-4">
                   <span className="text-sm font-semibold text-[var(--assessment-on-surface-variant)]">
-                    {hasRubric && Math.round(stageCompetencies.reduce((sum, c) => sum + c.weight_pct, 0)) !== targetRubricWeight
-                      ? `Total rubric weight must equal ${targetRubricWeight}% to save.`
-                      : 'Ready to continue.'}
+                    Ready to continue.
                   </span>
                   <button
                     type="button"
-                    disabled={hasRubric && Math.round(stageCompetencies.reduce((sum, c) => sum + c.weight_pct, 0)) !== targetRubricWeight}
                     className={`flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                       justSaved
                         ? 'bg-emerald-600 text-white'
                         : 'bg-[var(--assessment-primary)] text-white hover:bg-[var(--assessment-primary)]/90'
                     }`}
                     onClick={() => {
-                      const totalW = Math.round(stageCompetencies.reduce((sum, c) => sum + c.weight_pct, 0));
-                      if (hasRubric && totalW !== targetRubricWeight) {
-                        alert(`Total weight is ${totalW}%. It must be exactly ${targetRubricWeight}%.`);
-                        return;
-                      }
-
                       const n = new Set(savedStages);
                       if (activeStageKey) n.add(activeStageKey);
                       setSavedStages(n);
@@ -1200,158 +792,5 @@ export function RoundConfigurationView(props: Props) {
         }}
       />
     </>
-  );
-}
-
-function VerbalInterviewBudgetFields(props: {
-  rubricCount: number;
-  weights: number[];
-  names: string[];
-  roundConfig: Record<string, unknown> | null;
-  onChange: (next: Record<string, unknown>) => void;
-}) {
-  const config = props.roundConfig ?? {};
-  const savedMin = config[VERBAL_MIN_PRIMARY_KEY];
-  const savedMax = config[VERBAL_MAX_TOTAL_KEY];
-  const fallbackMin = Math.max(props.rubricCount, 1);
-  const displayMin = typeof savedMin === 'number' ? savedMin : fallbackMin;
-  const displayMax = typeof savedMax === 'number' ? savedMax : displayMin;
-  const savedDuration = config[VERBAL_DURATION_KEY];
-  const shapeError = verbalBudgetShapeError(displayMin, displayMax);
-  const budgetSaved = savedMin != null || savedMax != null;
-  const coverageError = budgetSaved || props.rubricCount > 0
-    ? verbalBudgetCoverageError(displayMin, props.rubricCount)
-    : null;
-  const durationError = verbalDurationError(savedDuration);
-  const error = shapeError || coverageError || durationError;
-  const allocation = props.rubricCount > 0 && !shapeError && !coverageError
-    ? allocatePrimaryQuestions(props.weights, displayMin)
-    : null;
-  const followups = Math.max(0, displayMax - displayMin);
-
-  const write = (minimum: number, maximum: number, duration: number | null) => {
-    const next: Record<string, unknown> = {
-      ...config,
-      [VERBAL_MIN_PRIMARY_KEY]: minimum,
-      [VERBAL_MAX_TOTAL_KEY]: maximum,
-    };
-    if (duration == null) delete next[VERBAL_DURATION_KEY];
-    else next[VERBAL_DURATION_KEY] = duration;
-    props.onChange(next);
-  };
-
-  return (
-    <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] p-4">
-      <h5 className="text-sm font-bold text-[var(--assessment-on-surface)]">Interview question budget</h5>
-      <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
-        Set how many primary questions the interview must attempt, and the maximum including follow-ups.
-        Categories are chosen from the role, each rubric, and the candidate resume. Extra room is kept for follow-ups and is not filled with extra primary questions.
-      </p>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <label className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
-          Minimum primary questions
-          <input
-            type="number"
-            min={1}
-            max={40}
-            className="mt-1 w-full rounded border border-[var(--assessment-outline-variant)] px-3 py-2 text-sm font-normal text-[var(--assessment-on-surface)]"
-            value={displayMin}
-            onChange={(event) => {
-              const raw = Number.parseInt(event.target.value, 10);
-              if (!Number.isFinite(raw)) return;
-              write(raw, displayMax, typeof savedDuration === 'number' ? savedDuration : null);
-            }}
-          />
-        </label>
-        <label className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
-          Maximum total questions
-          <input
-            type="number"
-            min={1}
-            max={40}
-            className="mt-1 w-full rounded border border-[var(--assessment-outline-variant)] px-3 py-2 text-sm font-normal text-[var(--assessment-on-surface)]"
-            value={displayMax}
-            onChange={(event) => {
-              const raw = Number.parseInt(event.target.value, 10);
-              if (!Number.isFinite(raw)) return;
-              write(displayMin, raw, typeof savedDuration === 'number' ? savedDuration : null);
-            }}
-          />
-        </label>
-        <label className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
-          Duration limit (optional)
-          <input
-            type="number"
-            min={10}
-            max={50}
-            placeholder="10â€“50 min"
-            className="mt-1 w-full rounded border border-[var(--assessment-outline-variant)] px-3 py-2 text-sm font-normal text-[var(--assessment-on-surface)]"
-            value={typeof savedDuration === 'number' ? savedDuration : ''}
-            onChange={(event) => {
-              if (event.target.value.trim() === '') {
-                write(displayMin, displayMax, null);
-                return;
-              }
-              const raw = Number.parseInt(event.target.value, 10);
-              if (!Number.isFinite(raw)) return;
-              write(displayMin, displayMax, raw);
-            }}
-          />
-        </label>
-      </div>
-      {error ? (
-        <p className="mt-2 text-xs font-semibold text-red-600">{error}</p>
-      ) : (
-        <p className="mt-2 text-xs text-[var(--assessment-on-surface-variant)]">
-          {displayMin} primary {displayMin === 1 ? 'question' : 'questions'}, up to {followups} follow-up{followups === 1 ? '' : 's'}.
-          {savedMin == null ? ' Shown until you edit it; nothing is saved yet.' : ''}
-        </p>
-      )}
-      {Array.isArray(allocation) ? (
-        <ul className="mt-2 space-y-1 text-xs text-[var(--assessment-on-surface)]">
-          {props.names.map((name, index) => (
-            <li key={`${name}-${index}`}>
-              {name}: {allocation[index]} primary {allocation[index] === 1 ? 'question' : 'questions'} ({props.weights[index]}%)
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="mt-5 border-t border-[var(--assessment-outline-variant)] pt-4">
-        <h5 className="text-sm font-bold text-[var(--assessment-on-surface)]">
-          Merge AI Screening + verbal
-        </h5>
-        <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
-          One LiveKit room: AI Screening questions, organic bridge, then technical verbal deep-dive.
-        </p>
-        <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-[var(--assessment-on-surface)]">
-          <input
-            type="checkbox"
-            checked={Boolean(config[MERGE_SCREENING_VERBAL_KEY])}
-            onChange={(event) => {
-              const next = { ...config };
-              if (event.target.checked) {
-                next[MERGE_SCREENING_VERBAL_KEY] = true;
-                // Seed default screening topics/requirements when missing.
-                if (!Array.isArray(next.topics) || next.topics.length === 0) {
-                  const defaults = defaultAiScreeningRoundConfig();
-                  next.maxQuestions = next.maxQuestions ?? defaults.maxQuestions;
-                  next.maxTimeMinutes = next.maxTimeMinutes ?? defaults.maxTimeMinutes;
-                  next.topics = defaults.topics;
-                  next.screeningRequirements =
-                    next.screeningRequirements ?? defaults.screeningRequirements;
-                }
-                delete next.unified_voice;
-                delete next.tech_hr_split;
-              } else {
-                delete next[MERGE_SCREENING_VERBAL_KEY];
-              }
-              props.onChange(next);
-            }}
-          />
-          Merge AI Screening into this voice round (one continuous session)
-        </label>
-      </div>
-    </div>
   );
 }

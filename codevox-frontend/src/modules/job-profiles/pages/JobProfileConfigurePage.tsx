@@ -67,36 +67,29 @@ const PIPELINE_PRESETS: Array<{
 }> = [
   {
     id: 'coding_only',
-    title: 'Coding test only',
+    title: 'Coding Round only',
     description:
       'Candidate only solves coding problems online. No voice call. Fastest option when you just need a skills check.',
-    stages: 'Coding test',
+    stages: 'Coding Round',
     icon: 'code',
   },
   {
     id: 'unified_voice',
-    title: 'Voice interview only',
+    title: 'Interview Round only',
     description:
       'One AI voice call. First a short screening chat, then deeper technical questions — without hanging up.',
-    stages: 'Screening → Technical talk',
+    stages: 'Interview Round',
     icon: 'mic',
   },
   {
     id: 'coding_plus_voice',
-    title: 'Coding + voice interview',
+    title: 'Coding + Interview Round',
     description:
       'First a coding test, then one AI voice call (screening + technical questions). Best fit for most roles.',
-    stages: 'Coding test → Voice call',
+    stages: 'Coding Round → Interview Round',
     icon: 'auto_awesome',
   },
-  {
-    id: 'screening_plus_full',
-    title: 'Full hiring flow',
-    description:
-      'Resume review first, then coding test, then a full AI voice interview. Use when you want every step covered.',
-    stages: 'Resume check → Coding → Voice',
-    icon: 'account_tree',
-  },
+
 ];
 
 const STEPS = [
@@ -108,8 +101,8 @@ const STEPS = [
 const STAGE_TYPE_OPTIONS: { value: JobStageType; label: string; duration: string }[] = [
   { value: 'ai_screening', label: 'AI Screening', duration: '5 mins' },
   { value: 'screening', label: 'AI Technical Screening', duration: '30 mins (Strict)' },
-  { value: 'coding', label: 'Coding Assessment', duration: '60 mins (Strict)' },
-  { value: 'ai_verbal', label: 'AI Verbal Interview', duration: '15 mins (Strict)' },
+  { value: 'coding', label: 'Coding Round', duration: '60 mins (Strict)' },
+  { value: 'ai_verbal', label: 'Interview Round', duration: '45 mins (Strict)' },
   { value: 'hr_verbal', label: 'HR Verbal Interview', duration: '30 mins' },
   { value: 'project_interview', label: 'Build & Defend', duration: 'Build window + 20 mins' },
   { value: 'panel', label: 'Panel Interview', duration: '60 mins' },
@@ -180,6 +173,9 @@ export function JobProfileConfigurePage() {
   const deleteProfileMutation = useMutation({
     mutationFn: () => deleteJobProfile(id),
     onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['job-profile', id] });
+      queryClient.removeQueries({ queryKey: ['job-profile-ai-insights', id] });
+      queryClient.removeQueries({ queryKey: ['job-profile-analytics', id] });
       router.push('/assessments/job-profiles');
     },
   });
@@ -882,21 +878,21 @@ export function JobProfileConfigurePage() {
       />
 
       {/* Modern CodeVox Action Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-violet-500/20 bg-[#160A30] p-4 shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4 shadow-sm">
         <div className="flex items-center flex-wrap gap-2 text-sm">
           <Link
             href="/assessments/job-profiles"
-            className="text-violet-300 hover:text-white transition-colors flex items-center gap-1.5 font-medium"
+            className="text-[var(--assessment-on-surface-variant)] hover:text-[var(--assessment-primary)] transition-colors flex items-center gap-1.5 font-medium"
           >
             <AssessmentMaterialIcon name="arrow_back" size={16} />
             <span>All Job Profiles</span>
           </Link>
-          <span className="text-violet-500/40">/</span>
+          <span className="text-[var(--assessment-outline-variant)]">/</span>
           <span className="font-bold text-white text-base">
             {profile.title || 'Untitled Profile'}
           </span>
           {profile.department ? (
-            <span className="rounded-full bg-violet-950/60 border border-violet-500/30 text-violet-300 font-mono text-xs px-2.5 py-0.5">
+            <span className="rounded-full bg-[var(--assessment-surface-container-low)] border border-[var(--assessment-outline-variant)] text-[var(--assessment-on-surface-variant)] font-mono text-xs px-2.5 py-0.5">
               {profile.department}
             </span>
           ) : null}
@@ -908,43 +904,19 @@ export function JobProfileConfigurePage() {
         </div>
 
         <div className="flex items-center gap-3 ml-auto">
-          <button
-            type="button"
-            disabled={deleteProfileMutation.isPending}
-            onClick={() => setShowDeleteConfirm(true)}
-            className="border border-rose-500/30 bg-rose-950/20 hover:bg-rose-900/40 text-rose-300 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
-            title="Delete Job Profile"
-          >
-            <AssessmentMaterialIcon name="delete" size={16} className="text-rose-400" />
-            <span>DELETE</span>
-          </button>
+          
 
           <button
             type="button"
             disabled={saveMutation.isPending || aiBusy || roundConfigSaveMutation.isPending}
             onClick={() => saveMutation.mutate()}
-            className="border border-violet-500/25 bg-[#120726] hover:bg-[#1C0D3D] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+            className="border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] hover:bg-[var(--assessment-surface-container-highest,#162846)] text-[var(--assessment-on-surface)] text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
           >
-            <AssessmentMaterialIcon name="save" size={16} className="text-violet-400" />
+            <AssessmentMaterialIcon name="save" size={16} className="text-[var(--assessment-primary)]" />
             {saveMutation.isPending ? 'SAVING...' : 'SAVE DRAFT'}
           </button>
 
-          {viewStep === 2 && profile.status === 'draft' ? (
-            <button
-              type="button"
-              disabled={publishMutation.isPending || saveMutation.isPending}
-              onClick={() => {
-                saveMutation.mutate(undefined, {
-                  onSuccess: () => publishMutation.mutate(),
-                });
-              }}
-              className="border border-emerald-500/30 bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-300 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
-              title="Publish profile directly with this pipeline"
-            >
-              <AssessmentMaterialIcon name="publish" size={16} className="text-emerald-400" />
-              <span>{publishMutation.isPending ? 'PUBLISHING...' : 'QUICK PUBLISH'}</span>
-            </button>
-          ) : null}
+          
 
           <button
             type="button"
@@ -966,7 +938,7 @@ export function JobProfileConfigurePage() {
                 ? saveMutation.isPending
                 : profile.status === 'draft' && !publishReady
             }
-            className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-[var(--assessment-primary)] hover:opacity-90 text-[var(--assessment-on-primary)] text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {viewStep === 2
               ? saveMutation.isPending
@@ -997,13 +969,13 @@ export function JobProfileConfigurePage() {
           {/* Left Column: Pipeline Stages (8 cols) */}
           <div className="col-span-12 space-y-6 lg:col-span-8">
             {/* Interview Pipeline Presets */}
-            <section className="nexus-card p-5 shadow-sm border border-violet-500/20 bg-[#100724]">
+            <section className="nexus-card p-5 shadow-sm border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]">
               <div className="mb-4">
                 <div className="flex items-center gap-2">
                   <AssessmentMaterialIcon name="auto_awesome" size={20} className="text-[#55E63B]" />
                   <h3 className="text-base font-bold text-white">Interview pipeline</h3>
                 </div>
-                <p className="text-xs text-violet-300/70 mt-1">
+                <p className="text-xs text-[var(--assessment-on-surface-variant)] mt-1">
                   Choose how candidates progress, or adjust the stages manually below.
                 </p>
               </div>
@@ -1024,8 +996,8 @@ export function JobProfileConfigurePage() {
                       onClick={() => applyPresetMutation.mutate(preset.id)}
                       className={`group relative rounded-xl border p-4 text-left transition-all duration-200 ${
                         isCurrent
-                          ? 'border-[#7C3AED] bg-[#7C3AED]/20 shadow-[0_0_20px_rgba(124,58,237,0.3)] ring-1 ring-[#7C3AED]'
-                          : 'border-violet-500/20 bg-[#160A30]/60 hover:bg-[#160A30] hover:border-violet-500/40'
+                          ? 'border-[var(--assessment-primary)] bg-[var(--assessment-primary-fixed)] shadow-sm ring-1 ring-[var(--assessment-primary)]'
+                          : 'border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] hover:border-[var(--assessment-primary)]/50'
                       }`}
                     >
                       <div className="mb-2 flex items-center justify-between">
@@ -1033,20 +1005,20 @@ export function JobProfileConfigurePage() {
                           <AssessmentMaterialIcon
                             name={preset.icon}
                             size={18}
-                            className={isCurrent ? 'text-[#55E63B]' : 'text-violet-300'}
+                            className={isCurrent ? 'text-[var(--assessment-primary)]' : 'text-[var(--assessment-on-surface-variant)]'}
                           />
                           <span className="font-semibold text-sm text-white">{preset.title}</span>
                         </div>
                         {isCurrent ? (
-                          <span className="rounded-full bg-[#55E63B]/20 px-2 py-0.5 text-[10px] font-bold text-[#55E63B] border border-[#55E63B]/30">
+                          <span className="rounded-full bg-[var(--nexus-secondary)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--nexus-secondary)] border border-[var(--nexus-secondary)]/30">
                             ACTIVE
                           </span>
                         ) : null}
                       </div>
-                      <p className="mb-2 text-xs text-violet-300/80 leading-relaxed">
+                      <p className="mb-2 text-xs text-[var(--assessment-on-surface-variant)] leading-relaxed">
                         {preset.description}
                       </p>
-                      <p className="text-xs font-medium text-[#55E63B]/90">
+                      <p className="text-xs font-medium text-[var(--assessment-primary)]">
                         {preset.stages}
                       </p>
                     </button>
@@ -1055,245 +1027,8 @@ export function JobProfileConfigurePage() {
               </div>
             </section>
 
-            <section className="nexus-card p-6 shadow-sm">
-              {/* Header with Title, Badge, and Add Stage Button */}
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="text-lg font-bold text-[var(--assessment-on-surface)]">Pipeline configuration</h3>
-                    <span className="bg-[var(--assessment-surface-container-low)] text-[var(--assessment-primary)] border border-[var(--assessment-outline-variant)] text-xs font-bold px-2.5 py-0.5 rounded-full">
-                      {stages.length} Stages Active
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--assessment-on-surface-variant)] mt-1">
-                    Define sequence and ownership for each evaluation stage.
-                  </p>
-                </div>
+            {/* Pipeline configuration & Stages editor hidden */}
 
-                <button
-                  type="button"
-                  onClick={handleAddStage}
-                  className="bg-[var(--assessment-primary)] hover:opacity-90 text-[var(--assessment-on-primary)] text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                  ADD STAGE
-                </button>
-              </div>
-
-              {/* Stages List with Drag-and-Drop */}
-              <div className="space-y-4">
-                {stages.map((stage, idx) => {
-                  const isAiForced =
-                    stage.stage_type === 'ai_verbal' ||
-                    stage.stage_type === 'coding' ||
-                    stage.stage_type === 'screening' ||
-                    stage.stage_type === 'project_interview';
-                  const isHumanForced =
-                    stage.stage_type === 'hr_verbal' || stage.stage_type === 'panel';
-                  const displayMode = isAiForced ? 'ai_led' : isHumanForced ? 'human_led' : stage.mode;
-
-                  return (
-                    <div
-                      key={stage.id}
-                      draggable
-                      onDragStart={() => setDragIdx(idx)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => {
-                        if (dragIdx != null) void reorderAfterDrop(dragIdx, idx);
-                        setDragIdx(null);
-                      }}
-                      className="relative transition-all"
-                    >
-                      <div
-                        className={`p-5 rounded-xl border bg-[var(--assessment-surface-container)] shadow-xs transition-shadow hover:shadow-sm ${
-                          stage.stage_type === 'coding' || stage.mode === 'ai_led'
-                            ? 'border-dashed border-[var(--nexus-secondary)]/50'
-                            : 'border-dashed border-[var(--assessment-outline-variant)]'
-                        }`}
-                      >
-                        {/* Stage Top Meta Row */}
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          {/* Left: Drag handle, Stage Number, Badges */}
-                          <div className="flex items-center flex-wrap gap-2.5">
-                            <span
-                              className="cursor-grab text-[var(--assessment-outline)] hover:text-[var(--assessment-on-surface)]"
-                              title="Drag to reorder stage"
-                            >
-                              <svg className="w-4 h-4 text-[var(--assessment-outline)]" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M7 4a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0zM7 16a2 2 0 11-4 0 2 2 0 014 0zM17 4a2 2 0 11-4 0 2 2 0 014 0zM17 10a2 2 0 11-4 0 2 2 0 014 0zM17 16a2 2 0 11-4 0 2 2 0 014 0z" />
-                              </svg>
-                            </span>
-
-                            <span className="font-bold text-sm text-[var(--assessment-on-surface)] font-mono">
-                              {String(idx + 1).padStart(2, '0')}
-                            </span>
-
-                            {stage.stage_type === 'coding' || stage.mode === 'ai_led' ? (
-                              <span className="bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] border border-[var(--assessment-outline-variant)] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
-                                <svg
-                                  className="w-2.5 h-2.5 text-[var(--nexus-secondary)]"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2.5}
-                                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                                  />
-                                </svg>
-                                AI SUGGESTED
-                              </span>
-                            ) : (
-                              <span className="bg-[var(--assessment-surface-container-low)] text-[var(--assessment-on-surface-variant)] border border-[var(--assessment-outline-variant)] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                CUSTOM ROUND
-                              </span>
-                            )}
-
-                            {stage.mandatory ? (
-                              <span className="bg-[var(--assessment-surface-container-low)] text-[var(--assessment-on-surface-variant)] border border-[var(--assessment-outline-variant)] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                MANDATORY
-                              </span>
-                            ) : null}
-
-                            <span className="bg-[var(--assessment-surface-container-low)] text-[var(--assessment-primary)] border border-[var(--assessment-outline-variant)] text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <svg className="w-2.5 h-2.5 text-[var(--assessment-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              {getStageDurationLabel(stage.stage_type)}
-                            </span>
-                          </div>
-
-                          {/* Right: Segmented AI-LED / HUMAN Toggle and Delete Button */}
-                          <div className="flex items-center gap-2 ml-auto" onMouseDown={(e) => e.stopPropagation()}>
-                            <div className="flex items-center rounded-lg bg-[var(--assessment-surface-container-low)] p-1 border border-[var(--assessment-outline-variant)]">
-                              <button
-                                type="button"
-                                disabled={isAiForced || isHumanForced}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleModeChange(idx, 'ai_led');
-                                }}
-                                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase transition-all ${
-                                  displayMode === 'ai_led'
-                                    ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
-                                    : 'text-[var(--assessment-on-surface-variant)] hover:text-[var(--assessment-on-surface)]'
-                                } disabled:cursor-not-allowed`}
-                              >
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                  />
-                                </svg>
-                                AI-LED
-                              </button>
-                              <button
-                                type="button"
-                                disabled={isAiForced || isHumanForced}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleModeChange(idx, 'human_led');
-                                }}
-                                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase transition-all ${
-                                  displayMode === 'human_led'
-                                    ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
-                                    : 'text-[var(--assessment-on-surface-variant)] hover:text-[var(--assessment-on-surface)]'
-                                } disabled:cursor-not-allowed`}
-                              >
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                  />
-                                </svg>
-                                HUMAN
-                              </button>
-                            </div>
-
-                            {stages.length > 1 ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteStage(idx);
-                                }}
-                                className="p-1.5 rounded-lg text-[var(--assessment-outline)] hover:text-[var(--assessment-error)] hover:bg-[var(--assessment-error-container)]/20 transition-colors ml-0.5 cursor-pointer"
-                                title="Delete stage"
-                              >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        {/* Stage Two-Column Inputs: Name & Type */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-[var(--assessment-outline-variant)]/40" onMouseDown={(e) => e.stopPropagation()}>
-                          <div>
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--assessment-on-surface-variant)] mb-1.5 block">
-                              STAGE NAME
-                            </label>
-                            <input
-                              type="text"
-                              value={stage.name}
-                              onChange={(e) => handleStageNameChange(idx, e.target.value)}
-                              className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3.5 py-2 text-sm text-[var(--assessment-on-surface)] font-medium focus:outline-none focus:border-[var(--assessment-primary)] focus:ring-1 focus:ring-[var(--assessment-primary)]"
-                              placeholder="Stage name..."
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--assessment-on-surface-variant)] mb-1.5 block">
-                              STAGE TYPE
-                            </label>
-                            <select
-                              value={stage.stage_type ?? 'custom'}
-                              onChange={(e) => handleStageTypeChange(idx, e.target.value as JobStageType)}
-                              className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3.5 py-2 text-sm text-[var(--assessment-on-surface)] font-medium focus:outline-none focus:border-[var(--assessment-primary)] focus:ring-1 focus:ring-[var(--assessment-primary)]"
-                            >
-                              {STAGE_TYPE_OPTIONS.map((opt) => (
-                                <option
-                                  key={opt.value}
-                                  value={opt.value}
-                                  disabled={isTakeHomeDisabledForIdx(idx, opt.value)}
-                                >
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Add Another Stage Dashed Button */}
-              <button
-                type="button"
-                onClick={handleAddStage}
-                className="w-full mt-4 py-3.5 border-2 border-dashed border-[var(--assessment-outline-variant)] hover:border-[var(--assessment-primary)] hover:bg-[var(--assessment-surface-container-low)] rounded-xl text-xs font-bold text-[var(--assessment-primary)] flex items-center justify-center gap-2 transition-all shadow-xs"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                </svg>
-                + Add another interview stage
-              </button>
-            </section>
           </div>
 
           {/* Right Column: AI Assistant, NL Editing, Pipeline Velocity (4 cols) */}
@@ -1709,7 +1444,7 @@ export function JobProfileConfigurePage() {
       </div>
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-violet-500/30 bg-[#160A30] p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-6 shadow-2xl">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
                 <AssessmentMaterialIcon name="delete_forever" size={22} />
@@ -1719,7 +1454,7 @@ export function JobProfileConfigurePage() {
                 <p className="text-xs text-slate-400">This action will remove this job profile and all its rounds.</p>
               </div>
             </div>
-            <p className="mb-6 rounded-xl border border-violet-500/20 bg-[#100724] p-3 text-sm text-violet-200">
+            <p className="mb-6 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] p-3 text-sm text-[var(--assessment-on-surface)]">
               Are you sure you want to delete <span className="font-bold text-white">{profile.title || 'this profile'}</span>?
             </p>
             <div className="flex justify-end gap-3">
@@ -1727,7 +1462,7 @@ export function JobProfileConfigurePage() {
                 type="button"
                 disabled={deleteProfileMutation.isPending}
                 onClick={() => setShowDeleteConfirm(false)}
-                className="rounded-xl border border-violet-500/25 px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-900/30 transition-colors"
+                className="rounded-xl border border-[var(--assessment-outline-variant)] px-4 py-2 text-xs font-semibold text-[var(--assessment-on-surface-variant)] hover:bg-[var(--assessment-surface-container-high)] transition-colors"
               >
                 Cancel
               </button>

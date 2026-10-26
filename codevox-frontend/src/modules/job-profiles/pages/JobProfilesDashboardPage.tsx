@@ -39,14 +39,41 @@ export function JobProfilesDashboardPage() {
   const [showAiTip, setShowAiTip] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<{ id: string; title: string } | null>(null);
 
+  const queryClient = useQueryClient();
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteJobProfile(id),
-    onSuccess: () => {
-      invalidate();
+    onMutate: async (id: string) => {
+      // 1. Close dialog immediately so UI does not stay on screen
       setProfileToDelete(null);
+
+      // 2. Remove queries for this profile so they never refetch and trigger 404
+      queryClient.removeQueries({ queryKey: ['job-profile', id] });
+      queryClient.removeQueries({ queryKey: ['job-profile-ai-insights', id] });
+      queryClient.removeQueries({ queryKey: ['job-profile-analytics', id] });
+
+      // 3. Cancel outgoing refetches for the list
+      await queryClient.cancelQueries({ queryKey: ['job-profiles-local'] });
+
+      // 4. Optimistically remove the item from local cache
+      queryClient.setQueriesData({ queryKey: ['job-profiles-local'] }, (old: any) => {
+        if (!old || !Array.isArray(old.items)) return old;
+        return {
+          ...old,
+          items: old.items.filter((item: any) => item.id !== id),
+          total: Math.max(0, (old.total ?? 1) - 1),
+        };
+      });
+    },
+    onSuccess: (_data, id) => {
+      queryClient.removeQueries({ queryKey: ['job-profile', id] });
+      invalidate();
+    },
+    onError: (err: any) => {
+      invalidate();
+      alert(err?.message || 'Failed to delete job profile');
     },
   });
-  const queryClient = useQueryClient();
 
   const localQuery = useQuery({
     queryKey: ['job-profiles-local', search],
@@ -293,7 +320,7 @@ export function JobProfilesDashboardPage() {
                           <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                             <Link
                               href={`/assessments/job-profiles/${profile.id}/analytics`}
-                              className="rounded-full p-2 text-violet-300 hover:text-white hover:bg-violet-900/30 transition-colors"
+                              className="rounded-full p-2 text-[var(--assessment-primary)] hover:text-white hover:bg-[var(--assessment-primary)]/20 transition-colors"
                               title="Analytics"
                             >
                               <AssessmentMaterialIcon name="analytics" size={18} />
@@ -392,7 +419,7 @@ export function JobProfilesDashboardPage() {
       </div>
       {profileToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-[#160A30] p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-6 shadow-2xl">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/25">
                 <AssessmentMaterialIcon name="delete_forever" size={24} />
@@ -402,7 +429,7 @@ export function JobProfilesDashboardPage() {
                 <p className="text-xs text-slate-400">This action will remove this job profile from active listings.</p>
               </div>
             </div>
-            <p className="mb-6 rounded-xl border border-violet-500/20 bg-[#100724] p-3 text-sm text-violet-200">
+            <p className="mb-6 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] p-3 text-sm text-[var(--assessment-on-surface)]">
               Are you sure you want to delete <span className="font-bold text-white">&ldquo;{profileToDelete.title}&rdquo;</span>?
             </p>
             <div className="flex justify-end gap-3">
@@ -410,7 +437,7 @@ export function JobProfilesDashboardPage() {
                 type="button"
                 disabled={deleteMutation.isPending}
                 onClick={() => setProfileToDelete(null)}
-                className="rounded-xl border border-violet-500/25 px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-900/30 transition-colors"
+                className="rounded-xl border border-[var(--assessment-outline-variant)] px-4 py-2 text-xs font-semibold text-[var(--assessment-on-surface-variant)] hover:bg-[var(--assessment-surface-container-high)] transition-colors"
               >
                 Cancel
               </button>
