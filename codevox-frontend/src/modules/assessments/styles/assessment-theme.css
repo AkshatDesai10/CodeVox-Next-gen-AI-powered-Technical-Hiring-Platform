@@ -1,19 +1,19 @@
-/* Assessment module — Sheryians Kodr Dark Violet & Electric Lime glass theme */
+/* Assessment module — Midnight Blue & Electric Cyan Glass Theme */
 .assessments-root {
-  --assessment-primary: var(--color-primary, #7C3AED);
-  --assessment-primary-container: var(--color-primary-container, rgba(124, 58, 237, 0.22));
+  --assessment-primary: var(--color-primary, #1685FF);
+  --assessment-primary-container: var(--color-primary-container, rgba(22, 133, 255, 0.2));
   --assessment-on-primary: var(--color-on-primary, #ffffff);
-  --assessment-on-primary-container: var(--color-on-primary-container, #DDD6FE);
-  --assessment-surface: var(--color-bg, #090414);
-  --assessment-surface-container: var(--color-surface-container, #160A30);
-  --assessment-surface-container-high: var(--color-surface-elevated, #1C0D3D);
-  --assessment-surface-container-low: var(--color-surface-low, #0D051C);
-  --assessment-surface-container-lowest: var(--color-surface-solid, #100724);
-  --assessment-surface-container-highest: var(--color-surface-highest, #2C135E);
-  --assessment-on-surface: var(--color-on-surface, #FFFFFF);
-  --assessment-on-surface-variant: var(--color-text-muted, #C4B5FD);
-  --assessment-outline: var(--color-outline, #7C68A6);
-  --assessment-outline-variant: var(--color-border, rgba(139, 92, 246, 0.22));
+  --assessment-on-primary-container: var(--color-on-primary-container, #BAE6FD);
+  --assessment-surface: var(--color-bg, #050B18);
+  --assessment-surface-container: var(--color-surface-container, #0B1930);
+  --assessment-surface-container-high: var(--color-surface-elevated, #0F203B);
+  --assessment-surface-container-low: var(--color-surface-low, #081426);
+  --assessment-surface-container-lowest: var(--color-surface-solid, #050B18);
+  --assessment-surface-container-highest: var(--color-surface-highest, #162846);
+  --assessment-on-surface: var(--color-on-surface, #F8FAFC);
+  --assessment-on-surface-variant: var(--color-text-muted, #A7B7CD);
+  --assessment-outline: var(--color-outline, #293B57);
+  --assessment-outline-variant: var(--color-border, rgba(41, 59, 87, 0.65));
   --assessment-error: var(--color-error, #F43F5E);
   --assessment-error-container: var(--color-error-container, rgba(244, 63, 94, 0.14));
   font-family: var(--font-family-base);
@@ -28,8 +28,8 @@
 }
 
 .assessment-card {
-  border: 1px solid var(--color-border);
-  background: rgba(26, 13, 50, 0.7);
+  border: 1px solid var(--color-border, #293B57);
+  background: rgba(11, 25, 48, 0.75);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-radius: 18px;
@@ -38,8 +38,8 @@
 }
 
 .assessment-card:hover {
-  border-color: rgba(168, 85, 247, 0.6);
-  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.25);
+  border-color: rgba(34, 211, 238, 0.5);
+  box-shadow: 0 12px 40px rgba(22, 133, 255, 0.2);
 }
 
 .assessment-badge {
@@ -54,56 +54,56 @@
 }
 
 .assessment-badge-assigned {
-  background: rgba(124, 58, 237, 0.25);
-  color: #DDD6FE;
+  background: rgba(22, 133, 255, 0.2);
+  color: #BAE6FD;
 }
 
 .assessment-badge-in_progress {
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
+  background: var(--color-warning-bg, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning-text, #FBBF24);
 }
 
 .assessment-badge-submitted,
 .assessment-badge-graded {
-  background: rgba(85, 230, 59, 0.15);
-  color: #55E63B;
+  background: rgba(52, 211, 153, 0.15);
+  color: #34D399;
 }
 
 .assessment-badge-not_assigned,
 .assessment-badge-pending,
 .assessment-badge-draft {
   background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text-muted);
+  color: var(--color-text-muted, #A7B7CD);
 }
 
 .assessment-badge-running {
-  background: rgba(85, 230, 59, 0.2);
-  color: #55E63B;
+  background: rgba(52, 211, 153, 0.2);
+  color: #34D399;
 }
 
 .assessment-badge-passed {
-  background: rgba(85, 230, 59, 0.15);
-  color: #55E63B;
+  background: rgba(52, 211, 153, 0.15);
+  color: #34D399;
 }
 
 .assessment-badge-partial {
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
+  background: var(--color-warning-bg, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning-text, #FBBF24);
 }
 
 .assessment-badge-failed,
 .assessment-badge-error {
-  background: var(--color-danger-bg);
-  color: var(--color-danger-text);
+  background: var(--color-danger-bg, rgba(244, 63, 94, 0.15));
+  color: var(--color-danger-text, #FB7185);
 }
 
 .assessment-badge-published {
-  background: rgba(168, 85, 247, 0.2);
-  color: #DDD6FE;
+  background: rgba(34, 211, 238, 0.18);
+  color: #CFFAFE;
 }
 
 .cvx-text-gradient {
-  background: var(--color-gradient);
+  background: var(--color-gradient, linear-gradient(135deg, #1685FF 0%, #22D3EE 100%));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -115,18 +115,18 @@
   justify-content: center;
   gap: 0.4rem;
   border-radius: 9999px;
-  background: var(--color-btn-gradient, linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%));
+  background: var(--color-btn-gradient, linear-gradient(135deg, #1685FF 0%, #0284C7 100%));
   color: #fff;
   padding: 0.65rem 1.35rem;
   font-size: 0.85rem;
   font-weight: 600;
-  box-shadow: 0 0 24px rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 24px rgba(22, 133, 255, 0.4);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .cvx-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 0 35px rgba(168, 85, 247, 0.65);
+  box-shadow: 0 0 35px rgba(34, 211, 238, 0.5);
 }
 
 .cvx-btn-ghost {
@@ -135,9 +135,9 @@
   justify-content: center;
   gap: 0.4rem;
   border-radius: 9999px;
-  border: 1px solid var(--color-border);
-  background: rgba(30, 14, 62, 0.65);
-  color: var(--color-text-muted);
+  border: 1px solid var(--color-border, #293B57);
+  background: rgba(8, 20, 38, 0.7);
+  color: var(--color-text-muted, #A7B7CD);
   padding: 0.65rem 1.35rem;
   font-size: 0.85rem;
   font-weight: 600;
@@ -145,12 +145,12 @@
 }
 
 .cvx-btn-ghost:hover {
-  border-color: rgba(168, 85, 247, 0.6);
-  background: rgba(45, 20, 95, 0.85);
-  color: var(--color-text);
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(15, 32, 59, 0.9);
+  color: var(--color-text, #F8FAFC);
 }
 
 .cvx-gold-accent {
-  color: #55E63B;
-  border-color: rgba(85, 230, 59, 0.35);
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.35);
 }

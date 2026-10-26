@@ -64,12 +64,12 @@ function NavLink({ item, active }: { item: AssessmentNavItem; active: boolean })
       href={item.href}
       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
         active
-          ? 'bg-[rgba(124,58,237,0.28)] text-white shadow-[inset_0_0_0_1px_rgba(139,92,246,0.45)]'
-          : 'text-[#C4B5FD] hover:bg-white/[0.05] hover:text-white'
+          ? 'bg-[rgba(22,133,255,0.18)] text-white shadow-[inset_0_0_0_1px_rgba(22,133,255,0.45)]'
+          : 'text-[#A7B7CD] hover:bg-white/[0.05] hover:text-white'
       }`}
     >
       {LucideIcon ? (
-        <LucideIcon className={`h-4.5 w-4.5 stroke-[2] ${active ? 'text-[#55E63B]' : ''}`} />
+        <LucideIcon className={`h-4.5 w-4.5 stroke-[2] ${active ? 'text-[#22D3EE]' : ''}`} />
       ) : (
         <AssessmentMaterialIcon name={item.icon} className="text-xl" />
       )}
@@ -85,13 +85,13 @@ export function RecruitmentAssessmentShell({ children }: { children: React.React
 
   return (
     <div className="assessments-root min-h-screen bg-[var(--color-page)]">
-      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-[rgba(139,92,246,0.2)] bg-[rgba(14,6,32,0.85)] px-6 backdrop-blur-xl">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-[#293B57] bg-[rgba(8,20,38,0.85)] px-6 backdrop-blur-xl">
         <Link href="/assessments" className="text-lg font-bold tracking-tight text-white">
           Code<span className="cvx-text-gradient">Vox</span>
         </Link>
-        <div className="flex items-center gap-4 text-sm text-[#C4B5FD]">
+        <div className="flex items-center gap-4 text-sm text-[#A7B7CD]">
           <span className="hidden sm:inline">{userName ? userName : 'Recruitment Console'}</span>
-          <span className="hidden rounded-full border border-[rgba(85,230,59,0.35)] bg-[rgba(85,230,59,0.12)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#55E63B] sm:inline">
+          <span className="hidden rounded-full border border-[rgba(52,211,153,0.35)] bg-[rgba(52,211,153,0.12)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#34D399] sm:inline">
             Pro
           </span>
           <button
@@ -105,11 +105,11 @@ export function RecruitmentAssessmentShell({ children }: { children: React.React
       </header>
 
       <div className="flex min-h-screen pt-16">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-[rgba(139,92,246,0.2)] bg-[#0E0620] py-5 md:flex">
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-[#293B57] bg-[#081426] py-5 md:flex">
           <nav className="flex-1 space-y-6 overflow-y-auto px-3">
             {RECRUITMENT_NAV_SECTIONS.map((section) => (
               <div key={section.label}>
-                <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#948BB0]">
+                <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#6B7C96]">
                   {section.label}
                 </p>
                 <div className="space-y-1">

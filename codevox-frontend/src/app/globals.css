@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    --color-text-primary: var(--color-text, #FFFFFF);
-    --color-text-secondary: var(--color-text-muted, #C4B5FD);
-    --color-background-primary: var(--color-bg, #090414);
-    --color-background-secondary: var(--color-surface-container, #160A30);
+    --color-text-primary: var(--color-text, #F8FAFC);
+    --color-text-secondary: var(--color-text-muted, #A7B7CD);
+    --color-background-primary: var(--color-bg, #050B18);
+    --color-background-secondary: var(--color-surface-container, #081426);
     --color-border-secondary: var(--color-border-strong, rgba(168, 85, 247, 0.35));
     --color-border-tertiary: var(--color-border, rgba(139, 92, 246, 0.22));
   }
