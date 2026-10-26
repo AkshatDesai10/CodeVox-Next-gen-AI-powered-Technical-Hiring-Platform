@@ -327,6 +327,17 @@ export function suggestCompetencies(id: string, stageType?: string) {
   );
 }
 
+export function suggestCompetenciesByRole(role: string, seniority?: string) {
+  return unwrap(
+    clientApiPost<
+      Envelope<{
+        suggestions: Array<{ name: string; category: 'hard' | 'soft'; description?: string }>;
+        ai_powered: boolean;
+      }>
+    >('/api/job-profiles/ai/suggest-competencies-by-role', { role, seniority })
+  );
+}
+
 export function suggestRubricWeights(id: string) {
   return unwrap(
     clientApiPost<

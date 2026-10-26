@@ -455,6 +455,19 @@ export class JobProfilesController {
     );
   }
 
+
+  @Post('ai/suggest-competencies-by-role')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async suggestCompetenciesByRole(
+    @CurrentUser() user: JwtUserPayload,
+    @Body() body: { role: string; seniority?: string },
+  ) {
+    return ok(
+      'Competency suggestions by role',
+      await this.ai.suggestCompetenciesByRole(user, body.role, body.seniority),
+    );
+  }
   @Post('ai/suggest-competencies/:id')
   @UseGuards(JwtAuthGuard)
   @RequirePermissions('job_profiles:write', 'assessments:write')
