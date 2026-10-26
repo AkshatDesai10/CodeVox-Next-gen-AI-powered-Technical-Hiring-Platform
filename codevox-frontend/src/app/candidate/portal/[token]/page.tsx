@@ -7,6 +7,7 @@ import { recruitmentApiBase } from '@/lib/recruitment-api-base';
 import { withBasePath } from '@/lib/with-base-path';
 import { getCandidateDashboard, saveCandidatePortalPreferences } from '@/lib/candidate-api';
 import { CandidatePortalIdentityGate } from '@/modules/job-profiles/components/CandidatePortalIdentityGate';
+import { CandidatePortalOnboardingGate } from '@/modules/job-profiles/components/CandidatePortalOnboardingGate';
 
 interface StageDto {
   id: string;
@@ -35,6 +36,12 @@ interface DashboardPayload {
     complete: boolean;
     consent_text: string;
     face_photo_url?: string | null;
+  };
+  onboarding?: {
+    needs_name: boolean;
+    needs_resume: boolean;
+    complete: boolean;
+    assigned_slot_label?: string | null;
   };
   job: {
     id: string;
@@ -369,6 +376,28 @@ export default function CandidatePortalPage({
     identityMode === 'permissions_only'
       ? 'Please complete the camera and microphone device check before starting a round.'
       : 'Please complete consent and face capture before starting a round.';
+
+  const needsOnboarding = Boolean(data.onboarding && !data.onboarding.complete);
+
+  if (needsOnboarding && data.onboarding) {
+    return (
+      <div className="min-h-screen bg-[#090414] text-white font-sans">
+        <CandidatePortalOnboardingGate
+          token={token}
+          jobTitle={data.job.title}
+          email={data.candidate.email}
+          needsName={data.onboarding.needs_name}
+          needsResume={data.onboarding.needs_resume}
+          assignedSlotLabel={data.onboarding.assigned_slot_label}
+          initialName={data.candidate.name}
+          onComplete={async () => {
+            await queryClient.invalidateQueries({ queryKey: ['candidate-portal', token] });
+            await refetch();
+          }}
+        />
+      </div>
+    );
+  }
 
   const availableStage = data.stages.find((s) => s.status === 'IN_PROGRESS' || s.status === 'NOT_STARTED');
   const currentRuleTab = activeRuleTab || availableStage?.id || data.stages[0]?.id;

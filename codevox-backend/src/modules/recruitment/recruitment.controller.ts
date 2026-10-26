@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UploadedFiles,
   UseGuards,
@@ -119,6 +121,90 @@ export class RecruitmentController {
     );
   }
 
+  @Get('time-slots')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:read', 'assessments:read')
+  async listTimeSlots(
+    @CurrentUser() user: JwtUserPayload,
+    @Query('available_only') availableOnly?: string,
+    @Query('for_date') forDate?: string,
+  ) {
+    return ok(
+      'Time slots listed',
+      await this.service.listTimeSlots(user, {
+        available_only: availableOnly === '1' || availableOnly === 'true',
+        for_date: forDate,
+      }),
+    );
+  }
+
+  @Post('time-slots')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async createTimeSlot(
+    @CurrentUser() user: JwtUserPayload,
+    @Body()
+    body: {
+      label?: string;
+      start_time: string;
+      end_time: string;
+      timezone?: string;
+      capacity?: number;
+      notes?: string;
+      status?: string;
+    },
+  ) {
+    return ok('Time slot created', await this.service.createTimeSlot(user, body));
+  }
+
+  @Patch('time-slots/:id')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async updateTimeSlot(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      label?: string | null;
+      start_time?: string;
+      end_time?: string;
+      timezone?: string;
+      capacity?: number;
+      notes?: string | null;
+      status?: string;
+    },
+  ) {
+    return ok('Time slot updated', await this.service.updateTimeSlot(user, id, body));
+  }
+
+  @Delete('time-slots/:id')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async deleteTimeSlot(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('id') id: string,
+  ) {
+    return ok('Time slot deleted', await this.service.deleteTimeSlot(user, id));
+  }
+
+  @Post('candidates/bulk-invite')
+  @UseGuards(JwtAuthGuard)
+  @RequirePermissions('job_profiles:write', 'assessments:write')
+  async bulkInviteCandidates(
+    @CurrentUser() user: JwtUserPayload,
+    @Body()
+    body: {
+      emails?: string[];
+      job_profile_id?: string;
+      slot_date?: string;
+    },
+  ) {
+    return ok(
+      'Bulk invite processed',
+      await this.service.bulkInviteCandidates(user, body),
+    );
+  }
+
   @Post('candidates/bulk')
   @UseGuards(JwtAuthGuard)
   @RequirePermissions('job_profiles:write', 'assessments:write')
@@ -155,6 +241,8 @@ export class RecruitmentController {
       name?: string;
       email?: string;
       job_profile_id?: string;
+      slot_id?: string;
+      slot_date?: string;
     },
     @UploadedFile() resume?: Express.Multer.File,
   ) {
@@ -170,10 +258,15 @@ export class RecruitmentController {
   async inviteLead(
     @CurrentUser() user: JwtUserPayload,
     @Param('leadId') leadId: string,
+    @Body() body?: { slot_id?: string; slot_date?: string; job_profile_id?: string },
   ) {
     return ok(
       'Lead invite processed',
-      await this.service.inviteLeadToAssessment(user, leadId),
+      await this.service.inviteLeadToAssessment(user, leadId, {
+        jobProfileId: body?.job_profile_id,
+        slot_id: body?.slot_id,
+        slot_date: body?.slot_date,
+      }),
     );
   }
 

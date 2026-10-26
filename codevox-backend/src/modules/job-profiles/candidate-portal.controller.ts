@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Post, Body, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { CandidatePortalService } from './candidate-portal.service';
 
 function ok(message: string, data: unknown) {
@@ -14,6 +15,26 @@ export class CandidatePortalController {
   async getDashboard(@Param('token') token: string) {
     const data = await this.candidatePortalService.getDashboardPayload(token);
     return ok('Candidate dashboard', data);
+  }
+
+  @Post(':token/onboard')
+  @UseInterceptors(
+    FileInterceptor('resume', {
+      storage: memoryStorage(),
+      limits: { fileSize: 8 * 1024 * 1024 },
+    }),
+  )
+  async onboardCandidate(
+    @Param('token') token: string,
+    @Body() body: { name?: string },
+    @UploadedFile() resume?: Express.Multer.File,
+  ) {
+    const data = await this.candidatePortalService.onboardCandidate(
+      token,
+      { name: body?.name },
+      resume,
+    );
+    return ok('Candidate onboarded', data);
   }
 
   @Post(':token/consent')

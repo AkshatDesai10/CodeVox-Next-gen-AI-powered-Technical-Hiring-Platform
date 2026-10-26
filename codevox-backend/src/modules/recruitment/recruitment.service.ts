@@ -23,6 +23,7 @@ import { buildMagicLinkEmail, buildNoOpeningEmail } from '../email/email-templat
 import { JobProfileStatus } from '../job-profiles/entities/job-profile.mysql.entity';
 import { ResumeScreeningService } from './resume-screening/resume-screening.service';
 import type { RecruitmentLeadOverlayMysql } from './entities/recruitment-lead-overlay.mysql.entity';
+import type { RecruitmentInterviewTimeSlotMysql } from './entities/recruitment-interview-time-slot.mysql.entity';
 import {
   INBOX_PIPELINE_STAGES,
   type LocalLeadRow,
@@ -35,6 +36,7 @@ const IST_TZ = 'Asia/Kolkata';
 const MAX_BULK_RESUMES = 50;
 const MAX_RESUME_BYTES = 8 * 1024 * 1024;
 const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+const SIMPLE_EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 type UploadedResumeFile = {
   buffer?: Buffer;
@@ -165,6 +167,11 @@ export class RecruitmentService {
       notice_period_days: lead.notice_period_days,
       invite_status: overlay?.inviteStatus ?? null,
       invite_token: overlay?.inviteToken ?? null,
+      invite_slot_id: overlay?.inviteSlotId ?? null,
+      invite_slot_label: overlay?.inviteSlotLabel ?? null,
+      invite_slot_date: overlay?.inviteSlotDate
+        ? String(overlay.inviteSlotDate).slice(0, 10)
+        : null,
       ...this.resumeScreening.mapListFields(overlay),
     };
   }
@@ -308,6 +315,7 @@ export class RecruitmentService {
     portalStage?: string;
     actorId?: string;
     extractedText?: string | null;
+    onboardingRequired?: boolean;
   }) {
     const leadId = `manual_${randomBytes(8).toString('hex')}`;
     const [firstName, ...rest] = input.name.trim().split(/\s+/);
@@ -328,6 +336,7 @@ export class RecruitmentService {
         job_profile_id: input.jobProfileId,
         job_title: input.jobTitle,
         resume_url: resumeUrl,
+        ...(input.onboardingRequired ? { onboarding_required: true } : {}),
       },
     });
 
@@ -356,6 +365,8 @@ export class RecruitmentService {
       name?: string;
       email?: string;
       job_profile_id?: string;
+      slot_id?: string;
+      slot_date?: string;
     },
     resume?: UploadedResumeFile,
   ) {
@@ -363,6 +374,8 @@ export class RecruitmentService {
     const name = String(body.name ?? '').trim();
     const email = String(body.email ?? '').trim().toLowerCase();
     const profileId = String(body.job_profile_id ?? '').trim();
+    const slotId = String(body.slot_id ?? '').trim() || undefined;
+    const slotDate = String(body.slot_date ?? '').trim() || undefined;
     if (!name || !email.includes('@')) {
       throw new BadRequestException('Name and a valid email are required');
     }
@@ -386,6 +399,7 @@ export class RecruitmentService {
 
     const invited = await this.inviteLeadToAssessment(actor, created.leadId, {
       jobProfileId: profileId,
+      ...(slotId && slotDate ? { slot_id: slotId, slot_date: slotDate } : {}),
     });
 
     if (invited.status === 'INVITED' && !invited.email_sent) {
@@ -1539,7 +1553,7 @@ export class RecruitmentService {
   async inviteLeadToAssessment(
     actor: JwtUserPayload,
     leadId: string,
-    opts?: { jobProfileId?: string },
+    opts?: { jobProfileId?: string; slot_id?: string; slot_date?: string },
   ) {
     await this.assertWrite(actor);
     const resolved = await this.resolveLocalLead(leadId);
@@ -1553,7 +1567,20 @@ export class RecruitmentService {
         status: 'ALREADY_INVITED' as const,
         invite_token: existingOverlay.inviteToken,
         interview_url: `${baseUrl}/candidate/portal/${existingOverlay.inviteToken}`,
+        slot_label: existingOverlay.inviteSlotLabel ?? null,
+        slot_date: existingOverlay.inviteSlotDate
+          ? String(existingOverlay.inviteSlotDate).slice(0, 10)
+          : null,
       };
+    }
+
+    const slotId = String(opts?.slot_id ?? '').trim();
+    const appointmentDate = String(opts?.slot_date ?? '').trim();
+    let bookableSlot: RecruitmentInterviewTimeSlotMysql | null = null;
+    let slotLabel: string | null = null;
+    if (slotId && appointmentDate) {
+      bookableSlot = await this.requireBookableSlot(slotId, appointmentDate);
+      slotLabel = this.formatInviteSlotLabel(bookableSlot, appointmentDate);
     }
 
     const candidateName = [lead.firstname, lead.lastname].filter(Boolean).join(' ') || 'Candidate';
@@ -1601,18 +1628,35 @@ export class RecruitmentService {
       const profile = await this.jobRepo.findById(profileId);
       const jobTitle = profile?.title ?? courseName ?? 'Assessment';
 
-      const emailContent = buildMagicLinkEmail(candidateName, jobTitle, magicLinkUrl);
+      const emailContent = buildMagicLinkEmail(
+        candidateName,
+        jobTitle,
+        magicLinkUrl,
+        slotLabel,
+      );
       const sent = await this.emailService.sendMail(
         lead.email,
         emailContent.subject,
         emailContent.html,
       );
 
+      if (bookableSlot) {
+        bookableSlot.bookedCount = Number(bookableSlot.bookedCount ?? 0) + 1;
+        await this.repo.timeSlots.save(bookableSlot);
+      }
+
       await this.repo.mergeLeadOverlay(lead.lead_id, {
         inviteStatus: 'INVITED',
         inviteToken: token,
         portalStage: 'Contacted',
         lastLocalActionAt: new Date(),
+        ...(bookableSlot
+          ? {
+              inviteSlotId: bookableSlot.id,
+              inviteSlotLabel: slotLabel,
+              inviteSlotDate: appointmentDate,
+            }
+          : {}),
       });
 
       await this.repo.links.save(
@@ -1626,11 +1670,16 @@ export class RecruitmentService {
       await this.repo.logActivity({
         leadId: lead.lead_id,
         eventType: 'lead_invited',
-        eventSummary: `Magic link sent to ${lead.email} for ${jobTitle}`,
+        eventSummary: slotLabel
+          ? `Magic link sent to ${lead.email} for ${jobTitle} (${slotLabel})`
+          : `Magic link sent to ${lead.email} for ${jobTitle}`,
         eventJson: {
           token,
           jobTitle,
           profileId,
+          ...(bookableSlot
+            ? { slot_id: bookableSlot.id, slot_date: appointmentDate }
+            : {}),
         } as Record<string, unknown>,
         actorId: this.actorId(actor),
       });
@@ -1640,6 +1689,9 @@ export class RecruitmentService {
         invite_token: token,
         interview_url: magicLinkUrl,
         email_sent: Boolean(sent.accepted),
+        slot_label: slotLabel,
+        slot_date: bookableSlot ? appointmentDate : null,
+        slot_id: bookableSlot ? bookableSlot.id : null,
       };
     }
 
@@ -1665,6 +1717,445 @@ export class RecruitmentService {
     return {
       status: 'NO_OPENING' as const,
       email_sent: Boolean(sent.accepted),
+    };
+  }
+
+  private normalizeTimeValue(value: unknown) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      const hh = String(value.getHours()).padStart(2, '0');
+      const mm = String(value.getMinutes()).padStart(2, '0');
+      const ss = String(value.getSeconds()).padStart(2, '0');
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    let trimmed = String(value ?? '').trim();
+    if (!trimmed) {
+      throw new BadRequestException('Time must be HH:mm or HH:mm:ss');
+    }
+
+    const iso = trimmed.match(/T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (iso) {
+      return `${iso[1]}:${iso[2]}:${iso[3] ?? '00'}`;
+    }
+
+    trimmed = trimmed.replace(/^(\d{1,2}:\d{2}(?::\d{2})?)\.\d+$/, '$1');
+
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) {
+      throw new BadRequestException('Time must be HH:mm or HH:mm:ss');
+    }
+    const hh = String(Number(match[1])).padStart(2, '0');
+    const mm = match[2];
+    const ss = match[3] ?? '00';
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  private timeToSeconds(value: unknown) {
+    const normalized = this.normalizeTimeValue(value);
+    const [hh, mm, ss] = normalized.split(':').map((part) => Number(part));
+    return hh * 3600 + mm * 60 + ss;
+  }
+
+  private assertEndAfterStart(startTime: unknown, endTime: unknown) {
+    if (this.timeToSeconds(endTime) <= this.timeToSeconds(startTime)) {
+      throw new BadRequestException('end_time must be after start_time');
+    }
+  }
+
+  private formatTimeOnly(value: unknown) {
+    try {
+      return this.normalizeTimeValue(value);
+    } catch {
+      return '00:00:00';
+    }
+  }
+
+  private formatTimeSlotLabel(slot: RecruitmentInterviewTimeSlotMysql) {
+    const start = this.formatTimeOnly(slot.startTime).slice(0, 5);
+    const end = this.formatTimeOnly(slot.endTime).slice(0, 5);
+    const tz = slot.timezone || 'Asia/Kolkata';
+    const range = `${start}–${end} (${tz})`;
+    return slot.label?.trim() ? `${slot.label.trim()} · ${range}` : range;
+  }
+
+  private formatInviteSlotLabel(
+    slot: RecruitmentInterviewTimeSlotMysql,
+    appointmentDate: string,
+  ) {
+    const date = String(appointmentDate).slice(0, 10);
+    const start = this.formatTimeOnly(slot.startTime).slice(0, 5);
+    const end = this.formatTimeOnly(slot.endTime).slice(0, 5);
+    const tz = slot.timezone || 'Asia/Kolkata';
+    const range = `${date} ${start}–${end} (${tz})`;
+    return slot.label?.trim() ? `${slot.label.trim()} · ${range}` : range;
+  }
+
+  private mapTimeSlot(
+    slot: RecruitmentInterviewTimeSlotMysql,
+    bookedForDate?: number,
+  ) {
+    const capacity = Number(slot.capacity ?? 0);
+    const booked =
+      bookedForDate != null ? Number(bookedForDate) : Number(slot.bookedCount ?? 0);
+    return {
+      id: slot.id,
+      label: slot.label,
+      start_time: this.formatTimeOnly(slot.startTime),
+      end_time: this.formatTimeOnly(slot.endTime),
+      timezone: slot.timezone,
+      capacity,
+      booked_count: booked,
+      remaining: Math.max(0, capacity - booked),
+      status: slot.status,
+      notes: slot.notes,
+      display_label: this.formatTimeSlotLabel(slot),
+      created_at: slot.createdAt,
+      updated_at: slot.updatedAt,
+    };
+  }
+
+  private async countBookingsForSlotOnDate(slotId: string, appointmentDate: string) {
+    return this.repo.leadOverlays.count({
+      where: {
+        inviteSlotId: slotId as any,
+        inviteSlotDate: appointmentDate,
+        inviteStatus: 'INVITED',
+        inactive: 0,
+      },
+    });
+  }
+
+  private async requireBookableSlot(slotId: string, appointmentDate: string) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate)) {
+      throw new BadRequestException('slot_date must be YYYY-MM-DD');
+    }
+    if (appointmentDate < this.todayDateString()) {
+      throw new BadRequestException('Selected interview date is in the past');
+    }
+    const slot = await this.repo.timeSlots.findOne({
+      where: { id: slotId, inactive: 0 },
+    });
+    if (!slot) throw new NotFoundException('Time slot not found');
+    if (slot.status !== 'open') {
+      throw new BadRequestException('Selected time slot is closed');
+    }
+    const booked = await this.countBookingsForSlotOnDate(slotId, appointmentDate);
+    if (booked >= Number(slot.capacity ?? 0)) {
+      throw new BadRequestException('Selected time slot is fully booked for that date');
+    }
+    return slot;
+  }
+
+  async listTimeSlots(
+    actor: JwtUserPayload,
+    query?: { available_only?: boolean; for_date?: string },
+  ) {
+    await this.assertRead(actor);
+    const slots = await this.repo.timeSlots.find({
+      where: { inactive: 0 },
+      order: { startTime: 'ASC' },
+    });
+    let rows = slots;
+    if (query?.available_only) {
+      rows = rows.filter((s) => s.status === 'open');
+    }
+
+    const forDate = String(query?.for_date ?? '').trim();
+    const useDate = /^\d{4}-\d{2}-\d{2}$/.test(forDate) ? forDate : null;
+
+    const mapped = await Promise.all(
+      rows.map(async (slot) => {
+        if (!useDate) return this.mapTimeSlot(slot);
+        const booked = await this.countBookingsForSlotOnDate(String(slot.id), useDate);
+        if (query?.available_only && booked >= Number(slot.capacity ?? 0)) {
+          return null;
+        }
+        return this.mapTimeSlot(slot, booked);
+      }),
+    );
+    return {
+      items: mapped.filter((row): row is NonNullable<typeof row> => row != null),
+    };
+  }
+
+  async createTimeSlot(
+    actor: JwtUserPayload,
+    body: {
+      label?: string;
+      start_time: string;
+      end_time: string;
+      timezone?: string;
+      capacity?: number;
+      notes?: string;
+      status?: string;
+    },
+  ) {
+    await this.assertWrite(actor);
+    const startTime = this.normalizeTimeValue(body.start_time);
+    const endTime = this.normalizeTimeValue(body.end_time);
+    this.assertEndAfterStart(startTime, endTime);
+    const capacity = Math.max(1, Number(body.capacity ?? 1) || 1);
+    const status = body.status === 'closed' ? 'closed' : 'open';
+    const saved = await this.repo.timeSlots.save(
+      this.repo.timeSlots.create({
+        label: body.label?.trim() || null,
+        slotDate: null,
+        startTime,
+        endTime,
+        timezone: (body.timezone ?? 'Asia/Kolkata').trim() || 'Asia/Kolkata',
+        capacity,
+        bookedCount: 0,
+        status,
+        notes: body.notes?.trim() || null,
+        inactive: 0,
+      }),
+    );
+    return this.mapTimeSlot(saved);
+  }
+
+  async updateTimeSlot(
+    actor: JwtUserPayload,
+    id: string,
+    body: {
+      label?: string | null;
+      start_time?: string;
+      end_time?: string;
+      timezone?: string;
+      capacity?: number;
+      notes?: string | null;
+      status?: string;
+    },
+  ) {
+    await this.assertWrite(actor);
+    const slot = await this.repo.timeSlots.findOne({ where: { id, inactive: 0 } });
+    if (!slot) throw new NotFoundException('Time slot not found');
+
+    if (body.label !== undefined) slot.label = body.label?.trim() || null;
+    if (body.start_time !== undefined) {
+      slot.startTime = this.normalizeTimeValue(body.start_time);
+    }
+    if (body.end_time !== undefined) {
+      slot.endTime = this.normalizeTimeValue(body.end_time);
+    }
+    this.assertEndAfterStart(slot.startTime, slot.endTime);
+    if (body.timezone !== undefined) {
+      slot.timezone = body.timezone.trim() || 'Asia/Kolkata';
+    }
+    if (body.capacity !== undefined) {
+      const capacity = Math.max(1, Number(body.capacity) || 1);
+      if (capacity < Number(slot.bookedCount ?? 0)) {
+        throw new BadRequestException('capacity cannot be less than booked_count');
+      }
+      slot.capacity = capacity;
+    }
+    if (body.notes !== undefined) slot.notes = body.notes?.trim() || null;
+    if (body.status !== undefined) {
+      slot.status = body.status === 'closed' ? 'closed' : 'open';
+    }
+    slot.slotDate = null;
+
+    const saved = await this.repo.timeSlots.save(slot);
+    return this.mapTimeSlot(saved);
+  }
+
+  async deleteTimeSlot(actor: JwtUserPayload, id: string) {
+    await this.assertWrite(actor);
+    const slot = await this.repo.timeSlots.findOne({ where: { id, inactive: 0 } });
+    if (!slot) throw new NotFoundException('Time slot not found');
+    slot.inactive = 1;
+    slot.status = 'closed';
+    await this.repo.timeSlots.save(slot);
+    return { id: slot.id, deleted: true };
+  }
+
+  async bulkInviteCandidates(
+    actor: JwtUserPayload,
+    body: { emails?: string[]; job_profile_id?: string; slot_date?: string },
+  ) {
+    await this.assertWrite(actor);
+
+    const rawEmails = Array.isArray(body.emails) ? body.emails : [];
+    let invalidCount = 0;
+    const seen = new Set<string>();
+    const validEmails: string[] = [];
+    for (const raw of rawEmails) {
+      const email = String(raw ?? '').trim().toLowerCase();
+      if (!email) continue;
+      if (!SIMPLE_EMAIL_RE.test(email)) {
+        invalidCount += 1;
+        continue;
+      }
+      if (seen.has(email)) continue;
+      seen.add(email);
+      validEmails.push(email);
+    }
+
+    const profileId = String(body.job_profile_id ?? '').trim();
+    const slotDate = String(body.slot_date ?? '').trim();
+    if (!profileId) throw new BadRequestException('job_profile_id is required');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(slotDate)) {
+      throw new BadRequestException('slot_date must be YYYY-MM-DD');
+    }
+    if (slotDate < this.todayDateString()) {
+      throw new BadRequestException('Selected interview date is in the past');
+    }
+    if (!validEmails.length) {
+      throw new BadRequestException('Provide at least one valid email');
+    }
+
+    const profile = await this.jobRepo.findById(profileId);
+    if (!profile) throw new NotFoundException('Job profile not found');
+    const jobTitle = profile.title ?? 'Assessment';
+
+    const slots = await this.repo.timeSlots.find({
+      where: { inactive: 0, status: 'open' },
+      order: { startTime: 'ASC' },
+    });
+
+    const capacityRows: Array<{
+      slot: RecruitmentInterviewTimeSlotMysql;
+      remaining: number;
+      assigned: number;
+    }> = [];
+    let totalRemaining = 0;
+    for (const slot of slots) {
+      const booked = await this.countBookingsForSlotOnDate(String(slot.id), slotDate);
+      const remaining = Math.max(0, Number(slot.capacity ?? 0) - booked);
+      if (remaining > 0) {
+        capacityRows.push({ slot, remaining, assigned: 0 });
+        totalRemaining += remaining;
+      }
+    }
+
+    if (totalRemaining === 0) {
+      throw new BadRequestException(
+        'No open time slots with remaining capacity for the selected date. Please add or reopen a slot.',
+      );
+    }
+    if (validEmails.length > totalRemaining) {
+      const overflow = validEmails.length - totalRemaining;
+      throw new BadRequestException(
+        `Total capacity is ${totalRemaining} across ${capacityRows.length} slots, but ${validEmails.length} emails pasted. Please add another slot or reduce ${overflow} candidates.`,
+      );
+    }
+
+    const assignments: Array<{
+      email: string;
+      slot: RecruitmentInterviewTimeSlotMysql;
+      slotLabel: string;
+    }> = [];
+    let slotIdx = 0;
+    for (const email of validEmails) {
+      while (slotIdx < capacityRows.length && capacityRows[slotIdx].remaining <= 0) {
+        slotIdx += 1;
+      }
+      if (slotIdx >= capacityRows.length) {
+        throw new BadRequestException('Ran out of slot capacity during allocation');
+      }
+      const row = capacityRows[slotIdx];
+      assignments.push({
+        email,
+        slot: row.slot,
+        slotLabel: this.formatInviteSlotLabel(row.slot, slotDate),
+      });
+      row.remaining -= 1;
+      row.assigned += 1;
+    }
+
+    const items: Array<{
+      email: string;
+      lead_id?: string;
+      status: string;
+      invite_token?: string;
+      interview_url?: string;
+      email_sent?: boolean;
+      slot_id?: string;
+      slot_label?: string;
+      error?: string;
+    }> = [];
+    let invited = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    for (const { email, slot, slotLabel } of assignments) {
+      try {
+        const created = await this.createManualLeadPending({
+          name: 'Pending',
+          email,
+          jobProfileId: profileId,
+          jobTitle,
+          inviteStatus: 'PENDING',
+          portalStage: 'New',
+          actorId: this.actorId(actor),
+          onboardingRequired: true,
+        });
+
+        const result = await this.inviteLeadToAssessment(actor, created.leadId, {
+          jobProfileId: profileId,
+          slot_id: String(slot.id),
+          slot_date: slotDate,
+        });
+
+        if (result.status === 'ALREADY_INVITED') {
+          skipped += 1;
+          items.push({
+            email,
+            lead_id: created.leadId,
+            status: result.status,
+            invite_token: result.invite_token,
+            interview_url: result.interview_url,
+            slot_id: String(slot.id),
+            slot_label: slotLabel,
+          });
+        } else if (result.status === 'INVITED') {
+          invited += 1;
+          items.push({
+            email,
+            lead_id: created.leadId,
+            status: result.status,
+            invite_token: result.invite_token,
+            interview_url: result.interview_url,
+            email_sent: result.email_sent,
+            slot_id: String(slot.id),
+            slot_label: result.slot_label ?? slotLabel,
+          });
+        } else {
+          failed += 1;
+          items.push({
+            email,
+            lead_id: created.leadId,
+            status: result.status,
+            slot_id: String(slot.id),
+            slot_label: slotLabel,
+            error: 'Invite did not complete',
+          });
+        }
+      } catch (err) {
+        failed += 1;
+        items.push({
+          email,
+          status: 'ERROR',
+          slot_id: String(slot.id),
+          slot_label: slotLabel,
+          error: err instanceof Error ? err.message : 'Failed to invite candidate',
+        });
+      }
+    }
+
+    return {
+      invited,
+      failed,
+      skipped,
+      invalid_count: invalidCount,
+      total_capacity: totalRemaining,
+      allocation: capacityRows
+        .filter((row) => row.assigned > 0)
+        .map((row) => ({
+          slot_id: String(row.slot.id),
+          slot_label: this.formatInviteSlotLabel(row.slot, slotDate),
+          assigned: row.assigned,
+        })),
+      items,
     };
   }
 

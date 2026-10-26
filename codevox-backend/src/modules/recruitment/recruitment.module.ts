@@ -6,6 +6,7 @@ import { JobProfilesModule } from '../job-profiles/job-profiles.module';
 import { JobApplicationMysql } from '../job-profiles/entities/job-application.mysql.entity';
 import { RecruitmentLeadOverlayMysql } from './entities/recruitment-lead-overlay.mysql.entity';
 import { RecruitmentInterviewOverlayMysql } from './entities/recruitment-interview-overlay.mysql.entity';
+import { RecruitmentInterviewTimeSlotMysql } from './entities/recruitment-interview-time-slot.mysql.entity';
 import {
   RecruitmentActivityLogMysql,
   RecruitmentCommunicationLogMysql,
@@ -24,6 +25,7 @@ import { ResumeScreeningModule } from './resume-screening/resume-screening.modul
     TypeOrmModule.forFeature([
       RecruitmentLeadOverlayMysql,
       RecruitmentInterviewOverlayMysql,
+      RecruitmentInterviewTimeSlotMysql,
       RecruitmentLeadInterviewLinkMysql,
       RecruitmentCommunicationLogMysql,
       RecruitmentActivityLogMysql,

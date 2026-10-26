@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { RecruitmentLeadOverlayMysql } from './entities/recruitment-lead-overlay.mysql.entity';
 import { RecruitmentInterviewOverlayMysql } from './entities/recruitment-interview-overlay.mysql.entity';
+import { RecruitmentInterviewTimeSlotMysql } from './entities/recruitment-interview-time-slot.mysql.entity';
 import {
   RecruitmentActivityLogMysql,
   RecruitmentCommunicationLogMysql,
@@ -17,6 +18,8 @@ export class RecruitmentRepository {
     readonly leadOverlays: Repository<RecruitmentLeadOverlayMysql>,
     @InjectRepository(RecruitmentInterviewOverlayMysql)
     readonly interviewOverlays: Repository<RecruitmentInterviewOverlayMysql>,
+    @InjectRepository(RecruitmentInterviewTimeSlotMysql)
+    readonly timeSlots: Repository<RecruitmentInterviewTimeSlotMysql>,
     @InjectRepository(RecruitmentLeadInterviewLinkMysql)
     readonly links: Repository<RecruitmentLeadInterviewLinkMysql>,
     @InjectRepository(RecruitmentCommunicationLogMysql)

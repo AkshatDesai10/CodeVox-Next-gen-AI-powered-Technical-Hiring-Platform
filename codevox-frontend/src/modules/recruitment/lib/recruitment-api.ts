@@ -1,4 +1,4 @@
-import { authedFetch, clientApiGet, clientApiPatch, clientApiPost } from '@/lib/client-api';
+import { authedFetch, clientApiDelete, clientApiGet, clientApiPatch, clientApiPost } from '@/lib/client-api';
 
 type Envelope<T> = { success: boolean; message: string; data: T };
 
@@ -506,6 +506,114 @@ export function batchInviteLeads(input: {
       lead_ids: input.lead_ids ?? [],
       ...(input.job_profile_id ? { job_profile_id: input.job_profile_id } : {}),
       ...(input.min_score != null ? { min_score: input.min_score } : {}),
+    }),
+  );
+}
+
+export type RecruitmentTimeSlot = {
+  id: string;
+  label: string | null;
+  start_time: string;
+  end_time: string;
+  timezone: string;
+  capacity: number;
+  booked_count: number;
+  remaining: number;
+  status: string;
+  notes: string | null;
+  display_label: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export function listRecruitmentTimeSlots(opts?: {
+  availableOnly?: boolean;
+  forDate?: string;
+}) {
+  const params = new URLSearchParams();
+  if (opts?.availableOnly) params.set('available_only', '1');
+  if (opts?.forDate) params.set('for_date', opts.forDate);
+  const q = params.toString();
+  return unwrap(
+    clientApiGet<Envelope<{ items: RecruitmentTimeSlot[] }>>(
+      `/api/recruitment/time-slots${q ? `?${q}` : ''}`,
+    ),
+  );
+}
+
+export function createRecruitmentTimeSlot(body: {
+  label?: string;
+  start_time: string;
+  end_time: string;
+  timezone?: string;
+  capacity?: number;
+  notes?: string;
+  status?: string;
+}) {
+  return unwrap(
+    clientApiPost<Envelope<RecruitmentTimeSlot>>('/api/recruitment/time-slots', body),
+  );
+}
+
+export function updateRecruitmentTimeSlot(
+  id: string,
+  body: Partial<{
+    label: string | null;
+    start_time: string;
+    end_time: string;
+    timezone: string;
+    capacity: number;
+    notes: string | null;
+    status: string;
+  }>,
+) {
+  return unwrap(
+    clientApiPatch<Envelope<RecruitmentTimeSlot>>(`/api/recruitment/time-slots/${id}`, body),
+  );
+}
+
+export function deleteRecruitmentTimeSlot(id: string) {
+  return clientApiDelete(`/api/recruitment/time-slots/${id}`).then(() => ({
+    id,
+    deleted: true as const,
+  }));
+}
+
+export type BulkInviteResult = {
+  invited: number;
+  failed: number;
+  skipped: number;
+  invalid_count?: number;
+  total_capacity?: number;
+  allocation?: Array<{
+    slot_id: string;
+    slot_label: string;
+    assigned: number;
+    remaining?: number;
+  }>;
+  items: Array<{
+    email: string;
+    lead_id?: string;
+    status: string;
+    invite_token?: string;
+    interview_url?: string;
+    email_sent?: boolean;
+    slot_id?: string;
+    slot_label?: string;
+    error?: string;
+  }>;
+};
+
+export function bulkInviteCandidates(input: {
+  emails: string[];
+  jobProfileId: string;
+  slotDate: string;
+}) {
+  return unwrap(
+    clientApiPost<Envelope<BulkInviteResult>>('/api/recruitment/candidates/bulk-invite', {
+      emails: input.emails,
+      job_profile_id: input.jobProfileId,
+      slot_date: input.slotDate,
     }),
   );
 }

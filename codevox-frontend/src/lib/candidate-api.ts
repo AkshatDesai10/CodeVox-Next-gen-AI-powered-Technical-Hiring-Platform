@@ -15,6 +15,38 @@ export async function getCandidateDashboard(token: string) {
   return res.json();
 }
 
+export async function onboardCandidate(
+  token: string,
+  input: { name: string; resume?: File | null },
+) {
+  const form = new FormData();
+  form.set('name', input.name);
+  if (input.resume) form.append('resume', input.resume);
+
+  const res = await fetch(`${recruitmentApiBase()}/api/candidate/portal/${token}/onboard`, {
+    method: 'POST',
+    body: form,
+  });
+
+  const text = await res.text().catch(() => '');
+  let payload: { success?: boolean; message?: string | string[]; data?: unknown } = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = {};
+  }
+
+  if (!res.ok || payload.success === false) {
+    const raw = payload.message;
+    const message = Array.isArray(raw)
+      ? raw.join(', ')
+      : raw || text || 'Failed to complete onboarding';
+    throw new Error(message);
+  }
+
+  return payload.data;
+}
+
 export async function saveCandidatePortalPreferences(
   token: string,
   body: { interview_language?: 'en' | 'hi'; accept_guidelines?: boolean },

@@ -47,6 +47,21 @@ export class RecruitmentLeadOverlayMysql extends ActiveMysqlRow {
   @Column({ type: 'varchar', length: 64, name: 'invite_token', nullable: true })
   inviteToken: string | null;
 
+  @Column({
+    type: 'bigint',
+    unsigned: true,
+    name: 'invite_slot_id',
+    nullable: true,
+  })
+  inviteSlotId: string | null;
+
+  @Column({ type: 'varchar', length: 255, name: 'invite_slot_label', nullable: true })
+  inviteSlotLabel: string | null;
+
+  /** Calendar date chosen when sending the magic-link invite (YYYY-MM-DD). */
+  @Column({ type: 'date', name: 'invite_slot_date', nullable: true })
+  inviteSlotDate: string | null;
+
   @Column({ type: 'varchar', length: 32, name: 'resume_match_status', nullable: true })
   resumeMatchStatus: string | null;
 

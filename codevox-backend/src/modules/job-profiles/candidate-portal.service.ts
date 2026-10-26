@@ -11,6 +11,7 @@ import { AutonomousInterviewRepository } from '../autonomous-interview/autonomou
 import { CandidateAutonomousInterviewMysql, AutonomousInterviewPhase } from '../autonomous-interview/entities/candidate-autonomous-interview.mysql.entity';
 import { extractReportText } from '../ai-detection/text-extraction.util';
 import { RecruitmentService } from '../recruitment/recruitment.service';
+import { RecruitmentRepository } from '../recruitment/recruitment.repository';
 import { ResumeScreeningService } from '../recruitment/resume-screening/resume-screening.service';
 import { RoundSnapshotService } from '../assessment-reports/round-snapshot.service';
 import { resolveInitialInterviewPhase, isBehaviouralAiStage } from './interview-phase.util';
@@ -144,6 +145,7 @@ export class CandidatePortalService {
     private readonly interviewRepo: AutonomousInterviewRepository,
     @Inject(forwardRef(() => RecruitmentService))
     private readonly recruitmentService: RecruitmentService,
+    private readonly recruitmentRepo: RecruitmentRepository,
     @Inject(forwardRef(() => ResumeScreeningService))
     private readonly resumeScreening: ResumeScreeningService,
     private readonly roundSnapshots: RoundSnapshotService,
@@ -446,6 +448,21 @@ export class CandidatePortalService {
     const sourceLeadId = application.source?.startsWith('lead:')
       ? application.source.slice('lead:'.length)
       : null;
+    const leadOverlay = sourceLeadId
+      ? await this.recruitmentRepo.findLeadOverlay(sourceLeadId).catch(() => null)
+      : null;
+    const parsedOverlay = (leadOverlay?.parsedResumeJson ?? null) as Record<
+      string,
+      unknown
+    > | null;
+    const firstNameRaw = String(candidateRec?.firstName ?? '').trim();
+    const firstNamePending = firstNameRaw.toLowerCase() === 'pending';
+    const onboardingRequired = parsedOverlay?.onboarding_required === true;
+    // Name gate: empty / placeholder "Pending" (bulk-invite self-onboard).
+    const needsName = !firstNameRaw || firstNamePending;
+    // Resume gate only for bulk-invite self-onboard flows — do not block
+    // existing single-invite candidates who were created without a resume.
+    const needsResume = onboardingRequired && !candidateRec?.resumeUrl;
     const resumeScreening = await this.resumeScreening
       .getApplicationResumeMatch(String(application.id), sourceLeadId)
       .catch(() => null);
@@ -473,6 +490,12 @@ export class CandidatePortalService {
       },
       interview_language: application.interviewLanguage === 'hi' ? 'hi' : 'en',
       guidelines_accepted: Boolean(application.guidelinesAcceptedAt),
+      onboarding: {
+        needs_name: needsName,
+        needs_resume: needsResume,
+        complete: !needsName && !needsResume,
+        assigned_slot_label: leadOverlay?.inviteSlotLabel ?? null,
+      },
       job: {
         id: profile.id,
         title: profile.title,
@@ -495,6 +518,176 @@ export class CandidatePortalService {
             error: resumeScreening.resume_match_error,
           }
         : null,
+    };
+  }
+
+  async onboardCandidate(
+    token: string,
+    body: { name?: string },
+    resumeFile?: Express.Multer.File,
+  ) {
+    const application = await this.applications.findOne({
+      where: { candidateToken: token, inactive: 0 },
+    });
+    if (!application) throw new NotFoundException('Invalid or expired candidate token');
+
+    const candidate = await this.candidates.findOne({
+      where: { id: application.candidateId },
+    });
+    if (!candidate) throw new NotFoundException('Candidate not found');
+
+    const name = String(body.name ?? '').trim();
+    if (!name) throw new BadRequestException('Name is required');
+
+    const [firstName, ...rest] = name.split(/\s+/);
+    const lastName = rest.join(' ').trim() || null;
+    candidate.firstName = firstName;
+    candidate.lastName = lastName;
+
+    let resumeUrl = candidate.resumeUrl ?? null;
+    let extractedText: string | null = null;
+    let extractedData: Record<string, unknown> = {};
+
+    if (resumeFile?.buffer?.length) {
+      const original = String(resumeFile.originalname ?? '').toLowerCase();
+      const mime = String(resumeFile.mimetype ?? '').toLowerCase();
+      const isPdf = original.endsWith('.pdf') || mime.includes('pdf');
+      const isDocx =
+        original.endsWith('.docx') ||
+        mime.includes('wordprocessingml') ||
+        mime.includes('officedocument');
+      if (!isPdf && !isDocx) {
+        throw new BadRequestException('Only PDF and DOCX resumes are supported');
+      }
+      if (resumeFile.buffer.length > 8 * 1024 * 1024) {
+        throw new BadRequestException('Resume must be 8MB or smaller');
+      }
+
+      const ext = (original.match(/\.[a-z0-9]+$/i)?.[0] ?? '.pdf').toLowerCase();
+      const key = underUploads(
+        'candidate-resumes',
+        String(candidate.id),
+        `${Date.now()}${ext}`,
+      );
+      resumeUrl = await uploadBuffer({
+        key,
+        body: resumeFile.buffer,
+        contentType: resumeFile.mimetype || 'application/octet-stream',
+      });
+      candidate.resumeUrl = resumeUrl;
+
+      try {
+        extractedText = await extractReportText(resumeFile);
+        if (this.openai.isConfigured() && extractedText) {
+          const ai = await this.openai.chatJson<{
+            skills: string[];
+            experience_years: number | null;
+            education_summary: string;
+            experience_summary: string;
+            projects_summary: string;
+            summary: string;
+          }>([
+            {
+              role: 'system',
+              content:
+                'You are a strict data extractor. You MUST output ONLY valid JSON without any markdown formatting, backticks, or extra text. Return JSON exactly matching this schema: { "skills": string[], "experience_years": number|null, "education_summary": string, "experience_summary": string, "projects_summary": string, "summary": string }',
+            },
+            {
+              role: 'user',
+              content: `Extract detailed technical projects and work experience from this resume.\n\n${extractedText.slice(0, 8000)}`,
+            },
+          ]);
+          if (!(ai as Record<string, unknown> | undefined)?.__isFallback) {
+            extractedData = ai as Record<string, unknown>;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to parse resume during onboard:', err);
+      }
+
+      if (extractedData.skills) {
+        const sk = extractedData.skills;
+        candidate.skills = Array.isArray(sk) ? sk.map(String) : [];
+      }
+      if (extractedData.experience_years != null) {
+        candidate.experienceYears = String(extractedData.experience_years);
+      }
+      if (extractedData.education_summary) {
+        candidate.educationSummary = String(extractedData.education_summary);
+      }
+      if (extractedData.experience_summary) {
+        candidate.experienceSummary = String(extractedData.experience_summary);
+      }
+      if (extractedData.projects_summary) {
+        const ps = extractedData.projects_summary;
+        candidate.projectsSummary = Array.isArray(ps)
+          ? (ps as string[]).join('\n\n')
+          : String(ps);
+      }
+    }
+
+    await this.candidates.save(candidate);
+
+    const stillNeedsResume = !candidate.resumeUrl;
+    let wasOnboardingRequired = false;
+
+    if (application.source?.startsWith('lead:')) {
+      const leadId = application.source.slice('lead:'.length);
+      const overlay = await this.recruitmentRepo.findLeadOverlay(leadId);
+      if (overlay) {
+        const prev = (overlay.parsedResumeJson ?? {}) as Record<string, unknown>;
+        wasOnboardingRequired = prev.onboarding_required === true;
+        // Keep flag until resume is uploaded for bulk-invite self-onboard flows.
+        const stillRequired = wasOnboardingRequired && stillNeedsResume;
+        const updated = await this.recruitmentRepo.mergeLeadOverlay(leadId, {
+          resumeExtractedText: extractedText?.trim() || overlay.resumeExtractedText,
+          parsedResumeJson: {
+            ...prev,
+            first_name: firstName,
+            last_name: lastName ?? '',
+            name,
+            resume_url: resumeUrl ?? prev.resume_url ?? null,
+            onboarding_required: stillRequired,
+            ...(extractedData.skills ? { skills: extractedData.skills } : {}),
+            ...(extractedData.experience_summary
+              ? { experience_summary: extractedData.experience_summary }
+              : {}),
+            ...(extractedData.education_summary
+              ? { education_summary: extractedData.education_summary }
+              : {}),
+            ...(extractedData.projects_summary
+              ? { projects_summary: extractedData.projects_summary }
+              : {}),
+          },
+        });
+
+        if (extractedText?.trim()) {
+          void this.resumeScreening
+            .ensureManualLeadScreened(updated)
+            .catch((err) => {
+              console.error(
+                `Onboard resume screen enqueue failed for lead ${leadId}:`,
+                err,
+              );
+            });
+          void this.recruitmentService
+            .triggerBackgroundResumeParse(application)
+            .catch(console.error);
+        }
+      }
+    }
+
+    const needsResume = wasOnboardingRequired && stillNeedsResume;
+    return {
+      candidate: {
+        name: `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() || name,
+        email: candidate.email,
+      },
+      onboarding: {
+        complete: !needsResume,
+        needs_name: false,
+        needs_resume: needsResume,
+      },
     };
   }
 

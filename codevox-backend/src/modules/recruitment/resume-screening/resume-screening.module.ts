@@ -6,6 +6,7 @@ import { JobProfilesModule } from '../../job-profiles/job-profiles.module';
 import { isRedisEnabled } from '../../../config/redis-enabled';
 import { RecruitmentLeadOverlayMysql } from '../entities/recruitment-lead-overlay.mysql.entity';
 import { RecruitmentInterviewOverlayMysql } from '../entities/recruitment-interview-overlay.mysql.entity';
+import { RecruitmentInterviewTimeSlotMysql } from '../entities/recruitment-interview-time-slot.mysql.entity';
 import {
   RecruitmentActivityLogMysql,
   RecruitmentCommunicationLogMysql,
@@ -26,6 +27,7 @@ const redisProviders = isRedisEnabled() ? [ResumeScreeningProcessor] : [];
     TypeOrmModule.forFeature([
       RecruitmentLeadOverlayMysql,
       RecruitmentInterviewOverlayMysql,
+      RecruitmentInterviewTimeSlotMysql,
       RecruitmentLeadInterviewLinkMysql,
       RecruitmentCommunicationLogMysql,
       RecruitmentActivityLogMysql,
