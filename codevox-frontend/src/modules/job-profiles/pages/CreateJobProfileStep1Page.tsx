@@ -517,15 +517,15 @@ export function CreateJobProfileStep1Page() {
             </div>
 
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
-              <div className="rounded-xl border border-violet-500/20 bg-[#120726] p-4">
+              <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <label className="font-label-caps block text-violet-300">
+                  <label className="font-label-caps block text-[var(--assessment-on-surface-variant)]">
                     Required skills ({requiredSkills.filter(Boolean).length})
                   </label>
                   <button
                     type="button"
                     onClick={() => setRequiredSkills([...requiredSkills, ''])}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#55E63B] hover:text-[#45c72f] transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--assessment-primary)] hover:opacity-80 transition-colors"
                   >
                     <AssessmentMaterialIcon name="add" size={14} />
                     Add skill
@@ -538,7 +538,7 @@ export function CreateJobProfileStep1Page() {
                         value={s}
                         onChange={(e) => updateList(requiredSkills, setRequiredSkills, i, e.target.value)}
                         placeholder="e.g. React, Node.js, System Design"
-                        className="codevox-input !py-2 !px-3 text-sm flex-1 !bg-[#160A30] !text-white !border-violet-500/25 focus:!border-violet-400"
+                        className="flex-1 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] px-3 py-2 text-sm text-[var(--assessment-on-surface)] focus:border-[var(--assessment-primary)] focus:outline-none"
                       />
                       {requiredSkills.length > 1 && (
                         <button
@@ -555,15 +555,15 @@ export function CreateJobProfileStep1Page() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-violet-500/20 bg-[#120726] p-4">
+              <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <label className="font-label-caps block text-violet-300">
+                  <label className="font-label-caps block text-[var(--assessment-on-surface-variant)]">
                     Nice to have ({niceSkills.filter(Boolean).length})
                   </label>
                   <button
                     type="button"
                     onClick={() => setNiceSkills([...niceSkills, ''])}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#55E63B] hover:text-[#45c72f] transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--assessment-primary)] hover:opacity-80 transition-colors"
                   >
                     <AssessmentMaterialIcon name="add" size={14} />
                     Add skill
@@ -576,7 +576,7 @@ export function CreateJobProfileStep1Page() {
                         value={s}
                         onChange={(e) => updateList(niceSkills, setNiceSkills, i, e.target.value)}
                         placeholder="e.g. Kubernetes, Redis, GraphQL"
-                        className="codevox-input !py-2 !px-3 text-sm flex-1 !bg-[#160A30] !text-white !border-violet-500/25 focus:!border-violet-400"
+                        className="flex-1 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] px-3 py-2 text-sm text-[var(--assessment-on-surface)] focus:border-[var(--assessment-primary)] focus:outline-none"
                       />
                       {niceSkills.length > 1 && (
                         <button
@@ -594,8 +594,8 @@ export function CreateJobProfileStep1Page() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-violet-500/20 bg-[#120726] p-4">
-              <label className="font-label-caps mb-3 block text-violet-300">
+            <div className="mt-4 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4">
+              <label className="font-label-caps mb-3 block text-[var(--assessment-on-surface-variant)]">
                 Experience Requirements (Years)
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -607,7 +607,7 @@ export function CreateJobProfileStep1Page() {
                     min={0}
                     placeholder="e.g. 3"
                     onChange={(e) => setExpMin(e.target.value)}
-                    className="codevox-input !py-2.5 !px-3 text-sm !bg-[#160A30] !text-white !border-violet-500/25 focus:!border-violet-400"
+                    className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] px-3 py-2 text-sm text-[var(--assessment-on-surface)] focus:border-[var(--assessment-primary)] focus:outline-none"
                   />
                 </div>
                 <div>
@@ -618,51 +618,13 @@ export function CreateJobProfileStep1Page() {
                     min={0}
                     placeholder="e.g. 7"
                     onChange={(e) => setExpMax(e.target.value)}
-                    className="codevox-input !py-2.5 !px-3 text-sm !bg-[#160A30] !text-white !border-violet-500/25 focus:!border-violet-400"
+                    className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] px-3 py-2 text-sm text-[var(--assessment-on-surface)] focus:border-[var(--assessment-primary)] focus:outline-none"
                   />
                 </div>
               </div>
             </div>
           </section>
 
-          <section className="nexus-card p-6">
-            <h2 className="font-headline-md mb-1">Interview pipeline</h2>
-            <p className="mb-5 text-sm text-[var(--assessment-on-surface-variant)]">
-              Choose how candidates progress. Default follows the AI recommendation when available.
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {PIPELINE_PRESETS.map((preset) => {
-                const selected = pipelinePreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setPipelinePreset(preset.id)}
-                    className={`rounded-xl border p-4 text-left transition-all ${
-                      selected
-                        ? 'border-[var(--assessment-primary)] bg-[var(--assessment-primary-fixed,#ede9fe)] text-[var(--assessment-on-surface)] shadow-sm ring-1 ring-[var(--assessment-primary)]'
-                        : 'border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] hover:border-[var(--assessment-primary)]/40'
-                    }`}
-                  >
-                    <div className="mb-2 flex items-center gap-2">
-                      <AssessmentMaterialIcon
-                        name={preset.icon}
-                        size={18}
-                        className={selected ? 'text-[var(--assessment-primary)]' : undefined}
-                      />
-                      <span className="text-sm font-semibold">{preset.title}</span>
-                    </div>
-                    <p className="mb-3 text-xs leading-relaxed text-[var(--assessment-on-surface-variant)]">
-                      {preset.description}
-                    </p>
-                    <p className="text-xs font-medium text-[var(--assessment-primary)]">
-                      {preset.stages}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
         </div>
 
         <aside className="col-span-12 space-y-6 lg:col-span-3">
@@ -717,36 +679,6 @@ export function CreateJobProfileStep1Page() {
             </div>
           </div>
 
-          <div className="nexus-card bg-[var(--assessment-surface-container-low)] p-6">
-            <h3 className="font-title-sm mb-4">Pipeline preview</h3>
-            <p className="mb-2 text-sm font-medium text-[var(--assessment-on-surface)]">
-              {selectedPresetMeta?.title ?? 'Coding + voice interview'}
-            </p>
-            <p className="mb-2 text-xs leading-relaxed text-[var(--assessment-on-surface-variant)]">
-              {selectedPresetMeta?.description}
-            </p>
-            <p className="mb-4 text-xs font-medium text-[var(--assessment-primary)]">
-              {selectedPresetMeta?.stages}
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--assessment-on-surface-variant)]">Basics &amp; JD</span>
-                <AssessmentMaterialIcon
-                  name="check_circle"
-                  size={18}
-                  className="text-[var(--assessment-primary)]"
-                />
-              </div>
-              <div className="flex items-center justify-between text-sm opacity-50">
-                <span className="text-[var(--assessment-on-surface-variant)]">Stages</span>
-                <AssessmentMaterialIcon name="radio_button_unchecked" size={18} />
-              </div>
-              <div className="flex items-center justify-between text-sm opacity-50">
-                <span className="text-[var(--assessment-on-surface-variant)]">Settings &amp; Review</span>
-                <AssessmentMaterialIcon name="radio_button_unchecked" size={18} />
-              </div>
-            </div>
-          </div>
         </aside>
       </div>
 

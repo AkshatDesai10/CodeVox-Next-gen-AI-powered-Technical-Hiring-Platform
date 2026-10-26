@@ -1,13 +1,13 @@
 /* Live interview session — uses CodeVox Assessment / viva-theme tokens */
 .conversation-session {
   /* Interview-room roadmap accents (scoped) */
-  --interview-lime: #55e63b;
-  --interview-purple: #7c3aed;
-  --interview-violet-deep: #1a0b2e;
-  --interview-violet-canvas: #160a30;
-  --interview-glow-lime: 0 0 0 3px rgba(85, 230, 59, 0.35), 0 0 28px rgba(85, 230, 59, 0.45);
-  --interview-glow-purple: 0 0 0 3px rgba(124, 58, 237, 0.4), 0 0 28px rgba(124, 58, 237, 0.5);
-  --interview-glow-subtle: 0 0 0 2px rgba(196, 181, 253, 0.25), 0 0 16px rgba(124, 58, 237, 0.2);
+  --interview-lime: #34D399;
+  --interview-purple: #1685FF;
+  --interview-violet-deep: #081426;
+  --interview-violet-canvas: #050B18;
+  --interview-glow-lime: 0 0 0 3px rgba(52, 211, 153, 0.35), 0 0 28px rgba(52, 211, 153, 0.45);
+  --interview-glow-purple: 0 0 0 3px rgba(22, 133, 255, 0.4), 0 0 28px rgba(22, 133, 255, 0.5);
+  --interview-glow-subtle: 0 0 0 2px rgba(167, 183, 205, 0.25), 0 0 16px rgba(22, 133, 255, 0.2);
 
   font-family: var(--font-family-base, 'Poppins', system-ui, sans-serif);
   color: var(--assessment-on-surface, var(--color-on-surface, #212529));
@@ -46,18 +46,18 @@
 .conversation-session .wave-container.is-speaking .wave-bar {
   animation-duration: 0.55s;
   background-color: var(--interview-lime);
-  box-shadow: 0 0 6px rgba(85, 230, 59, 0.6);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
 }
 
 .conversation-session .wave-container.is-analyzing .wave-bar {
   animation-duration: 1.35s;
   background-color: var(--interview-purple);
-  box-shadow: 0 0 6px rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 6px rgba(22, 133, 255, 0.5);
 }
 
 .conversation-session .wave-container.is-listening .wave-bar {
   animation-duration: 1.1s;
-  background-color: rgba(196, 181, 253, 0.9);
+  background-color: rgba(167, 183, 205, 0.9);
   opacity: 0.85;
 }
 
@@ -98,23 +98,23 @@
   letter-spacing: 0.02em;
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
-  border: 1px solid rgba(124, 58, 237, 0.25);
-  background: rgba(22, 10, 48, 0.35);
-  color: rgba(196, 181, 253, 0.75);
+  border: 1px solid #293B57;
+  background: rgba(8, 20, 38, 0.6);
+  color: rgba(167, 183, 205, 0.85);
   transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .conversation-session .voice-phase-pill.is-done {
-  border-color: rgba(85, 230, 59, 0.35);
-  color: rgba(85, 230, 59, 0.9);
-  background: rgba(85, 230, 59, 0.08);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: rgba(52, 211, 153, 0.9);
+  background: rgba(52, 211, 153, 0.08);
 }
 
 .conversation-session .voice-phase-pill.is-active {
   border-color: var(--interview-lime);
-  background: rgba(85, 230, 59, 0.15);
+  background: rgba(52, 211, 153, 0.15);
   color: #e8ffe3;
-  box-shadow: 0 0 12px rgba(85, 230, 59, 0.25);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
 }
 
 .conversation-session .custom-scrollbar::-webkit-scrollbar {

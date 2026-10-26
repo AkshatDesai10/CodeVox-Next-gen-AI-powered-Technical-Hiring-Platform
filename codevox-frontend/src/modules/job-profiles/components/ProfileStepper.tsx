@@ -104,7 +104,7 @@ export function ProfileStepper(props: {
                     : 'border-2 border-[var(--assessment-outline-variant)]'
                 }`}
               >
-                {done ? '✓' : step.id}
+                {done ? <AssessmentMaterialIcon name="check" size={16} /> : step.id}
               </div>
               <span className="font-title-sm text-sm">{step.label}</span>
             </div>

@@ -67,7 +67,7 @@ function SignInForm() {
       <h1 className="mt-5 text-2xl font-bold tracking-tight text-white sm:text-3xl">
         Sign in to your workspace
       </h1>
-      <p className="mt-2 text-sm text-[#C4B5FD]">
+      <p className="mt-2 text-sm text-[#A7B7CD]">
         Use your local admin credentials to continue.
       </p>
 
@@ -79,7 +79,7 @@ function SignInForm() {
 
       <form className="mt-6 space-y-4" onSubmit={(e) => void onSubmit(e)}>
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-[#C4B5FD]">Email</span>
+          <span className="mb-1.5 block font-medium text-[#A7B7CD]">Email</span>
           <input
             type="email"
             autoComplete="username"
@@ -90,7 +90,7 @@ function SignInForm() {
           />
         </label>
         <label className="block text-sm">
-          <span className="mb-1.5 block font-medium text-[#C4B5FD]">Password</span>
+          <span className="mb-1.5 block font-medium text-[#A7B7CD]">Password</span>
           <input
             type="password"
             autoComplete="current-password"
@@ -116,7 +116,7 @@ export default function SignInPage() {
   return (
     <div className="cvx-landing flex min-h-screen items-center justify-center px-4">
       <div className="cvx-hero-glow absolute inset-0" />
-      <Suspense fallback={<p className="text-sm text-[#C4B5FD]">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-[#A7B7CD]">Loading…</p>}>
         <SignInForm />
       </Suspense>
     </div>

@@ -537,6 +537,53 @@ export class JobProfilesAiService {
     return { suggestions: result.competencies ?? [], ai_powered: this.openai.isConfigured() };
   }
 
+  async suggestCompetenciesByRole(actor: JwtUserPayload, role: string, seniority?: string) {
+    await this.assertWrite(actor);
+    const roleClean = String(role || '').trim();
+    if (!roleClean) {
+      throw new BadRequestException('Role or job title is required');
+    }
+    const seniorityClean = String(seniority || 'MID-LEVEL').trim();
+    const messages: ChatMessage[] = [
+      {
+        role: 'system',
+        content:
+          'You are an expert technical recruiter and interviewer. Given a Job Role/Title and Seniority Level, suggest 5 to 7 key competencies (skills and topics) to assess. Return JSON: { "competencies": [{ "name": string, "category": "hard"|"soft", "description": string }] }. Names must be concise (2-4 words, e.g. "System Design", "Data Structures", "API Design", "Communication"). Descriptions must be 1 sentence explaining what is evaluated.',
+      },
+      {
+        role: 'user',
+        content: `Role/Title: ${roleClean}\nSeniority: ${seniorityClean}`,
+      },
+    ];
+
+    if (!this.openai.isConfigured()) {
+      return {
+        suggestions: [
+          { name: 'Core Domain Knowledge', category: 'hard', description: 'Understanding of foundational concepts and core frameworks.' },
+          { name: 'System Design & Architecture', category: 'hard', description: 'Ability to architect scalable and reliable solutions.' },
+          { name: 'Problem Solving & Debugging', category: 'hard', description: 'Techniques for isolating bugs and implementing robust fixes.' },
+          { name: 'Code Quality & Best Practices', category: 'hard', description: 'Adherence to clean code, testing, and security standards.' },
+          { name: 'Communication & Collaboration', category: 'soft', description: 'Clear technical communication and team collaboration.' },
+        ],
+        ai_powered: false,
+      };
+    }
+
+    const result = await this.openai.chatJson<{
+      competencies: Array<{
+        name: string;
+        category: 'hard' | 'soft';
+        description?: string;
+      }>;
+    }>(messages);
+
+    await this.logAi('suggest_competencies_by_role', null, { role: roleClean, seniority: seniorityClean }, result);
+    return {
+      suggestions: result.competencies ?? [],
+      ai_powered: true,
+    };
+  }
+
   async suggestRubricWeights(actor: JwtUserPayload, profileId: string) {
     await this.assertWrite(actor);
     const row = await this.repo.requireById(profileId);

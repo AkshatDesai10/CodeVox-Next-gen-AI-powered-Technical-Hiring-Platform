@@ -1,36 +1,36 @@
 /* CodeVox Recruiter — Dark Violet & Electric Lime Palette */
 .nexus-recruiter-root,
 .codevox-recruiter-root {
-  --assessment-primary: var(--color-primary, #7C3AED);
-  --assessment-primary-container: var(--color-primary-container, rgba(124, 58, 237, 0.22)));
-  --assessment-primary-fixed: var(--color-primary-fixed, rgba(124, 58, 237, 0.3)));
+  --assessment-primary: var(--color-primary, #1685FF);
+  --assessment-primary-container: var(--color-primary-container, rgba(22, 133, 255, 0.2));
+  --assessment-primary-fixed: var(--color-primary-fixed, rgba(22, 133, 255, 0.28));
   --assessment-on-primary: var(--color-on-primary, #ffffff);
-  --assessment-on-primary-container: var(--color-on-primary-container, #DDD6FE);
-  --assessment-surface: var(--color-bg, #090414);
-  --assessment-surface-container: var(--color-surface-container, #160A30);
-  --assessment-surface-container-high: var(--color-surface-elevated, #1C0D3D);
-  --assessment-surface-container-low: var(--color-surface-low, #0D051C);
-  --assessment-surface-container-lowest: var(--color-surface-solid, #100724);
-  --assessment-surface-container-highest: var(--color-surface-highest, #2C135E);
+  --assessment-on-primary-container: var(--color-on-primary-container, #BAE6FD);
+  --assessment-surface: var(--color-bg, #050B18);
+  --assessment-surface-container: var(--color-surface-container, #081426);
+  --assessment-surface-container-high: var(--color-surface-elevated, #0F203B);
+  --assessment-surface-container-low: var(--color-surface-low, #050B18);
+  --assessment-surface-container-lowest: var(--color-surface-solid, #030712);
+  --assessment-surface-container-highest: var(--color-surface-highest, #162846);
   --assessment-on-surface: var(--color-on-surface, #FFFFFF);
-  --assessment-on-surface-variant: var(--color-text-muted, #C4B5FD);
-  --assessment-outline: var(--color-outline, #7575A3);
+  --assessment-on-surface-variant: var(--color-text-muted, #A7B7CD);
+  --assessment-outline: var(--color-outline, #293B57);
   --assessment-outline-variant: var(--color-border, rgba(163, 163, 204, 0.14));
   --assessment-error: var(--color-error, #f43f5e);
   --assessment-error-container: var(--color-error-container, rgba(244, 63, 94, 0.14));
-  --nexus-secondary: var(--color-secondary, #A855F7);
-  --nexus-secondary-container: var(--color-primary-dark, #4C1D95);
+  --nexus-secondary: var(--color-secondary, #22D3EE);
+  --nexus-secondary-container: var(--color-primary-dark, #0F203B);
   --nexus-on-secondary: var(--color-on-primary, #ffffff);
   --nexus-on-secondary-container: var(--color-on-primary, #ffffff);
-  --nexus-tertiary: var(--color-highlight, #55E63B);
-  --nexus-tertiary-container: var(--color-primary, #7C3AED);
-  --nexus-tertiary-fixed: var(--color-primary-container, rgba(124, 58, 237, 0.22)));
-  --nexus-on-tertiary-fixed: var(--color-on-primary-container, #DDD6FE);
-  --nexus-secondary-fixed: var(--color-primary-fixed, rgba(124, 58, 237, 0.3)));
-  --recruitment-secondary: var(--color-text-muted, #C4B5FD);
+  --nexus-tertiary: var(--color-highlight, #34D399);
+  --nexus-tertiary-container: var(--color-primary, #1685FF);
+  --nexus-tertiary-fixed: var(--color-primary-container, rgba(22, 133, 255, 0.2));
+  --nexus-on-tertiary-fixed: var(--color-on-primary-container, #BAE6FD);
+  --nexus-secondary-fixed: var(--color-primary-fixed, rgba(22, 133, 255, 0.28));
+  --recruitment-secondary: var(--color-text-muted, #A7B7CD);
   --assessment-on-error-container: var(--color-danger-text, #fb7185);
-  --nexus-outline: var(--color-outline, #7575A3);
-  --nexus-surface-container-lowest: var(--color-surface-solid, #100724);
+  --nexus-outline: var(--color-outline, #293B57);
+  --nexus-surface-container-lowest: var(--color-surface-solid, #030712);
 
   font-family: var(--font-family-base);
   color: var(--assessment-on-surface);
@@ -126,7 +126,7 @@
 .nexus-card textarea,
 .nexus-input,
 .codevox-input {
-  background-color: #160A30 !important;
+  background-color: #081426 !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(139, 92, 246, 0.25) !important;
   border-radius: 0.75rem;
@@ -145,7 +145,7 @@
 .nexus-card textarea:focus,
 .nexus-input:focus,
 .codevox-input:focus {
-  border-color: #7C3AED !important;
+  border-color: #1685FF !important;
   box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
 }
 
@@ -161,7 +161,7 @@
 .nexus-recruiter-root select option,
 .codevox-recruiter-root select option,
 .nexus-card select option {
-  background-color: #160A30 !important;
+  background-color: #081426 !important;
   color: #FFFFFF !important;
 }
 
@@ -290,14 +290,14 @@
 }
 
 .nexus-recruiter-root .nexus-tonal-layer {
-  background-color: var(--assessment-surface-container, #160A30);
+  background-color: var(--assessment-surface-container, #081426);
   border: 1px solid var(--assessment-outline-variant, rgba(139, 92, 246, 0.22));
   transition: box-shadow 0.2s ease-in-out;
 }
 
 .nexus-recruiter-root .nexus-ai-insight-border {
   position: relative;
-  background: var(--assessment-surface-container, #160A30);
+  background: var(--assessment-surface-container, #081426);
   border: 1px solid transparent;
   background-clip: padding-box;
 }
@@ -469,7 +469,7 @@
   border-radius: 0.5rem;
   padding: 1rem;
   font-size: 0.875rem;
-  background: var(--assessment-surface-container, #160A30);
+  background: var(--assessment-surface-container, #081426);
   color: var(--assessment-on-surface, #FFFFFF);
 }
 

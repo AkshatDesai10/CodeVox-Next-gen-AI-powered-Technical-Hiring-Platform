@@ -32,10 +32,7 @@ export const RECRUITMENT_NAV_SECTIONS: AssessmentNavSection[] = [
     items: [
       { href: '/assessments', label: 'Dashboard', icon: 'dashboard' },
       { href: '/assessments/candidates', label: 'Candidates', icon: 'groups', permission: 'assessments:read' },
-      { href: '/assessments/list', label: 'Assessments', icon: 'assignment', permission: 'assessments:read' },
-      { href: '/assessments/create', label: 'Create Assessment', icon: 'add_circle', permission: 'assessments:write' },
-      { href: '/assessments/question-bank', label: 'Question Bank', icon: 'quiz', permission: 'assessments:write' },
-      { href: '/assessments/job-profiles/question-bank', label: 'Question Bank (JP)', icon: 'quiz', permission: ['job_profiles:read', 'assessments:read'] },
+      { href: '/assessments/job-profiles/question-bank', label: 'Question Bank', icon: 'quiz', permission: ['job_profiles:read', 'assessments:read'] },
       { href: '/assessments/job-profiles/problem-bank', label: 'Problem Bank (JP)', icon: 'code', permission: ['job_profiles:read', 'assessments:read'] },
       { href: '/assessments/interview-reports', label: 'Interview Reports', icon: 'monitoring', permission: 'assessments:read' },
       { href: '/assessments/assessment-reports', label: 'Assessment Reports', icon: 'bar_chart', permission: 'job_profiles:read' },

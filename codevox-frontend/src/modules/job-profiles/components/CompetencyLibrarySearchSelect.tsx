@@ -26,19 +26,21 @@ export function CompetencyLibrarySearchSelect(props: {
   className?: string;
   department?: string;
   category?: 'hard' | 'soft';
+  allowCustom?: boolean;
 }) {
   const {
     value,
     onChange,
     label = 'Competency',
     hideLabel = false,
-    placeholder = 'Select competency...',
-    searchPlaceholder = 'Search competencies...',
+    placeholder = 'Select or type competency...',
+    searchPlaceholder = 'Search or enter custom competency...',
     emptyMessage = 'No job profile competencies found',
     disabled = false,
     className,
     department,
     category,
+    allowCustom = true,
   } = props;
 
   const [open, setOpen] = useState(false);
@@ -70,13 +72,14 @@ export function CompetencyLibrarySearchSelect(props: {
     );
   }, [competencies, search]);
 
-  const selected = competencies.find((c) => c.name === value) ?? null;
+  const selected = competencies.find((c) => c.name.toLowerCase() === (value || '').toLowerCase()) ?? null;
 
   useEffect(() => {
+    if (allowCustom) return; // Do not auto-override custom value if custom allowed
     if (!competencies.length) return;
     if (competencies.some((c) => c.name === value)) return;
     onChange(competencies[0]!.name);
-  }, [competencies, value, onChange]);
+  }, [competencies, value, onChange, allowCustom]);
 
   useEffect(() => {
     if (!open) return;
@@ -94,7 +97,7 @@ export function CompetencyLibrarySearchSelect(props: {
   }, [open]);
 
   const competencySubtitle = (c: (typeof competencies)[number]) => {
-    const category = c.category === 'soft' ? 'Soft' : c.category === 'hard' ? 'Hard' : c.category;
+    const cat = c.category === 'soft' ? 'Soft' : c.category === 'hard' ? 'Hard' : c.category;
     const target = c.default_target_score != null ? `avg target ${c.default_target_score.toFixed(1)}/5` : null;
     const weight =
       c.default_weight_pct != null ? `avg ${c.default_weight_pct.toFixed(0)}% weight` : null;
@@ -102,8 +105,13 @@ export function CompetencyLibrarySearchSelect(props: {
       'profile_count' in c && (c as any).profile_count > 0
         ? `${(c as any).profile_count} profile${(c as any).profile_count === 1 ? '' : 's'}`
         : null;
-    return [category, profiles, weight, target].filter(Boolean).join(' | ');
+    return [cat, profiles, weight, target].filter(Boolean).join(' | ');
   };
+
+  const trimmedSearch = search.trim();
+  const searchMatchesExisting = competencies.some(
+    (c) => c.name.toLowerCase() === trimmedSearch.toLowerCase(),
+  );
 
   return (
     <div ref={rootRef} className={cn('relative w-full', className)}>
@@ -127,10 +135,10 @@ export function CompetencyLibrarySearchSelect(props: {
         <span
           className={cn(
             'min-w-0 flex-1 truncate text-left',
-            selected ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400',
+            value ? 'text-slate-900 dark:text-slate-100 font-medium' : 'text-slate-400',
           )}
         >
-          {libraryQuery.isLoading ? 'Loading competencies...' : selected?.name || placeholder}
+          {libraryQuery.isLoading ? 'Loading competencies...' : value || placeholder}
         </span>
         <span className={comboboxChevronClass(open)} aria-hidden>
           ▾
@@ -153,11 +161,34 @@ export function CompetencyLibrarySearchSelect(props: {
                 className={comboboxSearchInputClass}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') setOpen(false);
+                  if (e.key === 'Enter' && allowCustom && trimmedSearch) {
+                    e.preventDefault();
+                    onChange(trimmedSearch);
+                    setOpen(false);
+                    setSearch('');
+                  }
                 }}
               />
             </div>
           </div>
           <ul id={listId} role="listbox" className={comboboxListClass}>
+            {allowCustom && trimmedSearch && !searchMatchesExisting ? (
+              <li role="option" aria-selected={false} className="border-b border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[var(--assessment-primary,#2563eb)] hover:bg-slate-50 dark:hover:bg-slate-800"
+                  onClick={() => {
+                    onChange(trimmedSearch);
+                    setOpen(false);
+                    setSearch('');
+                  }}
+                >
+                  <span>✨ Use custom:</span>
+                  <span className="font-bold underline truncate">"{trimmedSearch}"</span>
+                </button>
+              </li>
+            ) : null}
+
             {libraryQuery.isLoading ? (
               <li className="px-3 py-6 text-center text-xs text-slate-400">Loading job profile competencies...</li>
             ) : libraryQuery.isError ? (
@@ -165,12 +196,16 @@ export function CompetencyLibrarySearchSelect(props: {
             ) : filtered.length === 0 ? (
               <li className="px-3 py-6 text-center text-xs text-slate-400">
                 {!competencies.length
-                  ? 'No competencies on job profiles yet. Add them in job profile rubric setup (step 2).'
-                  : emptyMessage}
+                  ? allowCustom
+                    ? 'No presets found. Type your custom competency name above and press Enter.'
+                    : 'No competencies on job profiles yet.'
+                  : allowCustom && trimmedSearch
+                    ? 'No preset match. Click "+ Use custom" above to apply.'
+                    : emptyMessage}
               </li>
             ) : (
               filtered.map((c) => {
-                const isSelected = c.name === value;
+                const isSelected = c.name.toLowerCase() === (value || '').toLowerCase();
                 return (
                   <li key={c.id} role="option" aria-selected={isSelected}>
                     <button

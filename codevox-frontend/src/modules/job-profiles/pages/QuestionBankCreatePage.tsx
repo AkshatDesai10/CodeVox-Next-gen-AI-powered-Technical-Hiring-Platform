@@ -11,6 +11,7 @@ import {
   generateQuestionBankAiDrafts,
   getQuestionBankQuestion,
   listCompetencyLibrary,
+  suggestCompetenciesByRole,
   updateQuestionBankQuestion,
   type QuestionBankAiDraft,
   type QuestionBankQuestionDetail,
@@ -327,6 +328,28 @@ export function QuestionBankCreatePage() {
   const [competency, setCompetency] = useState('');
   const [seniorityLevel, setSeniorityLevel] = useState('MID-LEVEL');
   const [industryDomain] = useState('General');
+  const [suggestRoleInput, setSuggestRoleInput] = useState('');
+  const [suggestedChips, setSuggestedChips] = useState<Array<{ name: string; category: string; description?: string }>>([]);
+  const [isSuggestingCompetencies, setIsSuggestingCompetencies] = useState(false);
+  const [suggestError, setSuggestError] = useState('');
+
+  const handleSuggestCompetencies = async (targetRole?: string) => {
+    const roleToUse = (targetRole ?? suggestRoleInput).trim();
+    if (!roleToUse) {
+      setSuggestError('Please enter a role or job title (e.g. Senior Backend Engineer)');
+      return;
+    }
+    setSuggestError('');
+    setIsSuggestingCompetencies(true);
+    try {
+      const res = await suggestCompetenciesByRole(roleToUse, seniorityLevel);
+      setSuggestedChips(res.suggestions ?? []);
+    } catch (err: any) {
+      setSuggestError(err?.message || 'Failed to suggest competencies');
+    } finally {
+      setIsSuggestingCompetencies(false);
+    }
+  };
 
   const competencyLibQuery = useQuery({
     queryKey: ['job-profile-competency-catalog', 'question-bank-create'],
@@ -334,7 +357,7 @@ export function QuestionBankCreatePage() {
   });
 
   const selectedCompetencyEntry = useMemo(
-    () => competencyLibQuery.data?.find((item) => item.name === competency) ?? null,
+    () => competencyLibQuery.data?.find((item) => item.name.toLowerCase() === competency.toLowerCase()) ?? (competency.trim() ? { name: competency.trim(), description: `${competency.trim()} competency.` } : null),
     [competencyLibQuery.data, competency],
   );
 
@@ -734,13 +757,15 @@ export function QuestionBankCreatePage() {
 
                   <div>
                     <label className="mb-2 block font-label-caps text-[var(--assessment-on-surface-variant)]">
-                      Master competency
+                      Master Competency
                     </label>
                     <CompetencyLibrarySearchSelect
                       value={competency}
                       onChange={setCompetency}
                       hideLabel
-                      placeholder="Search competencies..."
+                      allowCustom
+                      placeholder="Search or enter custom competency..."
+                      searchPlaceholder="Type competency name & press Enter..."
                     />
                   </div>
                 </div>
@@ -918,8 +943,77 @@ export function QuestionBankCreatePage() {
                       value={competency}
                       onChange={setCompetency}
                       hideLabel
-                      placeholder="Search competencies..."
+                      allowCustom
+                      placeholder="Search or enter custom competency..."
                     />
+                  {/* AI Suggest Competencies by Role */}
+                  <div className="rounded-lg border border-dashed border-[var(--nexus-secondary)]/40 bg-[var(--nexus-secondary-container)]/20 p-3">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-[var(--nexus-secondary)]">
+                        <AssessmentMaterialIcon name="auto_awesome" size={15} />
+                        Suggest by Job / Role
+                      </span>
+                      <span className="text-[10px] text-slate-400">Target Role</span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={suggestRoleInput}
+                        onChange={(e) => setSuggestRoleInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSuggestCompetencies();
+                          }
+                        }}
+                        placeholder="e.g. Backend Dev, React..."
+                        className="flex-1 rounded-md border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-2.5 py-1 text-xs text-[var(--assessment-on-surface)] focus:outline-none focus:ring-1 focus:ring-[var(--nexus-secondary)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSuggestCompetencies()}
+                        disabled={isSuggestingCompetencies}
+                        className="inline-flex items-center gap-1 rounded-md bg-[var(--nexus-secondary)] px-2.5 py-1 text-xs font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
+                      >
+                        {isSuggestingCompetencies ? 'Thinking...' : '✨ Suggest'}
+                      </button>
+                    </div>
+
+                    {suggestError ? (
+                      <p className="mt-1 text-[10px] text-red-500">{suggestError}</p>
+                    ) : null}
+
+                    {suggestedChips.length > 0 ? (
+                      <div className="mt-2.5 space-y-1">
+                        <p className="text-[10px] font-semibold text-slate-500">
+                          Click to select competency:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {suggestedChips.map((chip) => {
+                            const isSelected = competency.toLowerCase() === chip.name.toLowerCase();
+                            return (
+                              <button
+                                key={chip.name}
+                                type="button"
+                                onClick={() => setCompetency(chip.name)}
+                                title={chip.description}
+                                className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium transition ${
+                                  isSelected
+                                    ? 'bg-[var(--nexus-secondary)] text-white shadow-sm'
+                                    : 'border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] text-[var(--assessment-on-surface)] hover:border-[var(--nexus-secondary)] hover:text-[var(--nexus-secondary)]'
+                                }`}
+                              >
+                                <span>{chip.name}</span>
+                                {chip.category ? (
+                                  <span className="text-[8px] opacity-75 uppercase">({chip.category})</span>
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                   </div>
                   <div>
                     <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Seniority</label>
