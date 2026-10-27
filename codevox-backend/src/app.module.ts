@@ -20,6 +20,8 @@ import { ProjectInterviewModule } from './modules/project-interview/project-inte
 import { CodingRoundModule } from './modules/coding-round/coding-round.module';
 import { AssessmentReportsModule } from './modules/assessment-reports/assessment-reports.module';
 import { EmailModule } from './modules/email/email.module';
+import { NetworkCheckModule } from './modules/network-check/network-check.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 
 @Module({
   imports: [
@@ -45,7 +47,11 @@ import { EmailModule } from './modules/email/email.module';
     CodingRoundModule,
     AssessmentReportsModule,
     EmailModule,
+    NetworkCheckModule,
+    SystemConfigModule,
   ],
   controllers: [HealthController],
 })
 export class AppModule {}
+
+

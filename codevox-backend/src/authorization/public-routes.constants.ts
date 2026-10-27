@@ -7,8 +7,16 @@ export const PUBLIC_ROUTES: Array<{ method: string; path: string }> = [
   { method: 'GET', path: '/api/auth/verify-email' },
   { method: 'POST', path: '/api/auth/resend-verification' },
 
+  /** Pre-flight network readiness (unauthenticated, lightweight) */
+  { method: 'GET', path: '/api/network-check/ping' },
+  { method: 'POST', path: '/api/network-check/upload' },
+
+  /** Runtime flags for portal / interview clients (FACE, strikes) */
+  { method: 'GET', path: '/api/candidate/portal/runtime-config' },
+
   /** Candidate portal — token scoped, no auth */
   { method: 'GET', path: '/api/candidate/portal/:token/dashboard' },
+
   { method: 'POST', path: '/api/candidate/portal/:token/consent' },
   { method: 'POST', path: '/api/candidate/portal/:token/preferences' },
   { method: 'POST', path: '/api/candidate/portal/:token/face-capture' },

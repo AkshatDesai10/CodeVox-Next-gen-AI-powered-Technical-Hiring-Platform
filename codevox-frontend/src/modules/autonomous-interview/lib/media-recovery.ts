@@ -28,19 +28,47 @@ function readPublicEnv(name: string): string | undefined {
   return typeof value === 'string' ? value.trim() : undefined;
 }
 
+/** Optional runtime overrides from GET /api/candidate/portal/runtime-config. */
+let runtimeMaxStrikes: number | null = null;
+let runtimeAutoSubmitOnStrike: boolean | null = null;
+let runtimeGraceSeconds: number | null = null;
+
+export function applyRuntimeProctorConfig(input: {
+  maxStrikes?: number;
+  autoSubmitOnStrike?: boolean;
+  graceSeconds?: number;
+}) {
+  if (typeof input.maxStrikes === 'number' && Number.isFinite(input.maxStrikes) && input.maxStrikes >= 1) {
+    runtimeMaxStrikes = Math.floor(input.maxStrikes);
+  }
+  if (typeof input.autoSubmitOnStrike === 'boolean') {
+    runtimeAutoSubmitOnStrike = input.autoSubmitOnStrike;
+  }
+  if (
+    typeof input.graceSeconds === 'number' &&
+    Number.isFinite(input.graceSeconds) &&
+    input.graceSeconds >= 1
+  ) {
+    runtimeGraceSeconds = Math.floor(input.graceSeconds);
+  }
+}
+
 /** Strict lockout only when this is explicitly true. Missing or any other value stays in soft mode. */
 export function isAutoSubmitOnStrikeEnabled(): boolean {
+  if (runtimeAutoSubmitOnStrike != null) return runtimeAutoSubmitOnStrike;
   return readPublicEnv('NEXT_PUBLIC_PROCTOR_AUTO_SUBMIT_ON_STRIKE') === 'true';
 }
 
 /** Strikes required before strict mode terminates. Warnings run through max - 1. */
 export function getMaxMediaStrikes(): number {
+  if (runtimeMaxStrikes != null) return runtimeMaxStrikes;
   const parsed = Number(readPublicEnv('NEXT_PUBLIC_PROCTOR_MAX_STRIKES'));
   if (!Number.isFinite(parsed) || parsed < 1) return DEFAULT_MAX_MEDIA_STRIKES;
   return Math.floor(parsed);
 }
 
 export function getMediaGraceSeconds(): number {
+  if (runtimeGraceSeconds != null) return runtimeGraceSeconds;
   const parsed = Number(readPublicEnv('NEXT_PUBLIC_PROCTOR_GRACE_SECONDS'));
   if (!Number.isFinite(parsed) || parsed < 1) return GRACE_SECONDS;
   return Math.floor(parsed);

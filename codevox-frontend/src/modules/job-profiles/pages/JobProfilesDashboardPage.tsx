@@ -71,7 +71,10 @@ export function JobProfilesDashboardPage() {
     },
     onError: (err: any) => {
       invalidate();
-      alert(err?.message || 'Failed to delete job profile');
+      // Suppress 404 alert if profile is already deleted/inactive
+      if (!err?.message?.includes('404') && !err?.message?.includes('not found')) {
+        alert(err?.message || 'Failed to delete job profile');
+      }
     },
   });
 

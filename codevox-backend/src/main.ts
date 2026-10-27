@@ -1,5 +1,6 @@
 import './load-env';
 import cookieParser from 'cookie-parser';
+import express from 'express';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -15,6 +16,11 @@ async function bootstrap() {
   });
 
   app.useWebSocketAdapter(new WsAdapter(app));
+  // Binary upload for pre-flight throughput test (must run before JSON parser).
+  app.use(
+    '/api/network-check/upload',
+    express.raw({ type: () => true, limit: '1mb' }),
+  );
   app.useBodyParser('json', { limit: '10mb' });
   app.use(cookieParser());
   app.useGlobalPipes(

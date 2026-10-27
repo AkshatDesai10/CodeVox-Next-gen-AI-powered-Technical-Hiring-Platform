@@ -802,7 +802,7 @@ export class JobProfilesService {
 
   async delete(actor: JwtUserPayload, id: string) {
     await this.assertWrite(actor);
-    await this.repo.patchProfile(id, { inactive: 1 });
+    await this.repo.updateProfileRaw(id, { inactive: 1 });
     return { ok: true };
   }
 

@@ -22,6 +22,7 @@ import {
   underUploads,
   uploadBuffer,
 } from '../../files/local-storage';
+import { DynamicConfigService } from '../system-config/dynamic-config.service';
 
 const pdfParse = require('pdf-parse');
 
@@ -30,25 +31,6 @@ const demoCandidates = new Map<string, { name: string; email: string }>();
 const DEFAULT_FACE_CONSENT_TEXT =
   'I consent to capture and store my facial photograph for identity verification and assessment integrity. ' +
   'My photo will be stored securely and used only for this recruitment process.';
-
-/** FACE / FACE_VERIFICATION: on|true|1|yes (default) vs off|false|0|no. */
-function isFaceVerificationEnabled(): boolean {
-  const val = (process.env.FACE ?? process.env.FACE_VERIFICATION ?? 'on')
-    .trim()
-    .toLowerCase();
-  return val === 'on' || val === 'true' || val === '1' || val === 'yes';
-}
-
-function identityMode(): 'face' | 'permissions_only' {
-  return isFaceVerificationEnabled() ? 'face' : 'permissions_only';
-}
-
-function isIdentityComplete(app: JobApplicationMysql): boolean {
-  // Approach A: when face capture is off, portal identity is complete server-side
-  // (device permissions are enforced client-side per session only).
-  if (!isFaceVerificationEnabled()) return true;
-  return Boolean(app.faceConsentRecordedAt && app.faceCapturedAt && app.facePhotoStorageKey);
-}
 
 function proctorStageType(interview: CandidateAutonomousInterviewMysql): string {
   const meta = interview.proctorSummary as Record<string, unknown> | null;
@@ -150,11 +132,28 @@ export class CandidatePortalService {
     private readonly resumeScreening: ResumeScreeningService,
     private readonly roundSnapshots: RoundSnapshotService,
     private readonly projectInterview: ProjectInterviewService,
+    private readonly dynamicConfig: DynamicConfigService,
   ) { }
+
+  /** FACE from DynamicConfigService (DB) with .env fallback. */
+  private isFaceVerificationEnabled(): boolean {
+    return this.dynamicConfig.isFaceEnabled();
+  }
+
+  private identityMode(): 'face' | 'permissions_only' {
+    return this.dynamicConfig.identityMode();
+  }
+
+  private isIdentityComplete(app: JobApplicationMysql): boolean {
+    // When face capture is off, portal identity is complete server-side
+    // (device permissions are enforced client-side per session only).
+    if (!this.isFaceVerificationEnabled()) return true;
+    return Boolean(app.faceConsentRecordedAt && app.faceCapturedAt && app.facePhotoStorageKey);
+  }
 
   /**
    * Round progress for ops dashboards (Today's Interviews).
-   * Maps portal stage statuses â†’ completed / live / not_started / upcoming.
+   * Maps portal stage statuses to completed / live / not_started / upcoming.
    * NOT_STARTED (current unlocked round) must not be collapsed into upcoming.
    */
   async getRoundProgressForToken(token: string): Promise<{
@@ -180,7 +179,7 @@ export class CandidatePortalService {
         if (raw === 'COMPLETED') status = 'completed';
         else if (raw === 'IN_PROGRESS') status = 'live';
         else if (raw === 'NOT_STARTED') status = 'not_started';
-        else status = 'upcoming'; // LOCKED / unknown â†’ future rounds
+        else status = 'upcoming'; // LOCKED / unknown = future rounds
         return {
           id: String(s.id),
           name: s.name,
@@ -249,7 +248,7 @@ export class CandidatePortalService {
     } else if (currentStageIdx === -1) {
       effectiveCurrentIdx = 0;
     }
-    // Do NOT treat hired/completed as "all rounds done" up-front â€” that hid remaining
+    // Do NOT treat hired/completed as "all rounds done" up-front — that hid remaining
     // rounds (e.g. Build & Defend) when advance incorrectly marked the application finished.
 
     // Heal stuck applications: round already finished but pipeline never advanced
@@ -305,7 +304,7 @@ export class CandidatePortalService {
           interview?.screeningVoiceAudit != null &&
           typeof interview.screeningVoiceAudit === 'object' &&
           Object.keys(interview.screeningVoiceAudit as object).length > 0;
-        // Stage-scoped evidence only â€” do not treat a generic "completed" phase
+        // Stage-scoped evidence only — do not treat a generic "completed" phase
         // from another round as finishing the current stage.
         const currentDone =
           (currentStage.stageType === JobStageType.HR_VERBAL && (hasHr || interview?.currentPhase === 'completed')) ||
@@ -346,7 +345,7 @@ export class CandidatePortalService {
       application.status = 'in_progress' as any;
     }
 
-    const identityComplete = isIdentityComplete(application);
+    const identityComplete = this.isIdentityComplete(application);
 
     const mappedStages = await Promise.all(stages.map(async (stage, idx) => {
       let status: 'COMPLETED' | 'IN_PROGRESS' | 'LOCKED' | 'NOT_STARTED' = 'LOCKED';
@@ -460,7 +459,7 @@ export class CandidatePortalService {
     const onboardingRequired = parsedOverlay?.onboarding_required === true;
     // Name gate: empty / placeholder "Pending" (bulk-invite self-onboard).
     const needsName = !firstNameRaw || firstNamePending;
-    // Resume gate only for bulk-invite self-onboard flows â€” do not block
+    // Resume gate only for bulk-invite self-onboard flows — do not block
     // existing single-invite candidates who were created without a resume.
     const needsResume = onboardingRequired && !candidateRec?.resumeUrl;
     const resumeScreening = await this.resumeScreening
@@ -480,8 +479,8 @@ export class CandidatePortalService {
         auto_action: application.autoAction,
       },
       identity: {
-        required: isFaceVerificationEnabled(),
-        mode: identityMode(),
+        required: this.isFaceVerificationEnabled(),
+        mode: this.identityMode(),
         consent_recorded: Boolean(application.faceConsentRecordedAt),
         face_captured: Boolean(application.faceCapturedAt && application.facePhotoStorageKey),
         complete: identityComplete,
@@ -700,7 +699,7 @@ export class CandidatePortalService {
   }
 
   async recordFaceConsent(token: string) {
-    if (!isFaceVerificationEnabled()) {
+    if (!this.isFaceVerificationEnabled()) {
       throw new BadRequestException('Face verification is disabled for this environment');
     }
     const application = await this.requireApplicationByToken(token);
@@ -715,7 +714,7 @@ export class CandidatePortalService {
     return {
       consent_recorded: true,
       face_captured: Boolean(application.faceCapturedAt && application.facePhotoStorageKey),
-      complete: isIdentityComplete(application),
+      complete: this.isIdentityComplete(application),
     };
   }
 
@@ -748,7 +747,7 @@ export class CandidatePortalService {
     token: string,
     body: { image_base64?: string; face_descriptor?: number[] | null },
   ) {
-    if (!isFaceVerificationEnabled()) {
+    if (!this.isFaceVerificationEnabled()) {
       throw new BadRequestException('Face verification is disabled for this environment');
     }
     const application = await this.requireApplicationByToken(token);
@@ -897,7 +896,7 @@ export class CandidatePortalService {
     if (extractedData.education_summary) candidate.educationSummary = String(extractedData.education_summary);
     if (extractedData.experience_summary) candidate.experienceSummary = String(extractedData.experience_summary);
     if (extractedData.projects_summary) {
-      // AI sometimes returns an array instead of a string â€” always normalize to string
+      // AI sometimes returns an array instead of a string — always normalize to string
       const ps = extractedData.projects_summary;
       candidate.projectsSummary = Array.isArray(ps) ? (ps as string[]).join('\n\n') : String(ps);
     }
@@ -952,8 +951,8 @@ export class CandidatePortalService {
       },
     } as Partial<CandidateAutonomousInterviewMysql>);
 
-    // Same ResumeScreeningEngine as Lead Inbox â€” persist under app:{id} for portal dashboard.
-    // Reuse demo CV extract as candidate model + JD factor cache to cut Gemini calls (4 â†’ ~2).
+    // Same ResumeScreeningEngine as Lead Inbox — persist under app:{id} for portal dashboard.
+    // Reuse demo CV extract as candidate model + JD factor cache to cut Gemini calls (4 -> ~2).
     if (rawCvTextForScreening?.trim()) {
       const precomputedCandidateModel = demoCvExtractToCandidateModel(extractedData);
       void this.resumeScreening
@@ -985,7 +984,7 @@ export class CandidatePortalService {
     });
     if (!application) throw new NotFoundException('Invalid or expired candidate token');
 
-    if (isFaceVerificationEnabled() && !isIdentityComplete(application)) {
+    if (this.isFaceVerificationEnabled() && !this.isIdentityComplete(application)) {
       throw new BadRequestException(
         'Face capture and consent are required before starting any round',
       );
@@ -1016,7 +1015,7 @@ export class CandidatePortalService {
     });
 
     // Coding, Take-Home, Screening, and Custom rounds use the portal token directly.
-    // They look up the application via candidate_token = portalToken â€” no ses_xxx needed.
+    // They look up the application via candidate_token = portalToken — no ses_xxx needed.
     // Only AI verbal rounds need a session row in the autonomous interview table.
     const isScreening =
       stage.stageType === JobStageType.AI_SCREENING ||

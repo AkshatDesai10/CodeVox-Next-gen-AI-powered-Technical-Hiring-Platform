@@ -11,7 +11,7 @@ import { useInterviewViewport, normalizeViewportPhase } from '@/modules/autonomo
 import { InterviewRoomProvider } from '@/modules/autonomous-interview/context/InterviewRoomContext';
 import { LiveKitVoiceStagePanel } from '@/modules/autonomous-interview/components/LiveKitVoiceStagePanel';
 import { VoiceStagePanel } from '@/modules/autonomous-interview/components/VoiceStagePanel';
-import { InterviewConsentGate } from '@/modules/autonomous-interview/components/InterviewConsentGate';
+import { SystemReadinessLobby } from '@/modules/job-profiles/components/SystemReadinessLobby';
 import { releaseInterviewLeaveGuard } from '@/modules/autonomous-interview/lib/interview-leave-guard';
 
 type Props = {
@@ -42,7 +42,8 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
     null,
   );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [consentDone, setConsentDone] = useState(false);
+  const readinessKey = `interviewSystemReady:${candidateToken}`;
+  const [systemReady, setSystemReady] = useState(false);
   const [referenceDescriptor, setReferenceDescriptor] = useState<number[] | null>(null);
   const [liveKitSessionActive, setLiveKitSessionActive] = useState(false);
   const [screenShareGranted, setScreenShareGranted] = useState(false);
@@ -63,20 +64,24 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
   } = useInterviewViewport(candidateToken);
 
   useEffect(() => {
+    try {
+      setSystemReady(sessionStorage.getItem(readinessKey) === '1');
+    } catch {
+      setSystemReady(false);
+    }
+  }, [readinessKey]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const row = await getAutonomousSession(candidateToken);
         if (cancelled) return;
         setSession(row);
-        // HACK: Bypass consent check as requested by user
-        // if (row.consentRecordedAt) {
-          setConsentDone(true);
-          if (row.referenceFaceDescriptor?.length === 128) {
-            setReferenceDescriptor(row.referenceFaceDescriptor);
-          }
-        // }
-        // if (!row.consentRecordedAt) return;
+        // Hardware preflight is handled by SystemReadinessLobby below.
+        if (row.referenceFaceDescriptor?.length === 128) {
+          setReferenceDescriptor(row.referenceFaceDescriptor);
+        }
         await initAutonomousSession(candidateToken);
         if (cancelled) return;
         if (voiceTransport === 'livekit' && row.currentPhase !== 'completed') {
@@ -223,49 +228,31 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
   }
 
   const reqCamera = session.proctorConfig?.requireCameraForStart ?? true;
-  const reqVoice = session.proctorConfig?.requireVoiceEnroll ?? true;
 
-  const isGateComplete = () => {
-    if (!session.consentRecordedAt) return false;
-    if (reqCamera && (!session.identityVerifiedAt || !session.livenessVerifiedAt)) return false;
-    if (reqVoice && !session.voiceEnrolled) return false;
-    return true;
-  };
-
-  const computeInitialStep = (): 'consent' | 'liveness' | 'identity' | 'voice' | 'done' => {
-    if (!session.consentRecordedAt) return 'consent';
-    if (reqCamera && !session.livenessVerifiedAt) return 'liveness';
-    if (reqCamera && !session.identityVerifiedAt) return 'identity';
-    if (reqVoice && !session.voiceEnrolled) return 'voice';
-    return 'done';
-  };
-
-  // HACK: Bypassing the gate temporarily as requested by user
-  // if (!consentDone && !isGateComplete()) {
-  //   return (
-  //     <InterviewConsentGate
-  //       candidateToken={candidateToken}
-  //       consentText={session.consentText ?? undefined}
-  //       candidateName={session.candidateName ?? undefined}
-  //       requireCameraForStart={reqCamera}
-  //       requireVoiceEnroll={reqVoice}
-  //       initialStep={computeInitialStep()}
-  //       onComplete={async () => {
-  //         const row = await getAutonomousSession(candidateToken);
-  //         setSession(row);
-  //         setConsentDone(true);
-  //         if (row.referenceFaceDescriptor?.length === 128) {
-  //           setReferenceDescriptor(row.referenceFaceDescriptor);
-  //         }
-  //         const init = await initAutonomousSession(candidateToken);
-  //         setInitData(init);
-  //         if (voiceTransport === 'livekit' && row.currentPhase !== 'completed') {
-  //           setLiveKitSessionActive(true);
-  //         }
-  //       }}
-  //     />
-  //   );
-  // }
+  // Meet/Zoom-style hardware + network preflight (replaces scattered device modals).
+  // Full InterviewConsentGate (liveness/voice enroll) remains available but is not
+  // forced here — lobby unlocks the room once cam/mic/network/(face) are ready.
+  if (!systemReady && session.currentPhase !== 'completed') {
+    return (
+      <div className="assessments-root min-h-screen bg-[#090414]">
+        <SystemReadinessLobby
+          candidateName={session.candidateName ?? undefined}
+          faceMode={reqCamera}
+          startLabel="Start Interview"
+          title="Interview system check"
+          subtitle="Confirm camera, mic, and network before the live interview begins."
+          onComplete={async () => {
+            try {
+              sessionStorage.setItem(readinessKey, '1');
+            } catch {
+              /* ignore */
+            }
+            setSystemReady(true);
+          }}
+        />
+      </div>
+    );
+  }
 
   if (voiceTransport === 'browser' && showVoiceFull && !showCompleted) {
     const voicePhase = activePhase === 'hr_verbal' ? 'hr_verbal' : 'ai_verbal';

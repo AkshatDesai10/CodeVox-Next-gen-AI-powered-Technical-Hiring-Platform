@@ -211,9 +211,10 @@ export class AssessmentReportsService {
     });
     if (!app) throw new NotFoundException('Application not found');
 
+    // Allow report generation even if job profile or candidate was later marked inactive/archived
     const [profile, candidate, profileStages] = await Promise.all([
-      this.profiles.findOne({ where: { id: app.jobProfileId, inactive: 0 } }),
-      this.candidates.findOne({ where: { id: app.candidateId, inactive: 0 } }),
+      this.profiles.findOne({ where: { id: app.jobProfileId } }),
+      this.candidates.findOne({ where: { id: app.candidateId } }),
       this.stages.find({
         where: { jobProfileId: app.jobProfileId },
         order: { sortOrder: 'ASC' },

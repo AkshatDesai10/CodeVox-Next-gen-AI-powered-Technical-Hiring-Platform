@@ -142,3 +142,31 @@ export function submitCodingCode(token: string, submissions: Record<string, { la
   }).then((r) => r.json());
 }
 
+export type PortalRuntimeConfig = {
+  face: 'on' | 'off';
+  maxStrikes: number;
+  autoSubmitOnStrike: boolean;
+  graceSeconds: number;
+};
+
+export async function getPortalRuntimeConfig(): Promise<PortalRuntimeConfig> {
+  const res = await fetch(`${recruitmentApiBase()}/api/candidate/portal/runtime-config`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to load runtime config: ${text}`);
+  }
+  const payload = (await res.json()) as {
+    success?: boolean;
+    data?: PortalRuntimeConfig;
+  } & Partial<PortalRuntimeConfig>;
+  const data = payload.data ?? payload;
+  return {
+    face: data.face === 'off' ? 'off' : 'on',
+    maxStrikes: Number(data.maxStrikes) || 5,
+    autoSubmitOnStrike: Boolean(data.autoSubmitOnStrike),
+    graceSeconds: Number(data.graceSeconds) || 90,
+  };
+}
+

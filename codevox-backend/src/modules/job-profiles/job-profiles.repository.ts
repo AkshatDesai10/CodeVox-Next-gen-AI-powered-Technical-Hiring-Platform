@@ -51,6 +51,10 @@ export class JobProfilesRepository {
     return this.profiles.save(this.profiles.create(row));
   }
 
+  async updateProfileRaw(id: string, patch: Partial<JobProfileMysql>) {
+    await this.profiles.update({ id }, patch as Parameters<Repository<JobProfileMysql>['update']>[1]);
+  }
+
   async patchProfile(id: string, patch: Partial<JobProfileMysql>) {
     await this.profiles.update({ id }, patch as Parameters<Repository<JobProfileMysql>['update']>[1]);
     return this.requireById(id);

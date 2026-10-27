@@ -41,6 +41,7 @@ import {
   type ScreeningVoiceAudit,
 } from './screening-analyzer.service';
 import { ProjectInterviewService } from '../project-interview/project-interview.service';
+import { DynamicConfigService } from '../system-config/dynamic-config.service';
 
 @Injectable()
 export class SessionCoordinatorService {
@@ -65,6 +66,7 @@ export class SessionCoordinatorService {
     private readonly roundSnapshots: RoundSnapshotService,
     private readonly recordings: InterviewRecordingService,
     private readonly projectInterview: ProjectInterviewService,
+    private readonly dynamicConfig: DynamicConfigService,
   ) { }
 
   private proctorRow(row: CandidateAutonomousInterviewMysql): InterviewSessionProctorRow {
@@ -1670,7 +1672,7 @@ export class SessionCoordinatorService {
       );
     }
 
-    const maxStrikes = Number(process.env.PROCTOR_MAX_STRIKES ?? 5);
+    const maxStrikes = this.dynamicConfig.getProctorMaxStrikes();
     const strikeCount = Number(
       (active.proctorSummary as Record<string, unknown> | null)?.media_strike_count ?? 0,
     );

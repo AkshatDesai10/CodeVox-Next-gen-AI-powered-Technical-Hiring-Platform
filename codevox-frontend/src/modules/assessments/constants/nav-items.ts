@@ -25,6 +25,12 @@ export const RECRUITMENT_NAV_SECTIONS: AssessmentNavSection[] = [
       { href: '/assessments/recruitment/leads', label: 'Lead Inbox', icon: 'inbox', permission: ['job_profiles:read', 'assessments:read'] },
       { href: '/assessments/recruitment/interviews', label: 'Interviews', icon: 'groups', permission: ['job_profiles:read', 'assessments:read'] },
       { href: '/assessments/recruitment/time-slots', label: 'Time Slots', icon: 'schedule', permission: ['job_profiles:read', 'assessments:read'] },
+      {
+        href: '/assessments/recruitment/configurations',
+        label: 'Configurations',
+        icon: 'tune',
+        permission: ['job_profiles:write', 'assessments:write'],
+      },
     ],
   },
   {

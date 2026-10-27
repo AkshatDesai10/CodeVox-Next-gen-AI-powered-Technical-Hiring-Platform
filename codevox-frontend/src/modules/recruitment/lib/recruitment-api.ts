@@ -1,4 +1,11 @@
-import { authedFetch, clientApiDelete, clientApiGet, clientApiPatch, clientApiPost } from '@/lib/client-api';
+import {
+  authedFetch,
+  clientApiDelete,
+  clientApiGet,
+  clientApiPatch,
+  clientApiPost,
+  clientApiPut,
+} from '@/lib/client-api';
 
 type Envelope<T> = { success: boolean; message: string; data: T };
 
@@ -745,5 +752,36 @@ export function draftInterviewResultAi(id: string, summary?: string) {
       `/api/recruitment/interviews/${id}/ai-draft-result`,
       summary ? { summary } : {},
     ),
+  );
+}
+
+export type EffectiveConfigItem = {
+  key: string;
+  category: 'portal' | 'ai' | 'voice' | 'secrets';
+  label: string;
+  description: string;
+  type: 'string' | 'boolean' | 'number' | 'enum';
+  options?: string[];
+  min?: number;
+  max?: number;
+  secret: boolean;
+  value: string;
+  source: 'db' | 'env' | 'default';
+  is_set: boolean;
+  updated_at: string | null;
+  updated_by: string | null;
+};
+
+export function getSystemConfigurations() {
+  return unwrap(
+    clientApiGet<Envelope<{ items: EffectiveConfigItem[] }>>('/api/recruitment/configurations'),
+  );
+}
+
+export function updateSystemConfigurations(values: Record<string, string | null>) {
+  return unwrap(
+    clientApiPut<Envelope<{ items: EffectiveConfigItem[] }>>('/api/recruitment/configurations', {
+      values,
+    }),
   );
 }

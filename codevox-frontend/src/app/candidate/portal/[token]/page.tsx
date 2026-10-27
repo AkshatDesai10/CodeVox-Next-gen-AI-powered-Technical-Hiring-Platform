@@ -5,9 +5,13 @@ import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { recruitmentApiBase } from '@/lib/recruitment-api-base';
 import { withBasePath } from '@/lib/with-base-path';
-import { getCandidateDashboard, saveCandidatePortalPreferences } from '@/lib/candidate-api';
-import { CandidatePortalIdentityGate } from '@/modules/job-profiles/components/CandidatePortalIdentityGate';
+import {
+  getCandidateDashboard,
+  getPortalRuntimeConfig,
+  saveCandidatePortalPreferences,
+} from '@/lib/candidate-api';
 import { CandidatePortalOnboardingGate } from '@/modules/job-profiles/components/CandidatePortalOnboardingGate';
+import { SystemReadinessLobby } from '@/modules/job-profiles/components/SystemReadinessLobby';
 
 interface StageDto {
   id: string;
@@ -316,6 +320,12 @@ export default function CandidatePortalPage({
     },
   });
 
+  const runtimeQuery = useQuery({
+    queryKey: ['portal-runtime-config'],
+    queryFn: getPortalRuntimeConfig,
+    staleTime: 30_000,
+  });
+
   useEffect(() => {
     try {
       setDevicesVerified(sessionStorage.getItem(devicesSessionKey) === '1');
@@ -367,15 +377,17 @@ export default function CandidatePortalPage({
   const identityMode: 'face' | 'permissions_only' =
     identity?.mode ?? (identity?.required === false ? 'permissions_only' : 'face');
   const identityComplete = Boolean(identity?.complete);
-  const needsFaceGate = identityMode === 'face' && !identityComplete;
-  const needsPermissionsGate = identityMode === 'permissions_only' && !devicesVerified;
+  // Prefer runtime-config so FACE toggles apply immediately even if dashboard identity.mode is stale.
+  const faceMode = runtimeQuery.data
+    ? runtimeQuery.data.face === 'on'
+    : identityMode === 'face';
+  const needsFaceGate = faceMode && !identityComplete;
+  const needsPermissionsGate = !faceMode && !devicesVerified;
   const needsIdentityGate = needsFaceGate || needsPermissionsGate;
-  const gateBlockedLabel =
-    identityMode === 'permissions_only' ? 'Device permission required' : 'Face capture required';
-  const gateBlockedAlert =
-    identityMode === 'permissions_only'
-      ? 'Please complete the camera and microphone device check before starting a round.'
-      : 'Please complete consent and face capture before starting a round.';
+  const gateBlockedLabel = faceMode ? 'System check required' : 'Device & network check required';
+  const gateBlockedAlert = faceMode
+    ? 'Please complete the system readiness lobby (camera, mic, network, and face) before starting a round.'
+    : 'Please complete the system readiness lobby (camera, mic, and network) before starting a round.';
 
   const needsOnboarding = Boolean(data.onboarding && !data.onboarding.complete);
 
@@ -461,20 +473,23 @@ export default function CandidatePortalPage({
 
   return (
     <div className="min-h-screen bg-[#090414] text-white font-sans selection:bg-[#7C3AED]/30">
-      {/* Identity Gate Modal (Camera, Mic, Face Capture) */}
+      {/* Unified Meet/Zoom-style system readiness lobby */}
       {needsIdentityGate ? (
-        <CandidatePortalIdentityGate
-          token={token}
+        <SystemReadinessLobby
+          portalToken={token}
           candidateName={data.candidate.name}
-          mode={identityMode}
+          faceMode={faceMode}
           consentText={
             identity?.consent_text ||
             'I consent to capture and store my facial photograph for identity verification and assessment integrity.'
           }
-          consentRecorded={Boolean(identity?.consent_recorded)}
-          faceCaptured={Boolean(identity?.face_captured)}
+          consentAlreadyRecorded={Boolean(identity?.consent_recorded)}
+          faceAlreadyCaptured={Boolean(identity?.face_captured)}
+          startLabel="Enter Assessment Dashboard"
+          title="System check"
+          subtitle="Confirm camera, mic, and network before you enter — just like joining a video call."
           onComplete={async () => {
-            if (identityMode === 'permissions_only') {
+            if (!faceMode) {
               try {
                 sessionStorage.setItem(devicesSessionKey, '1');
               } catch {

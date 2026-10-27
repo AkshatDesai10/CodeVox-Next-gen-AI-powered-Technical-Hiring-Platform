@@ -1,14 +1,25 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { Code2 } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { Code2, Sparkles, Scale } from 'lucide-react';
+import { CompetencyWeightRow } from '@/modules/job-profiles/components/CompetencyWeightRow';
+import { suggestCompetencies, suggestRubricWeights } from '@/modules/job-profiles/lib/job-profiles-api';
+import {
+  MERGE_SCREENING_VERBAL_KEY,
+  VERBAL_MIN_PRIMARY_KEY,
+  VERBAL_MAX_TOTAL_KEY,
+  VERBAL_DURATION_KEY,
+  verbalBudgetShapeError,
+  verbalBudgetCoverageError,
+  verbalDurationError,
+  allocatePrimaryQuestions,
+} from '@/modules/job-profiles/lib/verbal-interview-budget';
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 import { RoundQuestionProblemPicker } from '@/modules/job-profiles/components/RoundQuestionProblemPicker';
 import { ProjectInterviewRoundConfigForm } from '@/modules/job-profiles/components/project-interview/ProjectInterviewRoundConfigForm';
 import { AiScreeningRoundConfigForm } from '@/modules/job-profiles/components/AiScreeningRoundConfigForm';
-import {
-  MERGE_SCREENING_VERBAL_KEY,
-} from '@/modules/job-profiles/lib/verbal-interview-budget';
+
 
 import {
   defaultAiScreeningRoundConfig,
@@ -119,6 +130,94 @@ export function RoundConfigurationView(props: Props) {
   const setSavedStages = props.onSavedStagesChange ?? setLocalSavedStages;
   const [dragQIdx, setDragQIdx] = useState<number | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  const [aiWeights, setAiWeights] = useState(true);
+
+  const applyAiCompetencies = (
+    suggestions: Array<{ id?: string; name: string; category?: string; weight_pct?: number; target_score?: number }>,
+    replace = false,
+  ) => {
+    if (!activeStageIdResolved) return;
+    const stageId = activeStageIdResolved;
+    let next = replace ? competencies.filter(c => c.stage_id !== stageId) : [...competencies];
+    for (const s of suggestions) {
+      if (!next.some((existing) => existing.stage_id === stageId && existing.name.toLowerCase() === s.name.toLowerCase())) {
+        next.push({
+          id: s.id ?? `ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          stage_id: stageId,
+          name: s.name,
+          category: (s.category as 'hard' | 'soft') ?? 'hard',
+          target_score: s.target_score ?? 8,
+          weight_pct: s.weight_pct ?? 0,
+          sort_order: next.length,
+        });
+      } else if (s.weight_pct != null) {
+        next = next.map((existing) =>
+          existing.stage_id === stageId && existing.name.toLowerCase() === s.name.toLowerCase()
+            ? { ...existing, weight_pct: s.weight_pct! }
+            : existing,
+        );
+      }
+    }
+    props.onCompetenciesChange(next);
+  };
+
+  const aiRubricMutation = useMutation({
+    mutationFn: () => suggestCompetencies(props.profileId, activeStage?.stage_type),
+    onSuccess: (data) => {
+      if (data.suggestions?.length) {
+        let runningTotal = 0;
+        data.suggestions.forEach((s: any, i: number) => {
+          if (s.weight_pct != null) {
+            if (i === data.suggestions.length - 1) {
+              s.weight_pct = Math.max(0, 100 - runningTotal);
+            } else {
+              const scaled = Math.round(s.weight_pct);
+              s.weight_pct = scaled;
+              runningTotal += scaled;
+            }
+          }
+        });
+        applyAiCompetencies(data.suggestions, true);
+        setAiWeights(true);
+      }
+    },
+  });
+
+  const aiBalanceMutation = useMutation({
+    mutationFn: () => suggestRubricWeights(props.profileId),
+    onSuccess: (data) => {
+      if (data.suggestions) {
+        const nextList = [...competencies];
+        let runningTotal = 0;
+        const matches: any[] = [];
+
+        data.suggestions.forEach((w: any) => {
+          const match = nextList.find(
+            (c) =>
+              c.stage_id === activeStageIdResolved &&
+              c.name.toLowerCase() === w.name.toLowerCase()
+          );
+          if (match) {
+            matches.push({ match, w });
+          }
+        });
+
+        matches.forEach(({ match, w }, index) => {
+          if (index === matches.length - 1) {
+            match.weight_pct = Math.max(0, 100 - runningTotal);
+          } else {
+            const scaled = Math.round(w.weight_pct);
+            match.weight_pct = scaled;
+            runningTotal += scaled;
+          }
+          match.target_score = w.target_score;
+        });
+
+        props.onCompetenciesChange(nextList);
+        setAiWeights(true);
+      }
+    },
+  });
 
   useEffect(() => {
     if (!stages.length) {
@@ -155,6 +254,12 @@ export function RoundConfigurationView(props: Props) {
         MERGE_SCREENING_VERBAL_KEY
       ],
     );
+  const hasRubric = isAiVerbal;
+  const targetRubricWeight = 100;
+  const stageCompetencies = useMemo(
+    () => (activeStageIdResolved ? competencies.filter((c) => c.stage_id === activeStageIdResolved) : []),
+    [competencies, activeStageIdResolved],
+  );
   const stageQuestions = useMemo(
     () => (activeStageIdResolved ? questionsForStage(questions, activeStageIdResolved) : []),
     [questions, activeStageIdResolved],
@@ -697,6 +802,7 @@ export function RoundConfigurationView(props: Props) {
                   </span>
                   <button
                     type="button"
+                    disabled={hasRubric && Math.round(stageCompetencies.reduce((sum, c) => sum + (c.weight_pct ?? 0), 0)) !== targetRubricWeight}
                     className={`flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                       justSaved
                         ? 'bg-emerald-600 text-white'
@@ -792,5 +898,121 @@ export function RoundConfigurationView(props: Props) {
         }}
       />
     </>
+  );
+}
+
+
+function VerbalInterviewBudgetFields(props: {
+  rubricCount: number;
+  weights: number[];
+  names: string[];
+  roundConfig: Record<string, unknown> | null;
+  onChange: (next: Record<string, unknown>) => void;
+}) {
+  const config = props.roundConfig ?? {};
+  const savedMin = config[VERBAL_MIN_PRIMARY_KEY];
+  const savedMax = config[VERBAL_MAX_TOTAL_KEY];
+  const fallbackMin = Math.max(props.rubricCount, 1);
+  const displayMin = typeof savedMin === 'number' ? savedMin : fallbackMin;
+  const displayMax = typeof savedMax === 'number' ? savedMax : displayMin;
+  const savedDuration = config[VERBAL_DURATION_KEY];
+  const shapeError = verbalBudgetShapeError(displayMin, displayMax);
+  const budgetSaved = savedMin != null || savedMax != null;
+  const coverageError = budgetSaved || props.rubricCount > 0
+    ? verbalBudgetCoverageError(displayMin, props.rubricCount)
+    : null;
+  const durationError = verbalDurationError(savedDuration);
+  const error = shapeError || coverageError || durationError;
+  const allocation = props.rubricCount > 0 && !shapeError && !coverageError
+    ? allocatePrimaryQuestions(props.weights, displayMin)
+    : null;
+  const followups = Math.max(0, displayMax - displayMin);
+
+  const write = (minimum: number, maximum: number, duration: number | null) => {
+    const next: Record<string, unknown> = {
+      ...config,
+      [VERBAL_MIN_PRIMARY_KEY]: minimum,
+      [VERBAL_MAX_TOTAL_KEY]: maximum,
+    };
+    if (duration == null) delete next[VERBAL_DURATION_KEY];
+    else next[VERBAL_DURATION_KEY] = duration;
+    props.onChange(next);
+  };
+
+  return (
+    <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] p-4">
+      <h5 className="text-sm font-bold text-[var(--assessment-on-surface)]">Interview Question Budget</h5>
+      <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
+        Set primary questions the AI interviewer must ask, and maximum questions including follow-ups.
+      </p>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
+          Minimum primary questions
+          <input
+            type="number"
+            min={1}
+            max={40}
+            className="mt-1 w-full rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-3 py-2 text-sm font-normal text-[var(--assessment-on-surface)]"
+            value={displayMin}
+            onChange={(event) => {
+              const raw = Number.parseInt(event.target.value, 10);
+              if (!Number.isFinite(raw)) return;
+              write(raw, displayMax, typeof savedDuration === 'number' ? savedDuration : null);
+            }}
+          />
+        </label>
+        <label className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
+          Maximum total questions
+          <input
+            type="number"
+            min={1}
+            max={40}
+            className="mt-1 w-full rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-3 py-2 text-sm font-normal text-[var(--assessment-on-surface)]"
+            value={displayMax}
+            onChange={(event) => {
+              const raw = Number.parseInt(event.target.value, 10);
+              if (!Number.isFinite(raw)) return;
+              write(displayMin, raw, typeof savedDuration === 'number' ? savedDuration : null);
+            }}
+          />
+        </label>
+        <label className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
+          Duration limit (optional)
+          <input
+            type="number"
+            min={10}
+            max={50}
+            placeholder="10–50 min"
+            className="mt-1 w-full rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-3 py-2 text-sm font-normal text-[var(--assessment-on-surface)]"
+            value={typeof savedDuration === 'number' ? savedDuration : ''}
+            onChange={(event) => {
+              if (event.target.value.trim() === '') {
+                write(displayMin, displayMax, null);
+                return;
+              }
+              const raw = Number.parseInt(event.target.value, 10);
+              if (!Number.isFinite(raw)) return;
+              write(displayMin, displayMax, raw);
+            }}
+          />
+        </label>
+      </div>
+      {error ? (
+        <p className="mt-2 text-xs font-semibold text-rose-400">{error}</p>
+      ) : (
+        <p className="mt-2 text-xs text-[var(--assessment-on-surface-variant)]">
+          {displayMin} primary {displayMin === 1 ? 'question' : 'questions'}, up to {followups} follow-up{followups === 1 ? '' : 's'}.
+        </p>
+      )}
+      {Array.isArray(allocation) ? (
+        <ul className="mt-2 space-y-1 text-xs text-[var(--assessment-on-surface)]">
+          {props.names.map((name, index) => (
+            <li key={`${name}-${index}`}>
+              <span className="font-semibold text-violet-300">{name}:</span> {allocation[index]} primary {allocation[index] === 1 ? 'question' : 'questions'} ({props.weights[index]}%)
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }

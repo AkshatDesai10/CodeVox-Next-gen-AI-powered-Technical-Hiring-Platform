@@ -39,7 +39,9 @@ import {
   ScreenShareRequiredOverlay,
 } from '@/modules/autonomous-interview/components/LiveKitConnectionBanner';
 import { MediaPermissionGateModal } from '@/modules/autonomous-interview/components/MediaPermissionGateModal';
+import { getPortalRuntimeConfig } from '@/lib/candidate-api';
 import {
+  applyRuntimeProctorConfig,
   getMaxMediaStrikes,
   getMediaGraceSeconds,
   isAutoSubmitOnStrikeEnabled,
@@ -741,6 +743,30 @@ export function InterviewRoomProvider({
     };
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
     return () => window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+  }, []);
+
+  // One-time fetch: apply dynamic proctor limits over NEXT_PUBLIC_* env fallbacks.
+  useEffect(() => {
+    let cancelled = false;
+    void getPortalRuntimeConfig()
+      .then((cfg) => {
+        if (cancelled) return;
+        applyRuntimeProctorConfig({
+          maxStrikes: cfg.maxStrikes,
+          autoSubmitOnStrike: cfg.autoSubmitOnStrike,
+          graceSeconds: cfg.graceSeconds,
+        });
+        setGraceSecondsLeft((prev) => {
+          const next = getMediaGraceSeconds();
+          return prev === next ? prev : next;
+        });
+      })
+      .catch(() => {
+        /* keep env / defaults */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

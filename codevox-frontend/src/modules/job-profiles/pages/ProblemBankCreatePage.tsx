@@ -263,6 +263,7 @@ export function ProblemBankCreatePage() {
   const [forcePublish, setForcePublish] = useState(false);
 
   const [seniorityLevel, setSeniorityLevel] = useState('MID-LEVEL');
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   const competencyLibQuery = useQuery({
     queryKey: ['job-profile-competency-catalog', 'problem-bank-create'],
@@ -440,7 +441,7 @@ export function ProblemBankCreatePage() {
     }
   }, [generatorContext?.techStack, editId]);
 
-  const canGenerateAi = Boolean(problemPattern) && Boolean(competency) && Boolean(generatorContext);
+  const canGenerateAi = true;
 
   const languageTemplates = useMemo(
     () =>
@@ -590,19 +591,26 @@ export function ProblemBankCreatePage() {
   const aiMutation = useMutation({
     mutationFn: () => {
       setAiGenerateWarning(null);
-      if (!canGenerateAi || !generatorContext) {
-        throw new Error('Select a competency and problem pattern before generating.');
-      }
+      const effectiveTopic = competency || topicTag || (aiGeneratorType === 'database' ? 'Database Design' : 'Data Structures');
+      const effectivePattern = problemPattern || patternsForTopic(effectiveTopic)[0] || 'Algorithm Implementation';
+      const effectiveContext = generatorContext || {
+        competencyName: effectiveTopic,
+        competencyDescription: 'Evaluation of candidate competence in ' + effectiveTopic,
+        seniorityLevel: seniorityLevel || 'MID-LEVEL',
+        industryDomain: 'Technology & Software',
+        techStack: allowedLanguages.join(', '),
+        jobRole: 'Software Engineer',
+      };
       const shared = {
-        competency_name: generatorContext.competencyName,
-        competency_description: generatorContext.competencyDescription,
-        seniority_level: generatorContext.seniorityLevel,
-        industry_domain: generatorContext.industryDomain,
-        tech_stack: generatorContext.techStack,
-        job_role: generatorContext.jobRole,
+        competency_name: effectiveContext.competencyName,
+        competency_description: effectiveContext.competencyDescription,
+        seniority_level: effectiveContext.seniorityLevel,
+        industry_domain: effectiveContext.industryDomain,
+        tech_stack: effectiveContext.techStack,
+        job_role: effectiveContext.jobRole,
         ...(profileId ? { job_profile_id: profileId } : {}),
-        topic_tag: competency || topicTag,
-        problem_pattern: problemPattern,
+        topic_tag: effectiveTopic,
+        problem_pattern: effectivePattern,
         difficulty: problemDifficulty,
       };
       if (aiGeneratorType === 'database') {
@@ -1180,15 +1188,24 @@ export function ProblemBankCreatePage() {
 
           {/* Right utility panel */}
           <div className="col-span-12 space-y-6 xl:col-span-4">
-            <section className="overflow-hidden rounded-xl border border-[var(--nexus-secondary)]/30 bg-[var(--nexus-secondary-container)]/10 shadow-sm">
-              <div className="flex items-center gap-2 bg-[var(--nexus-secondary)] p-4 text-white">
-                <AssessmentMaterialIcon name="auto_awesome" size={20} style={{ fontVariationSettings: "'FILL' 1" }} />
-                <h3 className="font-title-sm font-bold">AI Problem Architect</h3>
+            <section className="overflow-hidden rounded-xl border border-violet-500/30 bg-[#160A30]/40 shadow-xl backdrop-blur-md">
+              <div className="flex items-center justify-between bg-gradient-to-r from-violet-600 to-indigo-600 p-4 text-white shadow-md">
+                <div className="flex items-center gap-2">
+                  <AssessmentMaterialIcon name="auto_awesome" size={20} style={{ fontVariationSettings: "'FILL' 1" }} />
+                  <h3 className="font-title-sm font-bold tracking-wide">
+                    {aiGeneratorType === 'database' ? 'SQL Assessment Architect' : 'Coding Problem Architect'}
+                  </h3>
+                </div>
+                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
+                  {aiGeneratorType === 'database' ? 'SQL Mode' : 'Code Mode'}
+                </span>
               </div>
+
               <div className="space-y-4 p-6">
+                {/* 1. Generator Type Toggle */}
                 <div>
-                  <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Generator Type</label>
-                  <div className="flex gap-1">
+                  <label className="mb-2 block font-label-caps text-xs font-bold text-violet-300 uppercase tracking-wider">Assessment Type</label>
+                  <div className="grid grid-cols-2 gap-2">
                     {AI_GENERATOR_OPTIONS.map((option) => {
                       const active = aiGeneratorType === option.value;
                       return (
@@ -1196,10 +1213,10 @@ export function ProblemBankCreatePage() {
                           key={option.value}
                           type="button"
                           onClick={() => setAiGeneratorType(option.value)}
-                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-bold transition ${
+                          className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-bold transition-all ${
                             active
-                              ? 'border-[var(--nexus-secondary)] bg-[var(--nexus-secondary)] text-white'
-                              : 'border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] text-[var(--assessment-on-surface)]'
+                              ? 'border-violet-500 bg-violet-600 text-white shadow-md shadow-violet-600/30'
+                              : 'border-violet-500/20 bg-[#160A30] text-violet-300 hover:border-violet-500/40'
                           }`}
                         >
                           <AssessmentMaterialIcon name={option.icon} size={16} />
@@ -1210,208 +1227,346 @@ export function ProblemBankCreatePage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Competency</label>
-                  <CompetencyLibrarySearchSelect
-                    value={competency}
-                    onChange={setCompetency}
-                    hideLabel
-                    category="hard"
-                    placeholder="Search competencies..."
+                {/* 2. Natural Language Prompt Box */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-label-caps text-xs font-bold text-violet-300 uppercase tracking-wider">
+                      {aiGeneratorType === 'database' ? 'SQL Query Goal / Scenario' : 'Describe Problem / Goal'}
+                    </label>
+                    <span className="text-[10px] text-violet-400/80">Natural Language</span>
+                  </div>
+                  <textarea
+                    value={customAiInstructions}
+                    onChange={(e) => setCustomAiInstructions(e.target.value)}
+                    placeholder={
+                      aiGeneratorType === 'database'
+                        ? "e.g., Write an SQL query to calculate 30-day user retention and churn rate with active logins..."
+                        : "e.g., Design a problem about finding contiguous subarrays with target sum, or an LRU cache eviction logic..."
+                    }
+                    className="h-28 w-full rounded-xl border border-violet-500/30 bg-[#0E061E] p-3 text-sm text-white placeholder:text-violet-400/40 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400 transition-all resize-none"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Seniority</label>
-                  <select
-                    value={seniorityLevel}
-                    onChange={(e) => setSeniorityLevel(e.target.value)}
-                    className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-2 text-sm"
-                  >
-                    <option value="INTERN / FRESHER">Intern / Fresher</option>
-                    <option value="JUNIOR">Junior</option>
-                    <option value="MID-LEVEL">Mid-Level</option>
-                    <option value="SENIOR">Senior</option>
-                    <option value="LEAD / PRINCIPAL">Lead / Principal</option>
-                  </select>
+                {/* 3. Quick Inspiration Chips (Adaptive for Coding vs SQL Database) */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-semibold text-violet-300/80">
+                    {aiGeneratorType === 'database' ? 'Quick SQL Preset Scenarios:' : 'Quick Coding Preset Ideas:'}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(aiGeneratorType === 'database'
+                      ? [
+                          { label: 'Multi-Table JOINs', type: 'database', topic: 'Database Design', prompt: 'Write an SQL query with multiple table joins (INNER and LEFT JOIN), aggregation, and conditional filtering.' },
+                          { label: 'Aggregations & HAVING', type: 'database', topic: 'Database Design', prompt: 'Write an SQL query using GROUP BY, COUNT/SUM/AVG, and a HAVING clause to filter aggregated groups.' },
+                          { label: 'Window Functions (RANK)', type: 'database', topic: 'Database Design', prompt: 'Write an SQL query using window functions (e.g., RANK, DENSE_RANK, or ROW_NUMBER) partitioned by category.' },
+                          { label: 'Retention & Date Math', type: 'database', topic: 'Database Design', prompt: 'Write an SQL query calculating 30-day user retention cohorts or month-over-month revenue growth using date functions.' },
+                          { label: 'Subqueries & CTEs', type: 'database', topic: 'Database Design', prompt: 'Write an SQL query using Common Table Expressions (WITH clause) to isolate intermediate data.' },
+                          { label: 'Data Cleaning & NULLs', type: 'database', topic: 'Database Design', prompt: 'Write an SQL query that properly handles NULL values using COALESCE/IFNULL and filters archived records.' },
+                        ]
+                      : [
+                          { label: 'Two Pointers / Arrays', type: 'coding', topic: 'Data Structures', prompt: 'Create an algorithmic problem using two pointers to process an array in O(n) time and O(1) space.' },
+                          { label: 'Sliding Window', type: 'coding', topic: 'Algorithms', prompt: 'Create a problem about finding the maximum or minimum contiguous window satisfying a condition.' },
+                          { label: 'Binary Search', type: 'coding', topic: 'Algorithms', prompt: 'Design a binary search problem on a rotated or shifted array with O(log n) requirement.' },
+                          { label: 'SQL Joins & Grouping', type: 'database', topic: 'Database Design', prompt: 'Write an SQL query with multiple table joins, aggregation, and conditional filtering.' },
+                          { label: 'Dynamic Programming', type: 'coding', topic: 'Algorithms', prompt: 'Design a dynamic programming problem involving subproblems and optimal substructure.' },
+                          { label: 'System Logic / Cache', type: 'coding', topic: 'System Design', prompt: 'Design an in-memory caching logic or rate limiter with expiration.' },
+                        ]
+                    ).map((chip) => (
+                      <button
+                        key={chip.label}
+                        type="button"
+                        onClick={() => {
+                          setAiGeneratorType(chip.type as AiGeneratorType);
+                          setTopicTag(chip.topic);
+                          setCustomAiInstructions(chip.prompt);
+                        }}
+                        className="rounded-lg border border-violet-500/20 bg-violet-950/30 px-2 py-1 text-[11px] font-medium text-violet-300 hover:border-violet-400 hover:bg-violet-900/40 transition-all text-left"
+                      >
+                        ⚡ {chip.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Pattern / Topic</label>
-                  <ProblemTopicSearchSelect value={topicTag} onChange={setTopicTag} hideLabel placeholder="Topic tag..." />
-                </div>
-
-                <DifficultySegmentedControl
-                  value={problemDifficulty}
-                  onChange={setProblemDifficulty}
-                  label="Difficulty"
-                  labelClassName="text-[var(--nexus-secondary)]"
-                  activeClassName="bg-[var(--nexus-secondary)] text-white"
-                />
-
-                <div>
-                  <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Problem Pattern</label>
-                  <ProblemPatternSearchSelect
-                    topic={topicTag}
-                    value={problemPattern}
-                    onChange={setProblemPattern}
-                    hideLabel
-                  />
-                </div>
-
-                <div className="rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-3">
-                  {aiGeneratorType === 'database' ? (
-                    <div className="grid grid-cols-1 gap-3">
-                      <label className="space-y-1 text-xs">
-                        <span className="font-label-caps text-[var(--nexus-secondary)]">Question Style</span>
-                        <select
-                          value={databaseQuestionType}
-                          onChange={(e) => setDatabaseQuestionType(e.target.value as 'scenario' | 'simple')}
-                          className="w-full rounded border border-[var(--assessment-outline-variant)] px-2 py-1.5 text-xs"
-                        >
-                          <option value="simple">Simple — LeetCode Style (Single Query, schema shown in problem)</option>
-                          <option value="scenario">Scenario-based (Complex business problem, multiple queries)</option>
-                        </select>
-                      </label>
-                      <label className="space-y-1 text-xs">
-                        <span className="font-label-caps text-[var(--nexus-secondary)]">Database Type</span>
+                {/* 4. Adaptive Controls: SQL Settings vs Coding Controls */}
+                {aiGeneratorType === 'database' ? (
+                  <div className="space-y-3 rounded-xl border border-violet-500/25 bg-[#0E061E] p-3">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="mb-1 block font-label-caps text-[10px] font-bold text-violet-300 uppercase">Database Engine</label>
                         <select
                           value={databaseType}
                           onChange={(e) => setDatabaseType(e.target.value as DatabaseType)}
-                          className="w-full rounded border border-[var(--assessment-outline-variant)] px-2 py-1.5 text-xs"
+                          className="w-full rounded border border-violet-500/25 bg-[#160A30] px-2 py-1.5 text-xs text-white focus:border-violet-400 focus:outline-none"
                         >
                           {DATABASE_TYPE_OPTIONS.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
+                            <option key={type} value={type}>{type}</option>
                           ))}
                         </select>
-                      </label>
-                      <label className="space-y-1 text-xs">
-                        <span className="text-[var(--assessment-on-surface-variant)]">Seed Size</span>
+                      </div>
+                      <div>
+                        <label className="mb-1 block font-label-caps text-[10px] font-bold text-violet-300 uppercase">Query Style</label>
+                        <select
+                          value={databaseQuestionType}
+                          onChange={(e) => setDatabaseQuestionType(e.target.value as 'scenario' | 'simple')}
+                          className="w-full rounded border border-violet-500/25 bg-[#160A30] px-2 py-1.5 text-xs text-white focus:border-violet-400 focus:outline-none"
+                        >
+                          <option value="simple">LeetCode (Single Query)</option>
+                          <option value="scenario">Enterprise Scenario</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <label className="mb-1 block font-label-caps text-[10px] font-bold text-violet-300 uppercase">Seed Rows</label>
                         <select
                           value={seedSize}
                           onChange={(e) => setSeedSize(e.target.value as SeedSize)}
-                          className="w-full rounded border border-[var(--assessment-outline-variant)] px-2 py-1.5 text-xs"
+                          className="w-full rounded border border-violet-500/25 bg-[#160A30] px-2 py-1.5 text-xs text-white focus:border-violet-400 focus:outline-none"
                         >
                           {SEED_SIZE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
+                            <option key={option.value} value={option.value}>{option.label}</option>
                           ))}
                         </select>
-                      </label>
-                      <label className="space-y-1 text-xs">
-                        <span className="text-[var(--assessment-on-surface-variant)]">Random Seed</span>
-                        <input
-                          type="number"
-                          value={seedRandomSeed}
-                          onChange={(e) => setSeedRandomSeed(Number(e.target.value) || 42)}
-                          className="w-full rounded border border-[var(--assessment-outline-variant)] px-2 py-1.5 font-mono text-xs"
-                        />
-                      </label>
+                      </div>
+                      <div>
+                        <label className="mb-1 block font-label-caps text-[10px] font-bold text-violet-300 uppercase">Difficulty</label>
+                        <select
+                          value={problemDifficulty}
+                          onChange={(e) => setProblemDifficulty(e.target.value as ProblemDifficulty)}
+                          className="w-full rounded border border-violet-500/25 bg-[#160A30] px-2 py-1.5 text-xs text-white focus:border-violet-400 focus:outline-none"
+                        >
+                          <option value="easy">Easy</option>
+                          <option value="medium">Medium</option>
+                          <option value="hard">Hard</option>
+                        </select>
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <p className="mb-3 font-label-caps text-[var(--nexus-secondary)]">Constraints</p>
-                      <div className="grid grid-cols-1 gap-3">
-                        <label className="space-y-1 text-xs">
-                          <span className="text-[var(--assessment-on-surface-variant)]">Max Input Size</span>
-                          <input
-                            value={inputSizeConstraint}
-                            onChange={(e) => setInputSizeConstraint(e.target.value)}
-                            className="w-full rounded border border-[var(--assessment-outline-variant)] px-2 py-1.5 font-mono text-xs"
-                          />
-                        </label>
-                        <label className="space-y-1 text-xs">
-                          <span className="text-[var(--assessment-on-surface-variant)]">Time Limit</span>
-                          <div className="flex items-center gap-2">
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="mb-1.5 block font-label-caps text-xs font-bold text-violet-300 uppercase tracking-wider">Difficulty</label>
+                      <DifficultySegmentedControl
+                        value={problemDifficulty}
+                        onChange={setProblemDifficulty}
+                        activeClassName="bg-violet-600 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block font-label-caps text-xs font-bold text-violet-300 uppercase tracking-wider">Seniority</label>
+                      <select
+                        value={seniorityLevel}
+                        onChange={(e) => setSeniorityLevel(e.target.value)}
+                        className="w-full rounded-lg border border-violet-500/25 bg-[#0E061E] p-2 text-xs text-white focus:border-violet-400 focus:outline-none"
+                      >
+                        <option value="INTERN / FRESHER">Intern / Fresher</option>
+                        <option value="JUNIOR">Junior</option>
+                        <option value="MID-LEVEL">Mid-Level</option>
+                        <option value="SENIOR">Senior</option>
+                        <option value="LEAD / PRINCIPAL">Lead / Principal</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Collapsible Advanced Settings */}
+                <div className="border-t border-violet-500/20 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                    className="flex w-full items-center justify-between py-1 text-xs font-semibold text-violet-300 hover:text-white transition-colors"
+                  >
+                    <span>Advanced Tuning Options</span>
+                    <span className="text-[10px]">{showAdvancedSettings ? '▲ Hide' : '▼ Expand'}</span>
+                  </button>
+
+                  {showAdvancedSettings && (
+                    <div className="space-y-3 pt-3">
+                      <div>
+                        <label className="mb-1 block font-label-caps text-[11px] text-violet-300">Topic Tag</label>
+                        <ProblemTopicSearchSelect value={topicTag} onChange={setTopicTag} hideLabel placeholder="Topic tag..." />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block font-label-caps text-[11px] text-violet-300">Problem Pattern</label>
+                        <ProblemPatternSearchSelect
+                          topic={topicTag}
+                          value={problemPattern}
+                          onChange={setProblemPattern}
+                          hideLabel
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block font-label-caps text-[11px] text-violet-300">Competency Library (Optional)</label>
+                        <CompetencyLibrarySearchSelect
+                          value={competency}
+                          onChange={setCompetency}
+                          hideLabel
+                          category="hard"
+                          placeholder="Search competencies..."
+                        />
+                      </div>
+
+                      {aiGeneratorType === 'database' ? (
+                        <div className="space-y-2 pt-1 text-xs">
+                          <label className="space-y-1 block">
+                            <span className="text-violet-300 text-[10px]">Deterministic Random Seed</span>
+                            <input
+                              type="number"
+                              value={seedRandomSeed}
+                              onChange={(e) => setSeedRandomSeed(Number(e.target.value) || 42)}
+                              className="w-full rounded border border-violet-500/25 bg-[#0E061E] px-2 py-1 font-mono text-xs text-white"
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                          <label className="space-y-1">
+                            <span className="text-violet-300 text-[10px]">Max Input Size</span>
+                            <input
+                              value={inputSizeConstraint}
+                              onChange={(e) => setInputSizeConstraint(e.target.value)}
+                              className="w-full rounded border border-violet-500/25 bg-[#0E061E] px-2 py-1 font-mono text-xs text-white"
+                            />
+                          </label>
+                          <label className="space-y-1">
+                            <span className="text-violet-300 text-[10px]">Time Limit (ms)</span>
                             <input
                               type="number"
                               min={500}
                               value={timeLimitMs}
                               onChange={(e) => setTimeLimitMs(Number(e.target.value) || 2000)}
-                              className="w-full rounded border border-[var(--assessment-outline-variant)] px-2 py-1.5 text-xs"
+                              className="w-full rounded border border-violet-500/25 bg-[#0E061E] px-2 py-1 text-xs text-white"
                             />
-                            <span className="text-[var(--assessment-on-surface-variant)]">ms</span>
-                          </div>
-                        </label>
-                      </div>
-                    </>
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                <div className="space-y-3 pt-4">
-                  <p className="font-label-caps text-[var(--nexus-secondary)]">Custom Instructions</p>
-                  <label className="block text-xs text-[var(--assessment-on-surface-variant)]">
-                    Provide any specific requirements, scenarios, or edge cases you want the AI to include in the generated problem.
-                  </label>
-                  <textarea
-                    value={customAiInstructions}
-                    onChange={(e) => setCustomAiInstructions(e.target.value)}
-                    placeholder="E.g., Make the scenario about a food delivery startup like Zomato, and include a tricky edge case about canceled orders..."
-                    className="h-24 w-full rounded border border-[var(--assessment-outline)] bg-[var(--assessment-surface)] px-3 py-2 text-sm text-[var(--assessment-on-surface)] placeholder:text-[var(--assessment-on-surface-variant)] focus:border-[var(--nexus-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--nexus-secondary)]"
-                  />
-                </div>
-
-
-
-                {generatorContext ? (
-                  <div className="space-y-2 border-t border-[var(--nexus-secondary)]/20 pt-4">
-                    <p className="font-label-caps text-[var(--nexus-secondary)]">Generator context</p>
-                    <div className="flex flex-wrap gap-2">
-                        {[
-                          { label: 'Competency', value: generatorContext.competencyName },
-                          { label: 'Seniority', value: generatorContext.seniorityLabel },
-                          { label: 'Domain', value: generatorContext.industryDomain },
-                          { label: 'Stack', value: generatorContext.techStack || 'Inferred' },
-                        ].map((chip) => (
-                        <span
-                          key={chip.label}
-                          className="rounded-full border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-1 text-[11px] text-[var(--assessment-on-surface-variant)]"
-                        >
-                          <span className="font-bold text-[var(--nexus-secondary)]">{chip.label}:</span> {chip.value}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-
-
+                {/* 6. Primary Generate Button */}
                 <button
                   type="button"
-                  disabled={aiMutation.isPending || !canGenerateAi}
+                  disabled={aiMutation.isPending}
                   onClick={() => aiMutation.mutate()}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--nexus-secondary)] py-2.5 font-title-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-3 font-title-sm font-bold text-white shadow-lg shadow-violet-600/30 transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
+                  <AssessmentMaterialIcon name="auto_awesome" size={18} />
                   {aiMutation.isPending
-                    ? 'Generating & auto Validating...'
-                    : aiGeneratorType === 'database'
-                      ? 'Generate Database Assessment'
-                      : 'Generate Problem with AI'}
-                  <AssessmentMaterialIcon name="arrow_forward" size={18} />
+                    ? (aiGeneratorType === 'database' ? 'Architecting SQL Schema & Query...' : 'Architecting Problem with AI...')
+                    : (aiGeneratorType === 'database' ? 'Generate SQL Assessment' : 'Generate Problem with AI')}
                 </button>
-                {aiMutation.isError ? (
-                  <p className="text-xs text-[var(--assessment-error)]">
-                    {(aiMutation.error as Error).message || 'Generation failed. Try again.'}
-                  </p>
-                ) : null}
-                {aiGenerateWarning ? (
-                  <p className="text-xs text-amber-700">{aiGenerateWarning}</p>
-                ) : null}
-                {validationFixedIssues && validationFixedIssues.length > 0 && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-bold text-amber-800 mb-1">AI auto-fixed ✅ {validationFixedIssues.length} issue{validationFixedIssues.length > 1 ? 's' : ''} in this draft:</p>
-                        <ul className="list-disc list-inside space-y-0.5">
-                          {validationFixedIssues.map((issue, i) => (
-                            <li key={i} className="text-xs text-amber-700">{issue}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <button onClick={() => setValidationFixedIssues(null)} className="text-amber-500 hover:text-amber-700 font-bold text-sm flex-shrink-0">✕</button>
+
+                {/* 7. Post-generation Quick Tweaks */}
+                {title && (
+                  <div className="rounded-xl border border-violet-500/20 bg-[#0E061E] p-3 space-y-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-violet-300">
+                      {aiGeneratorType === 'database' ? 'SQL Quick Tweaks:' : 'AI Quick Tweaks:'}
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {aiGeneratorType === 'database' ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomAiInstructions((prev) => `${prev ? prev + ' ' : ''}Simplify the SQL query to require fewer table joins and straightforward WHERE conditions.`);
+                              aiMutation.mutate();
+                            }}
+                            disabled={aiMutation.isPending}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            🪄 Simplify Query
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomAiInstructions((prev) => `${prev ? prev + ' ' : ''}Require advanced window functions (RANK, DENSE_RANK, or NTILE) and multiple subqueries/CTEs.`);
+                              aiMutation.mutate();
+                            }}
+                            disabled={aiMutation.isPending}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            ⚡ Window Functions
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDatabaseSeedSql((prev) => `${prev}\n-- Additional edge case with NULL values:\nINSERT INTO customers (id, email, status) VALUES (999, NULL, 'archived');\nINSERT INTO orders (id, customer_id, total, deleted_at) VALUES (999, 999, 0.00, '2024-01-01');`);
+                            }}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            🧪 + NULL Edge Seed
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHints([
+                                'Start by joining tables on primary/foreign key relations before aggregating.',
+                                'Use COALESCE to handle NULL values in calculations.',
+                                'Verify that GROUP BY includes all non-aggregated SELECT columns.',
+                              ]);
+                            }}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            💡 Add SQL Hints
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomAiInstructions((prev) => `${prev ? prev + ' ' : ''}Make the question simpler and more intuitive for junior candidates.`);
+                              aiMutation.mutate();
+                            }}
+                            disabled={aiMutation.isPending}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            🪄 Make Simpler
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomAiInstructions((prev) => `${prev ? prev + ' ' : ''}Increase difficulty, enforce strict O(N) time and O(1) space constraints, and add tricky edge cases.`);
+                              aiMutation.mutate();
+                            }}
+                            disabled={aiMutation.isPending}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            ⚡ Make Harder
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newCases: DraftCase[] = [
+                                { inputValue: '[]', expectedOutput: '0', isVisible: 0, isEdgeCase: 1 },
+                                { inputValue: '[0]', expectedOutput: '0', isVisible: 1, isEdgeCase: 1 },
+                                { inputValue: '[-999999]', expectedOutput: '-999999', isVisible: 0, isEdgeCase: 1 },
+                              ];
+                              setTestCases((prev) => [...prev, ...newCases]);
+                            }}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            🧪 + Edge Cases
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHints([
+                                'Consider using two pointers or a frequency hash map.',
+                                'Watch out for negative values or empty array inputs.',
+                                'Aim for a single pass O(n) solution to pass the large hidden test cases.',
+                              ]);
+                            }}
+                            className="rounded-lg border border-violet-500/20 bg-violet-950/40 px-2 py-1.5 text-[11px] font-medium text-violet-200 hover:bg-violet-900/40 text-left transition"
+                          >
+                            💡 Add Hints
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

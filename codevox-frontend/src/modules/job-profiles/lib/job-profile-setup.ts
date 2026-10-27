@@ -12,7 +12,11 @@ export function isBasicsStepComplete(profile: JobProfileSummary): boolean {
   return skills.length > 0 || responsibilities.length > 0;
 }
 
-export function isRubricStepComplete(competencies: JobProfileCompetency[]): boolean {
+export function isRubricStepComplete(competencies: JobProfileCompetency[], stages?: JobProfileStage[]): boolean {
+  if (stages && stages.length > 0) {
+    const hasVerbal = stages.some((s) => s.stage_type === 'ai_verbal' || (s.mode === 'ai_led' && !['coding', 'project_interview', 'screening', 'ai_screening', 'hr_verbal', 'panel'].includes(s.stage_type || '')));
+    if (!hasVerbal) return true;
+  }
   return competencies.length > 0;
 }
 
@@ -82,7 +86,7 @@ export function canPublishJobProfile(input: {
 
 export function firstIncompleteSetupStep(data: JobProfileDetail): 1 | 2 | 3 {
   if (!isBasicsStepComplete(data.profile)) return 1;
-  if (!isRubricStepComplete(data.competencies)) return 2;
+  if (!isRubricStepComplete(data.competencies, data.stages)) return 2;
   return 3;
 }
 

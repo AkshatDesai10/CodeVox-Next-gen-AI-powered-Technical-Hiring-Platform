@@ -22,6 +22,7 @@ import {
 } from './entities/question-bank-question.mysql.entity';
 import { ProblemBankProblemMysql, ProblemBankStatus } from './entities/problem-bank-problem.mysql.entity';
 import { JobProfilesRepository } from './job-profiles.repository';
+import { DynamicConfigService } from '../system-config/dynamic-config.service';
 import { seniorityToDifficulty, slugifyTitle, deriveSkillsFromJobProfile, inferSeniorityFromJobProfile } from './job-profiles.util';
 import { inferLanguagesFromTechStack, inferTechStackFromText } from './tech-stack-inference.util';
 import { buildRoundQuestionPromptHints } from './round-question-prompt.util';
@@ -116,6 +117,7 @@ export class JobProfilesAiService {
     private readonly questionBank: Repository<QuestionBankQuestionMysql>,
     @InjectRepository(ProblemBankProblemMysql)
     private readonly problemBank: Repository<ProblemBankProblemMysql>,
+    private readonly dynamicConfig: DynamicConfigService,
   ) {}
 
   private async assertWrite(actor: JwtUserPayload) {
@@ -1353,12 +1355,14 @@ ${JSON.stringify(result.draft, null, 2)}`;
           return detailed.data;
         };
 
-        const geminiKey = (process.env.TAKEHOME_LLM_KEY || '').trim();
+        const geminiKey = this.dynamicConfig.getGeminiApiKey();
         if (geminiKey) {
           const geminiUrl =
             process.env.TAKEHOME_LLM_URL ||
             'https://generativelanguage.googleapis.com/v1beta/openai/';
-          const geminiModel = process.env.TAKEHOME_LLM_MODEL || 'gemini-3.6-flash';
+          const geminiModel = this.dynamicConfig.getGeminiModel();
+          const maxTokens = this.dynamicConfig.getMaxTokens();
+          const reasoningEffort = this.dynamicConfig.getReasoningEffort();
           try {
             const geminiClient = new OpenAI({
               apiKey: geminiKey,
@@ -1370,9 +1374,9 @@ ${JSON.stringify(result.draft, null, 2)}`;
             const completion = (await geminiClient.chat.completions.create({
               model: geminiModel,
               messages: validationMessages,
-              max_tokens: 16_384,
+              max_tokens: maxTokens,
               stream: false,
-              reasoning_effort: 'low',
+              reasoning_effort: reasoningEffort,
             } as Parameters<OpenAI['chat']['completions']['create']>[0])) as OpenAI.Chat.ChatCompletion;
             const content = completion.choices[0]?.message?.content || '{}';
             validationResult = parseJsonObject(content) as ValidationResult;
