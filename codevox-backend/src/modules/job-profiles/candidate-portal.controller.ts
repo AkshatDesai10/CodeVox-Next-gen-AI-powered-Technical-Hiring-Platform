@@ -11,6 +11,13 @@ function ok(message: string, data: unknown) {
 export class CandidatePortalController {
   constructor(private readonly candidatePortalService: CandidatePortalService) { }
 
+  /** Lightweight public flags for candidate FE (no token). Must be before :token routes. */
+  @Get('runtime-config')
+  async runtimeConfig() {
+    const data = await this.candidatePortalService.getRuntimeConfig();
+    return ok('Candidate runtime config', data);
+  }
+
   @Get(':token/dashboard')
   async getDashboard(@Param('token') token: string) {
     const data = await this.candidatePortalService.getDashboardPayload(token);

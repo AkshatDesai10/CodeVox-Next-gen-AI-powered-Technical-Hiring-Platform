@@ -586,41 +586,41 @@ export function deleteRecruitmentTimeSlot(id: string) {
   }));
 }
 
+export type BulkInviteItem = {
+  email: string;
+  invite_token: string;
+  interview_url: string;
+  slot_label: string;
+  slot_id: string;
+  email_sent: boolean;
+  lead_id: string;
+};
+
 export type BulkInviteResult = {
+  total: number;
   invited: number;
-  failed: number;
-  skipped: number;
-  invalid_count?: number;
-  total_capacity?: number;
-  allocation?: Array<{
+  failed: Array<{ email: string; error: string }>;
+  allocation: Array<{
     slot_id: string;
     slot_label: string;
-    assigned: number;
-    remaining?: number;
+    assigned_count: number;
+    remaining: number;
   }>;
-  items: Array<{
-    email: string;
-    lead_id?: string;
-    status: string;
-    invite_token?: string;
-    interview_url?: string;
-    email_sent?: boolean;
-    slot_id?: string;
-    slot_label?: string;
-    error?: string;
-  }>;
+  items: BulkInviteItem[];
 };
 
 export function bulkInviteCandidates(input: {
-  emails: string[];
   jobProfileId: string;
   slotDate: string;
+  emails?: string[];
+  candidates?: Array<{ name?: string; email: string }>;
 }) {
   return unwrap(
     clientApiPost<Envelope<BulkInviteResult>>('/api/recruitment/candidates/bulk-invite', {
-      emails: input.emails,
       job_profile_id: input.jobProfileId,
       slot_date: input.slotDate,
+      emails: input.emails,
+      candidates: input.candidates,
     }),
   );
 }
@@ -752,36 +752,5 @@ export function draftInterviewResultAi(id: string, summary?: string) {
       `/api/recruitment/interviews/${id}/ai-draft-result`,
       summary ? { summary } : {},
     ),
-  );
-}
-
-export type EffectiveConfigItem = {
-  key: string;
-  category: 'portal' | 'ai' | 'voice' | 'secrets';
-  label: string;
-  description: string;
-  type: 'string' | 'boolean' | 'number' | 'enum';
-  options?: string[];
-  min?: number;
-  max?: number;
-  secret: boolean;
-  value: string;
-  source: 'db' | 'env' | 'default';
-  is_set: boolean;
-  updated_at: string | null;
-  updated_by: string | null;
-};
-
-export function getSystemConfigurations() {
-  return unwrap(
-    clientApiGet<Envelope<{ items: EffectiveConfigItem[] }>>('/api/recruitment/configurations'),
-  );
-}
-
-export function updateSystemConfigurations(values: Record<string, string | null>) {
-  return unwrap(
-    clientApiPut<Envelope<{ items: EffectiveConfigItem[] }>>('/api/recruitment/configurations', {
-      values,
-    }),
   );
 }

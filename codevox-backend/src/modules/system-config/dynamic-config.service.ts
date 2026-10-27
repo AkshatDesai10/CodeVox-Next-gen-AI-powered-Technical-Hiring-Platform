@@ -2,290 +2,413 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemConfigurationMysql } from './entities/system-configuration.mysql.entity';
+import { SystemConfigurationLogMysql } from './entities/system-configuration-log.mysql.entity';
 import {
-  SYSTEM_CONFIG_META,
+  envFallbackValue,
+  getConfigDef,
+  isFaceEnabledValue,
   looksMasked,
   maskSecret,
-  metaFor,
-  type ConfigMeta,
+  parseBooleanConfig,
+  SYSTEM_CONFIG_DEFS,
+  SYSTEM_CONFIG_KEY_SET,
+  type SystemConfigDef,
 } from './system-config.keys';
 
 export type EffectiveConfigItem = {
   key: string;
-  category: ConfigMeta['category'];
+  category: SystemConfigDef['category'];
   label: string;
   description: string;
-  type: ConfigMeta['type'];
+  type: SystemConfigDef['type'];
+  secret: boolean;
   options?: string[];
   min?: number;
   max?: number;
-  secret: boolean;
-  /** Effective value (masked when secret). */
+  step?: number;
+  /** Effective value (secrets masked). */
   value: string;
-  /** Whether a non-empty override exists in DB. */
+  /** True when DB row supplies the value. */
   source: 'db' | 'env' | 'default';
-  /** True when a secret is set (DB or env) even if value is masked. */
-  is_set: boolean;
-  updated_at: string | null;
-  updated_by: string | null;
+  hasDbValue: boolean;
+  updatedBy: string | null;
+  updatedAt: string | null;
 };
+
+export type CandidateRuntimeConfig = {
+  face: 'on' | 'off';
+  graceSeconds: number;
+  enableMediaStrikes: boolean;
+  maxMediaStrikes: number;
+  autoSubmitOnMediaStrike: boolean;
+  enableFocusStrikes: boolean;
+  maxFocusStrikes: number;
+  autoSubmitOnFocusStrike: boolean;
+  focusStrikeThresholdSeconds: number;
+  /** @deprecated Prefer maxMediaStrikes — kept for older clients. */
+  maxStrikes: number;
+  /** @deprecated Prefer autoSubmitOnMediaStrike — kept for older clients. */
+  autoSubmitOnStrike: boolean;
+};
+
+export type ConfigChangeLogItem = {
+  id: string;
+  key: string;
+  label: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: string | null;
+  createdAt: string;
+};
+
+type CacheEntry = { value: string | null; updatedBy: string | null; updatedAt: Date | null };
+
+const CACHE_TTL_MS = 30_000;
 
 @Injectable()
 export class DynamicConfigService implements OnModuleInit {
   private readonly logger = new Logger(DynamicConfigService.name);
-  /** config_key → raw DB value (null/empty means “use env fallback”). */
-  private readonly cache = new Map<string, string | null>();
-  private readonly metaByKey = new Map(SYSTEM_CONFIG_META.map((m) => [m.key, m]));
-  private rowMeta = new Map<string, { updatedAt: Date | null; updatedBy: string | null }>();
+  private cache = new Map<string, CacheEntry>();
+  private cacheLoadedAt = 0;
+  private loading: Promise<void> | null = null;
 
   constructor(
     @InjectRepository(SystemConfigurationMysql)
     private readonly repo: Repository<SystemConfigurationMysql>,
+    @InjectRepository(SystemConfigurationLogMysql)
+    private readonly logs: Repository<SystemConfigurationLogMysql>,
   ) {}
 
   async onModuleInit() {
-    await this.refreshCache();
+    try {
+      await this.refreshCache();
+    } catch (err) {
+      this.logger.warn(
+        `system_configurations cache warm failed (table may be missing until migration): ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+    }
   }
 
-  async refreshCache() {
-    const rows = await this.repo.find();
-    this.cache.clear();
-    this.rowMeta.clear();
-    for (const row of rows) {
-      this.cache.set(row.configKey, row.configValue);
-      this.rowMeta.set(row.configKey, {
-        updatedAt: row.updatedAt ?? null,
-        updatedBy: row.updatedBy ?? null,
-      });
+  /** Sync read from in-memory cache → env → default (no DB round-trip). */
+  getSync(key: string, fallback = ''): string {
+    const def = getConfigDef(key);
+    const cached = this.cache.get(key);
+    if (cached && cached.value != null && String(cached.value).trim() !== '') {
+      return String(cached.value).trim();
     }
-    this.logger.log(`Loaded ${rows.length} system configuration row(s)`);
-  }
-
-  /** Raw DB override only (null if missing/empty). */
-  getDb(key: string): string | null {
-    const raw = this.cache.get(key);
-    if (raw == null) return null;
-    const trimmed = String(raw).trim();
-    return trimmed ? trimmed : null;
-  }
-
-  /**
-   * Effective value: DB override → first non-empty env alias → default.
-   * Sync — safe for hot paths (cache is in-memory).
-   */
-  get(key: string, fallbackEnvKeys?: string[], defaultValue = ''): string {
-    const db = this.getDb(key);
-    if (db != null) return db;
-
-    const meta = this.metaByKey.get(key);
-    const aliases = fallbackEnvKeys?.length
-      ? fallbackEnvKeys
-      : meta?.envAliases ?? [key];
-    for (const envKey of aliases) {
-      const v = process.env[envKey]?.trim();
-      if (v) return v;
+    if (def) {
+      const fromEnv = envFallbackValue(def);
+      if (fromEnv) return fromEnv;
+      if (fallback !== '') return fallback;
+      return def.defaultValue ?? '';
     }
-    if (defaultValue) return defaultValue;
-    return meta?.defaultValue ?? '';
+    if (fallback !== '') return fallback;
+    return (process.env[key] ?? '').trim();
   }
 
-  isFaceEnabled(): boolean {
-    const val = this.get('FACE', ['FACE', 'FACE_VERIFICATION'], 'on').toLowerCase();
-    return val === 'on' || val === 'true' || val === '1' || val === 'yes';
+  /** Raw effective value: DB → env → default. Secrets returned unmasked. */
+  async get(key: string, fallback?: string): Promise<string> {
+    await this.ensureCache();
+    return this.getSync(key, fallback ?? '');
   }
 
-  identityMode(): 'face' | 'permissions_only' {
-    return this.isFaceEnabled() ? 'face' : 'permissions_only';
+  async getNumber(key: string, fallback: number): Promise<number> {
+    const raw = await this.get(key, String(fallback));
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : fallback;
   }
 
-  getProctorMaxStrikes(): number {
-    const n = Number(
-      this.get('PROCTOR_MAX_STRIKES', ['PROCTOR_MAX_STRIKES', 'NEXT_PUBLIC_PROCTOR_MAX_STRIKES'], '5'),
+  async getBoolean(key: string, fallback = false): Promise<boolean> {
+    const raw = await this.get(key, fallback ? 'true' : 'false');
+    if (!raw) return fallback;
+    return parseBooleanConfig(raw);
+  }
+
+  async isFaceVerificationEnabled(): Promise<boolean> {
+    const raw = await this.get('FACE', 'on');
+    return isFaceEnabledValue(raw);
+  }
+
+  async getCandidateRuntimeConfig(): Promise<CandidateRuntimeConfig> {
+    const faceOn = await this.isFaceVerificationEnabled();
+
+    let graceSeconds = await this.getNumber('PROCTOR_GRACE_SECONDS', 90);
+    if (graceSeconds < 30 || graceSeconds > 300) graceSeconds = 90;
+    graceSeconds = Math.floor(graceSeconds);
+
+    const enableMediaStrikes = await this.getBoolean('PROCTOR_ENABLE_MEDIA_STRIKES', false);
+    let maxMediaStrikes = await this.getNumber('PROCTOR_MAX_MEDIA_STRIKES', 5);
+    if (maxMediaStrikes < 1 || maxMediaStrikes > 10) maxMediaStrikes = 5;
+    maxMediaStrikes = Math.floor(maxMediaStrikes);
+    const autoSubmitOnMediaStrike = await this.getBoolean(
+      'PROCTOR_AUTO_SUBMIT_ON_MEDIA_STRIKE',
+      false,
     );
-    if (!Number.isFinite(n) || n < 1) return 5;
-    return Math.min(10, Math.floor(n));
-  }
 
-  isProctorAutoSubmit(): boolean {
-    return (
-      this.get(
-        'PROCTOR_AUTO_SUBMIT',
-        ['PROCTOR_AUTO_SUBMIT_ON_STRIKE', 'NEXT_PUBLIC_PROCTOR_AUTO_SUBMIT_ON_STRIKE'],
-        'false',
-      ).toLowerCase() === 'true'
+    const enableFocusStrikes = await this.getBoolean('PROCTOR_ENABLE_FOCUS_STRIKES', false);
+    let maxFocusStrikes = await this.getNumber('PROCTOR_MAX_FOCUS_STRIKES', 5);
+    if (maxFocusStrikes < 1 || maxFocusStrikes > 10) maxFocusStrikes = 5;
+    maxFocusStrikes = Math.floor(maxFocusStrikes);
+    const autoSubmitOnFocusStrike = await this.getBoolean(
+      'PROCTOR_AUTO_SUBMIT_ON_FOCUS_STRIKE',
+      false,
     );
-  }
 
-  getProctorGraceSeconds(): number {
-    const n = Number(
-      this.get(
-        'PROCTOR_GRACE_SECONDS',
-        ['PROCTOR_GRACE_SECONDS', 'NEXT_PUBLIC_PROCTOR_GRACE_SECONDS'],
-        '90',
-      ),
+    let focusStrikeThresholdSeconds = await this.getNumber(
+      'PROCTOR_FOCUS_STRIKE_THRESHOLD_SECONDS',
+      5,
     );
-    if (!Number.isFinite(n) || n < 1) return 90;
-    return Math.min(300, Math.max(30, Math.floor(n)));
+    if (focusStrikeThresholdSeconds < 1 || focusStrikeThresholdSeconds > 60) {
+      focusStrikeThresholdSeconds = 5;
+    }
+    focusStrikeThresholdSeconds = Math.floor(focusStrikeThresholdSeconds);
+
+    return {
+      face: faceOn ? 'on' : 'off',
+      graceSeconds,
+      enableMediaStrikes,
+      maxMediaStrikes,
+      autoSubmitOnMediaStrike,
+      enableFocusStrikes,
+      maxFocusStrikes,
+      autoSubmitOnFocusStrike,
+      focusStrikeThresholdSeconds,
+      maxStrikes: maxMediaStrikes,
+      autoSubmitOnStrike: autoSubmitOnMediaStrike,
+    };
   }
 
-  getGeminiApiKey(): string {
-    return this.get('GEMINI_API_KEY', ['TAKEHOME_LLM_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY'], '');
+  async getAllEffective(): Promise<EffectiveConfigItem[]> {
+    await this.ensureCache();
+    return SYSTEM_CONFIG_DEFS.map((def) => this.toEffectiveItem(def));
   }
 
-  getGeminiModel(): string {
-    return this.get(
-      'GEMINI_MODEL',
-      ['TAKEHOME_LLM_MODEL', 'RECRUITMENT_GEMINI_MODEL', 'GEMINI_MODEL'],
-      'gemini-3.6-flash',
-    );
-  }
-
-  getReasoningEffort(): string {
-    return this.get(
-      'REASONING_EFFORT',
-      ['TAKEHOME_LLM_REASONING_EFFORT', 'RECRUITMENT_GEMINI_REASONING_EFFORT'],
-      'low',
-    );
-  }
-
-  getMaxTokens(): number {
-    const n = Number(
-      this.get('MAX_TOKENS', ['TAKEHOME_LLM_MAX_TOKENS', 'OPENAI_MAX_TOKENS'], '16384'),
-    );
-    if (!Number.isFinite(n) || n < 256) return 16_384;
-    return Math.min(65_536, Math.floor(n));
-  }
-
-  getAllEffective(): EffectiveConfigItem[] {
-    return SYSTEM_CONFIG_META.map((meta) => {
-      const db = this.getDb(meta.key);
-      let source: 'db' | 'env' | 'default' = 'default';
-      let raw = '';
-      if (db != null) {
-        raw = db;
-        source = 'db';
-      } else {
-        let fromEnv = '';
-        for (const envKey of meta.envAliases) {
-          const v = process.env[envKey]?.trim();
-          if (v) {
-            fromEnv = v;
-            break;
-          }
-        }
-        if (fromEnv) {
-          raw = fromEnv;
-          source = 'env';
-        } else {
-          raw = meta.defaultValue;
-          source = 'default';
-        }
-      }
-
-      const isSet = Boolean(raw.trim());
-      const row = this.rowMeta.get(meta.key);
+  async getRecentChangeLogs(limit = 40): Promise<ConfigChangeLogItem[]> {
+    const take = Math.min(Math.max(1, Math.floor(limit)), 100);
+    const rows = await this.logs.find({
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take,
+    });
+    return rows.map((row) => {
+      const def = getConfigDef(row.key);
       return {
-        key: meta.key,
-        category: meta.category,
-        label: meta.label,
-        description: meta.description,
-        type: meta.type,
-        options: meta.options,
-        min: meta.min,
-        max: meta.max,
-        secret: Boolean(meta.secret),
-        value: meta.secret ? (isSet ? maskSecret(raw) : '') : raw,
-        source,
-        is_set: isSet,
-        updated_at: row?.updatedAt ? row.updatedAt.toISOString() : null,
-        updated_by: row?.updatedBy ?? null,
+        id: String(row.id),
+        key: row.key,
+        label: def?.label ?? row.key,
+        oldValue: this.displayLogValue(row.key, row.oldValue),
+        newValue: this.displayLogValue(row.key, row.newValue),
+        changedBy: row.changedBy,
+        createdAt: row.createdAt.toISOString(),
       };
     });
   }
 
-  getRuntimePublicConfig() {
-    return {
-      face: this.isFaceEnabled() ? ('on' as const) : ('off' as const),
-      maxStrikes: this.getProctorMaxStrikes(),
-      autoSubmitOnStrike: this.isProctorAutoSubmit(),
-      graceSeconds: this.getProctorGraceSeconds(),
-    };
-  }
-
+  /**
+   * Upsert many keys. Empty string clears DB (revert to env).
+   * Masked secret payloads are ignored (keep existing).
+   */
   async setMany(
-    updates: Record<string, string | null | undefined>,
-    actorId?: string | null,
+    records: Record<string, string | null | undefined>,
+    actor?: string | null,
   ): Promise<EffectiveConfigItem[]> {
-    const entries = Object.entries(updates ?? {});
-    for (const [key, rawValue] of entries) {
-      const meta = metaFor(key);
-      if (!meta) continue;
+    await this.ensureCache();
+    const updates: Array<{ key: string; value: string | null }> = [];
 
-      // Skip masked secret re-submits (UI sends ••••abcd unchanged).
-      if (meta.secret && typeof rawValue === 'string' && looksMasked(rawValue)) {
+    for (const [key, raw] of Object.entries(records)) {
+      if (!SYSTEM_CONFIG_KEY_SET.has(key)) {
+        throw new Error(`Unknown configuration key: ${key}`);
+      }
+      const def = getConfigDef(key)!;
+      if (raw == null) continue;
+
+      const trimmed = String(raw).trim();
+      if (def.secret && looksMasked(trimmed)) {
         continue;
       }
 
-      let next: string | null =
-        rawValue == null ? null : String(rawValue).trim() === '' ? null : String(rawValue).trim();
-
-      if (next != null) {
-        next = this.normalizeValue(meta, next);
-      }
-
-      if (next == null) {
-        await this.repo.delete({ configKey: key });
-        this.cache.set(key, null);
-        this.rowMeta.delete(key);
+      if (trimmed === '') {
+        updates.push({ key, value: null });
         continue;
       }
 
-      const existing = await this.repo.findOne({ where: { configKey: key } });
-      const row =
-        existing ??
-        this.repo.create({
-          configKey: key,
-          configValue: next,
-          updatedBy: actorId ?? null,
-        });
-      row.configValue = next;
-      row.updatedBy = actorId ?? null;
-      const saved = await this.repo.save(row);
-      this.cache.set(key, saved.configValue);
-      this.rowMeta.set(key, {
-        updatedAt: saved.updatedAt ?? new Date(),
-        updatedBy: saved.updatedBy ?? null,
-      });
+      const normalized = this.validateAndNormalize(def, trimmed);
+      updates.push({ key, value: normalized });
     }
 
+    const actorName = actor?.trim() || null;
+    const logRows: SystemConfigurationLogMysql[] = [];
+
+    for (const u of updates) {
+      const previousDb = this.cache.get(u.key)?.value ?? null;
+      const previousEffective = await this.get(u.key, '');
+      const oldForLog = previousDb != null && String(previousDb).trim() !== ''
+        ? String(previousDb).trim()
+        : previousEffective || null;
+
+      if (u.value == null) {
+        await this.repo.delete({ key: u.key });
+        this.cache.delete(u.key);
+        this.mirrorEnv(u.key, null);
+      } else {
+        await this.repo.save(
+          this.repo.create({
+            key: u.key,
+            value: u.value,
+            updatedBy: actorName,
+          }),
+        );
+        this.cache.set(u.key, {
+          value: u.value,
+          updatedBy: actorName,
+          updatedAt: new Date(),
+        });
+        this.mirrorEnv(u.key, u.value);
+      }
+
+      const nextStored = u.value;
+      if ((oldForLog ?? '') === (nextStored ?? '')) continue;
+
+      logRows.push(
+        this.logs.create({
+          key: u.key,
+          oldValue: this.persistLogValue(u.key, oldForLog),
+          newValue: this.persistLogValue(u.key, nextStored),
+          changedBy: actorName,
+        }),
+      );
+    }
+
+    if (logRows.length) {
+      await this.logs.save(logRows);
+    }
+
+    this.cacheLoadedAt = Date.now();
+    this.logger.log(
+      `system config updated keys=${updates.map((u) => u.key).join(',') || '(none)'} by=${actorName ?? 'unknown'}`,
+    );
     return this.getAllEffective();
   }
 
-  private normalizeValue(meta: ConfigMeta, value: string): string {
-    if (meta.type === 'boolean') {
-      const v = value.toLowerCase();
-      if (['1', 'true', 'yes', 'on'].includes(v)) return 'true';
-      if (['0', 'false', 'no', 'off'].includes(v)) return 'false';
-      return meta.defaultValue;
+  /** Secrets are masked before writing to the audit table. */
+  private persistLogValue(key: string, value: string | null): string | null {
+    if (value == null || value === '') return null;
+    const def = getConfigDef(key);
+    if (def?.secret) return maskSecret(value);
+    return value;
+  }
+
+  private displayLogValue(key: string, value: string | null): string | null {
+    if (value == null || value === '') return null;
+    const def = getConfigDef(key);
+    if (def?.secret) return maskSecret(value);
+    return value;
+  }
+
+  private toEffectiveItem(def: SystemConfigDef): EffectiveConfigItem {
+    const cached = this.cache.get(def.key);
+    const hasDb =
+      cached != null && cached.value != null && String(cached.value).trim() !== '';
+    let source: EffectiveConfigItem['source'] = 'default';
+    let effective = def.defaultValue ?? '';
+    if (hasDb) {
+      effective = String(cached!.value).trim();
+      source = 'db';
+    } else {
+      const fromEnv = envFallbackValue(def);
+      if (fromEnv) {
+        effective = fromEnv;
+        source = 'env';
+      }
     }
-    if (meta.type === 'enum' && meta.options?.length) {
-      const match = meta.options.find((o) => o.toLowerCase() === value.toLowerCase());
-      return match ?? meta.defaultValue;
+
+    return {
+      key: def.key,
+      category: def.category,
+      label: def.label,
+      description: def.description,
+      type: def.type,
+      secret: Boolean(def.secret),
+      options: def.options,
+      min: def.min,
+      max: def.max,
+      step: def.step,
+      value: def.secret ? maskSecret(effective) : effective,
+      source,
+      hasDbValue: hasDb,
+      updatedBy: hasDb ? cached?.updatedBy ?? null : null,
+      updatedAt: hasDb && cached?.updatedAt ? cached.updatedAt.toISOString() : null,
+    };
+  }
+
+  private validateAndNormalize(def: SystemConfigDef, value: string): string {
+    if (def.type === 'enum' && def.options?.length) {
+      const lower = value.toLowerCase();
+      const match = def.options.find((o) => o.toLowerCase() === lower);
+      if (!match) {
+        // Allow custom model ids for GEMINI_MODEL beyond the dropdown.
+        if (def.key === 'GEMINI_MODEL' && /^[a-z0-9._:-]+$/i.test(value)) return value.trim();
+        throw new Error(`${def.key} must be one of: ${def.options.join(', ')}`);
+      }
+      return match;
     }
-    if (meta.type === 'number') {
+    if (def.type === 'boolean') {
+      return parseBooleanConfig(value) ? 'true' : 'false';
+    }
+    if (def.type === 'number') {
       const n = Number(value);
-      if (!Number.isFinite(n)) return meta.defaultValue;
-      let clamped = n;
-      if (meta.min != null) clamped = Math.max(meta.min, clamped);
-      if (meta.max != null) clamped = Math.min(meta.max, clamped);
-      // Keep pace as decimal string when needed.
-      if (meta.key === 'SARVAM_TTS_PACE') return clamped.toFixed(2);
-      return String(Math.round(clamped) === clamped ? Math.round(clamped) : clamped);
+      if (!Number.isFinite(n)) throw new Error(`${def.key} must be a number`);
+      if (def.min != null && n < def.min) throw new Error(`${def.key} must be ≥ ${def.min}`);
+      if (def.max != null && n > def.max) throw new Error(`${def.key} must be ≤ ${def.max}`);
+      if (def.key === 'SARVAM_TTS_PACE') return n.toFixed(2);
+      return String(Math.trunc(n) === n ? Math.trunc(n) : n);
     }
-    if (meta.key === 'FACE') {
-      const v = value.toLowerCase();
-      return ['on', 'true', '1', 'yes'].includes(v) ? 'on' : 'off';
+    if (def.secret && value.length < 8) {
+      throw new Error(`${def.key} looks too short to be a valid API key`);
     }
     return value;
+  }
+
+  /** Keep process.env mirrors in sync for same-process readers & dual env names. */
+  private mirrorEnv(logicalKey: string, value: string | null) {
+    const def = getConfigDef(logicalKey);
+    if (!def) return;
+    // Only mirror the primary env name (avoid shared aliases like PROCTOR_ENABLE_STRIKES).
+    const primary =
+      def.envFallbacks.find((n) => n === logicalKey) ||
+      def.envFallbacks.find((n) => !n.startsWith('NEXT_PUBLIC_'));
+    if (!primary) return;
+    if (value == null || value === '') return;
+    process.env[primary] = value;
+  }
+
+  private async ensureCache() {
+    if (Date.now() - this.cacheLoadedAt < CACHE_TTL_MS && this.cacheLoadedAt > 0) return;
+    if (this.loading) {
+      await this.loading;
+      return;
+    }
+    this.loading = this.refreshCache().finally(() => {
+      this.loading = null;
+    });
+    await this.loading;
+  }
+
+  private async refreshCache() {
+    const rows = await this.repo.find();
+    const next = new Map<string, CacheEntry>();
+    for (const row of rows) {
+      next.set(row.key, {
+        value: row.value,
+        updatedBy: row.updatedBy,
+        updatedAt: row.updatedAt ?? null,
+      });
+      if (row.value != null && String(row.value).trim() !== '') {
+        this.mirrorEnv(row.key, String(row.value).trim());
+      }
+    }
+    this.cache = next;
+    this.cacheLoadedAt = Date.now();
   }
 }

@@ -305,6 +305,41 @@ export class RecruitmentService {
    * Creates a manual lead overlay without inviting/emailing.
    * Used by bulk upload (PENDING) and as the base for createManualCandidate.
    */
+  private nameFromEmailLocalPart(email: string): {
+    firstName: string;
+    lastName: string;
+    fullName: string;
+  } {
+    const local = String(email).split('@')[0] || 'Candidate';
+    const parts = local
+      .split(/[._+\-]+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
+    const firstName = parts[0] || 'Candidate';
+    const lastName = parts.slice(1).join(' ');
+    return {
+      firstName,
+      lastName,
+      fullName: [firstName, lastName].filter(Boolean).join(' '),
+    };
+  }
+
+  private normalizeInviteEmails(raw: unknown): string[] {
+    const list = Array.isArray(raw)
+      ? raw.map((e) => String(e ?? ''))
+      : String(raw ?? '').split(/[,;\s]+/);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const item of list) {
+      const email = item.trim().toLowerCase();
+      if (!email || !SIMPLE_EMAIL_RE.test(email) || seen.has(email)) continue;
+      seen.add(email);
+      out.push(email);
+    }
+    return out;
+  }
+
   private async createManualLeadPending(input: {
     name: string;
     email: string;
@@ -316,12 +351,15 @@ export class RecruitmentService {
     actorId?: string;
     extractedText?: string | null;
     onboardingRequired?: boolean;
+    source?: 'manual' | 'bulk_invite';
+    hasExplicitName?: boolean;
   }) {
     const leadId = `manual_${randomBytes(8).toString('hex')}`;
     const [firstName, ...rest] = input.name.trim().split(/\s+/);
     const lastName = rest.join(' ');
     const email = input.email.trim().toLowerCase();
     const resumeUrl = await this.uploadManualResume(leadId, input.resume);
+    const source = input.source ?? 'manual';
 
     const overlay = await this.repo.mergeLeadOverlay(leadId, {
       inviteStatus: input.inviteStatus ?? 'PENDING',
@@ -329,7 +367,7 @@ export class RecruitmentService {
       portalStage: input.portalStage ?? 'New',
       resumeExtractedText: input.extractedText?.trim() || null,
       parsedResumeJson: {
-        source: 'manual',
+        source,
         first_name: firstName,
         last_name: lastName,
         email,
@@ -337,6 +375,7 @@ export class RecruitmentService {
         job_title: input.jobTitle,
         resume_url: resumeUrl,
         ...(input.onboardingRequired ? { onboarding_required: true } : {}),
+        ...(input.hasExplicitName ? { has_explicit_name: true } : {}),
       },
     });
 
@@ -346,12 +385,13 @@ export class RecruitmentService {
 
     await this.repo.logActivity({
       leadId,
-      eventType: 'manual_candidate_pending',
+      eventType: source === 'bulk_invite' ? 'bulk_candidate_pending' : 'manual_candidate_pending',
       eventSummary: `Manual candidate created for review (${email}) — ${input.jobTitle}`,
       eventJson: {
         jobTitle: input.jobTitle,
         profileId: input.jobProfileId,
         resume_url: resumeUrl ?? null,
+        source,
       },
       actorId: input.actorId,
     });
@@ -1970,191 +2010,176 @@ export class RecruitmentService {
 
   async bulkInviteCandidates(
     actor: JwtUserPayload,
-    body: { emails?: string[]; job_profile_id?: string; slot_date?: string },
+    body: {
+      job_profile_id?: string;
+      slot_date?: string;
+      emails?: string[];
+      candidates?: Array<{ name?: string; email: string }>;
+    },
   ) {
     await this.assertWrite(actor);
-
-    const rawEmails = Array.isArray(body.emails) ? body.emails : [];
-    let invalidCount = 0;
-    const seen = new Set<string>();
-    const validEmails: string[] = [];
-    for (const raw of rawEmails) {
-      const email = String(raw ?? '').trim().toLowerCase();
-      if (!email) continue;
-      if (!SIMPLE_EMAIL_RE.test(email)) {
-        invalidCount += 1;
-        continue;
-      }
-      if (seen.has(email)) continue;
-      seen.add(email);
-      validEmails.push(email);
-    }
-
     const profileId = String(body.job_profile_id ?? '').trim();
-    const slotDate = String(body.slot_date ?? '').trim();
-    if (!profileId) throw new BadRequestException('job_profile_id is required');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(slotDate)) {
-      throw new BadRequestException('slot_date must be YYYY-MM-DD');
+    const appointmentDate = String(body.slot_date ?? '').trim();
+    if (!profileId) throw new BadRequestException('Select a job role');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate)) {
+      throw new BadRequestException('Select an interview date before sending invites');
     }
-    if (slotDate < this.todayDateString()) {
+    if (appointmentDate < this.todayDateString()) {
       throw new BadRequestException('Selected interview date is in the past');
     }
-    if (!validEmails.length) {
-      throw new BadRequestException('Provide at least one valid email');
+
+    const nameMap = new Map<string, string>();
+    const candidateList: string[] = [];
+    if (Array.isArray(body.candidates) && body.candidates.length) {
+      for (const c of body.candidates) {
+        const em = String(c?.email ?? '').trim().toLowerCase();
+        if (em) {
+          candidateList.push(em);
+          if (c?.name?.trim()) {
+            nameMap.set(em, c.name.trim());
+          }
+        }
+      }
+    }
+    const rawEmails = candidateList.length ? candidateList : (body.emails ?? []);
+    const emails = this.normalizeInviteEmails(rawEmails);
+    if (!emails.length) {
+      throw new BadRequestException('Provide at least one valid candidate email address');
     }
 
     const profile = await this.jobRepo.findById(profileId);
     if (!profile) throw new NotFoundException('Job profile not found');
+    if (profile.status !== JobProfileStatus.ACTIVE) {
+      throw new BadRequestException('Job profile must be active to invite candidates');
+    }
     const jobTitle = profile.title ?? 'Assessment';
 
-    const slots = await this.repo.timeSlots.find({
+    const openSlots = await this.repo.timeSlots.find({
       where: { inactive: 0, status: 'open' },
       order: { startTime: 'ASC' },
     });
 
-    const capacityRows: Array<{
+    const slotCapacity: Array<{
       slot: RecruitmentInterviewTimeSlotMysql;
       remaining: number;
       assigned: number;
     }> = [];
     let totalRemaining = 0;
-    for (const slot of slots) {
-      const booked = await this.countBookingsForSlotOnDate(String(slot.id), slotDate);
+    for (const slot of openSlots) {
+      const booked = await this.countBookingsForSlotOnDate(String(slot.id), appointmentDate);
       const remaining = Math.max(0, Number(slot.capacity ?? 0) - booked);
-      if (remaining > 0) {
-        capacityRows.push({ slot, remaining, assigned: 0 });
-        totalRemaining += remaining;
-      }
+      if (remaining <= 0) continue;
+      slotCapacity.push({ slot, remaining, assigned: 0 });
+      totalRemaining += remaining;
     }
 
-    if (totalRemaining === 0) {
+    if (emails.length > totalRemaining) {
+      const slotCount = slotCapacity.length;
+      const over = emails.length - totalRemaining;
       throw new BadRequestException(
-        'No open time slots with remaining capacity for the selected date. Please add or reopen a slot.',
-      );
-    }
-    if (validEmails.length > totalRemaining) {
-      const overflow = validEmails.length - totalRemaining;
-      throw new BadRequestException(
-        `Total capacity is ${totalRemaining} across ${capacityRows.length} slots, but ${validEmails.length} emails pasted. Please add another slot or reduce ${overflow} candidates.`,
+        `Total capacity is ${totalRemaining} across ${slotCount} slot${slotCount === 1 ? '' : 's'}, but ${emails.length} emails pasted. Please add another slot or reduce ${over} candidate${over === 1 ? '' : 's'}.`,
       );
     }
 
     const assignments: Array<{
       email: string;
       slot: RecruitmentInterviewTimeSlotMysql;
-      slotLabel: string;
     }> = [];
     let slotIdx = 0;
-    for (const email of validEmails) {
-      while (slotIdx < capacityRows.length && capacityRows[slotIdx].remaining <= 0) {
+    for (const email of emails) {
+      while (slotIdx < slotCapacity.length && slotCapacity[slotIdx].remaining <= 0) {
         slotIdx += 1;
       }
-      if (slotIdx >= capacityRows.length) {
-        throw new BadRequestException('Ran out of slot capacity during allocation');
+      if (slotIdx >= slotCapacity.length) {
+        throw new BadRequestException('Not enough remaining capacity for all emails');
       }
-      const row = capacityRows[slotIdx];
-      assignments.push({
-        email,
-        slot: row.slot,
-        slotLabel: this.formatInviteSlotLabel(row.slot, slotDate),
-      });
-      row.remaining -= 1;
-      row.assigned += 1;
+      const bucket = slotCapacity[slotIdx];
+      assignments.push({ email, slot: bucket.slot });
+      bucket.remaining -= 1;
+      bucket.assigned += 1;
     }
 
     const items: Array<{
       email: string;
-      lead_id?: string;
-      status: string;
-      invite_token?: string;
-      interview_url?: string;
-      email_sent?: boolean;
-      slot_id?: string;
-      slot_label?: string;
-      error?: string;
+      invite_token: string;
+      interview_url: string;
+      slot_label: string;
+      slot_id: string;
+      email_sent: boolean;
+      lead_id: string;
     }> = [];
-    let invited = 0;
-    let failed = 0;
-    let skipped = 0;
+    const failed: Array<{ email: string; error: string }> = [];
 
-    for (const { email, slot, slotLabel } of assignments) {
+    for (const assignment of assignments) {
+      const explicitName = nameMap.get(assignment.email);
+      const { fullName: fallbackName } = this.nameFromEmailLocalPart(assignment.email);
+      const fullName = explicitName || fallbackName;
+      const slotLabel = this.formatInviteSlotLabel(assignment.slot, appointmentDate);
       try {
         const created = await this.createManualLeadPending({
-          name: 'Pending',
-          email,
+          name: fullName,
+          email: assignment.email,
           jobProfileId: profileId,
           jobTitle,
           inviteStatus: 'PENDING',
           portalStage: 'New',
           actorId: this.actorId(actor),
           onboardingRequired: true,
+          source: 'bulk_invite',
+          hasExplicitName: Boolean(explicitName),
         });
 
         const result = await this.inviteLeadToAssessment(actor, created.leadId, {
           jobProfileId: profileId,
-          slot_id: String(slot.id),
-          slot_date: slotDate,
+          slot_id: String(assignment.slot.id),
+          slot_date: appointmentDate,
         });
 
-        if (result.status === 'ALREADY_INVITED') {
-          skipped += 1;
-          items.push({
-            email,
-            lead_id: created.leadId,
-            status: result.status,
-            invite_token: result.invite_token,
-            interview_url: result.interview_url,
-            slot_id: String(slot.id),
-            slot_label: slotLabel,
-          });
-        } else if (result.status === 'INVITED') {
-          invited += 1;
-          items.push({
-            email,
-            lead_id: created.leadId,
-            status: result.status,
-            invite_token: result.invite_token,
-            interview_url: result.interview_url,
-            email_sent: result.email_sent,
-            slot_id: String(slot.id),
-            slot_label: result.slot_label ?? slotLabel,
-          });
-        } else {
-          failed += 1;
-          items.push({
-            email,
-            lead_id: created.leadId,
-            status: result.status,
-            slot_id: String(slot.id),
-            slot_label: slotLabel,
+        if (result.status !== 'INVITED' && result.status !== 'ALREADY_INVITED') {
+          failed.push({
+            email: assignment.email,
             error: 'Invite did not complete',
+          });
+          continue;
+        }
+
+        const emailSent =
+          result.status === 'INVITED' ? Boolean(result.email_sent) : true;
+        items.push({
+          email: assignment.email,
+          invite_token: result.invite_token,
+          interview_url: result.interview_url,
+          slot_label: result.slot_label ?? slotLabel,
+          slot_id: String(assignment.slot.id),
+          email_sent: emailSent,
+          lead_id: created.leadId,
+        });
+        if (result.status === 'INVITED' && !emailSent) {
+          failed.push({
+            email: assignment.email,
+            error: 'Magic link email was not accepted by SMTP',
           });
         }
       } catch (err) {
-        failed += 1;
-        items.push({
-          email,
-          status: 'ERROR',
-          slot_id: String(slot.id),
-          slot_label: slotLabel,
-          error: err instanceof Error ? err.message : 'Failed to invite candidate',
-        });
+        const message = err instanceof Error ? err.message : 'Invite failed';
+        failed.push({ email: assignment.email, error: message });
       }
     }
 
+    const allocation = slotCapacity
+      .filter((b) => b.assigned > 0)
+      .map((b) => ({
+        slot_id: String(b.slot.id),
+        slot_label: this.formatInviteSlotLabel(b.slot, appointmentDate),
+        assigned_count: b.assigned,
+        remaining: b.remaining,
+      }));
+
     return {
-      invited,
+      total: emails.length,
+      invited: items.length,
       failed,
-      skipped,
-      invalid_count: invalidCount,
-      total_capacity: totalRemaining,
-      allocation: capacityRows
-        .filter((row) => row.assigned > 0)
-        .map((row) => ({
-          slot_id: String(row.slot.id),
-          slot_label: this.formatInviteSlotLabel(row.slot, slotDate),
-          assigned: row.assigned,
-        })),
+      allocation,
       items,
     };
   }

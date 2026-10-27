@@ -148,7 +148,7 @@ export type ProjectInterviewReportSummary = {
   status: string;
   project_id: string | null;
   project_title: string | null;
-  submission_type?: 'github_url' | 'zip_upload' | 'excel_or_pdf' | null;
+  submission_type?: 'github_url' | 'zip_upload' | 'excel_or_pdf' | 'pdf_document' | null;
   github_url: string | null;
   github_branch: string | null;
   /** Signed download for submitted workbook / zip (not GitHub). */

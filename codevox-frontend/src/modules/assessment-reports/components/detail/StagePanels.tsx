@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
@@ -88,7 +88,7 @@ function ProjectSubmissionCard({
     const id = window.setInterval(() => {
       if (Date.now() - startedAt > RESCORE_POLL_MAX_MS) {
         setRescoring(false);
-        setRescoreMsg('Re-score is taking longer than usual â€” refresh if scores look stale.');
+        setRescoreMsg('Re-score is taking longer than usual — refresh if scores look stale.');
         window.clearInterval(id);
         return;
       }
@@ -140,7 +140,7 @@ function ProjectSubmissionCard({
       };
       setRescoreOpen(false);
       setRescoring(true);
-      setRescoreMsg(result.message || 'Re-scoring codeâ€¦ scores will update automatically.');
+      setRescoreMsg(result.message || 'Re-scoring code… scores will update automatically.');
     } catch (err) {
       setRescoreErr(err instanceof Error ? err.message : 'Re-score failed');
     } finally {
@@ -156,7 +156,7 @@ function ProjectSubmissionCard({
           {rescoring ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-500/15 px-2.5 py-1 text-[11px] font-bold text-sky-900 ring-1 ring-sky-500/25">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-500" />
-              Re-scoring codeâ€¦
+              Re-scoring code…
             </span>
           ) : null}
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold uppercase text-slate-600">
@@ -198,7 +198,7 @@ function ProjectSubmissionCard({
             Time taken: <b>{formatDuration(project.duration_minutes)}</b>
             {project.build_duration_minutes != null || project.defend_duration_minutes != null ? (
               <span className="text-xs text-slate-500 font-normal">
-                {' '}(Build: {formatDuration(project.build_duration_minutes)} Â· Defend: {formatDuration(project.defend_duration_minutes)})
+                {' '}(Build: {formatDuration(project.build_duration_minutes)} · Defend: {formatDuration(project.defend_duration_minutes)})
               </span>
             ) : null}
           </div>
@@ -207,15 +207,18 @@ function ProjectSubmissionCard({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 text-sm">
               {project.submission_type === 'excel_or_pdf' ||
+              project.submission_type === 'pdf_document' ||
               project.submission_type === 'zip_upload' ||
               project.submission_file_url ? (
                 <>
                   <span className="text-[var(--assessment-on-surface-variant)]">
-                    {project.submission_type === 'excel_or_pdf'
-                      ? 'Submitted workbook: '
-                      : project.submission_type === 'zip_upload'
-                        ? 'Submitted zip: '
-                        : 'Submitted file: '}
+                    {project.submission_type === 'pdf_document'
+                      ? 'Submitted PDF practical: '
+                      : project.submission_type === 'excel_or_pdf'
+                        ? 'Submitted workbook: '
+                        : project.submission_type === 'zip_upload'
+                          ? 'Submitted zip: '
+                          : 'Submitted file: '}
                   </span>
                   {project.submission_file_url ? (
                     <a
@@ -284,14 +287,14 @@ function ProjectSubmissionCard({
                   value={rescoreUrl}
                   onChange={(e) => setRescoreUrl(e.target.value)}
                   placeholder="https://github.com/owner/repo"
-                  className="w-full rounded-lg border border-slate-200 bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/25"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/25"
                 />
                 <input
                   type="text"
                   value={rescoreBranch}
                   onChange={(e) => setRescoreBranch(e.target.value)}
                   placeholder="Branch"
-                  className="w-full rounded-lg border border-slate-200 bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/25 sm:w-36"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/25 sm:w-36"
                 />
               </div>
               <div className="flex flex-wrap gap-2">
@@ -302,12 +305,12 @@ function ProjectSubmissionCard({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--assessment-primary)] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
                 >
                   <AssessmentMaterialIcon name={rescoreBusy ? 'hourglass_top' : 'play_arrow'} size={14} />
-                  {rescoreBusy ? 'Startingâ€¦' : 'Start Re-Score'}
+                  {rescoreBusy ? 'Starting…' : 'Start Re-Score'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setRescoreOpen(false)}
-                  className="rounded-lg border border-slate-200 bg-[var(--assessment-surface-container)] px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
@@ -397,7 +400,7 @@ function ProjectSubmissionCard({
                     r.passed === true ? 'text-emerald-600' : r.passed === false ? 'text-red-600' : 'text-slate-400'
                   }
                 >
-                  {r.passed === true ? 'âœ“' : r.passed === false ? 'âœ—' : 'â€¢'}
+                  {r.passed === true ? '✓' : r.passed === false ? '✗' : '•'}
                 </span>
                 <span className="flex-1">
                   <span className="font-medium">
@@ -423,9 +426,10 @@ function ProjectSubmissionCard({
         </div>
       ) : null}
       {project.project_profile?.generated_by === 'heuristic' &&
-      project.submission_type !== 'excel_or_pdf' ? (
+      project.submission_type !== 'excel_or_pdf' &&
+      project.submission_type !== 'pdf_document' ? (
         <p className="text-xs text-amber-700">
-          Code analysis ran in fallback mode (LLM unavailable); checklist items were not auto-graded.
+          Automated AI evaluation was temporarily unavailable; manual review recommended.
         </p>
       ) : null}
     </div>
@@ -506,12 +510,12 @@ export function TakeHomeStagePanel(props: { stage: TakeHomeStageReport }) {
           <div>
             Plagiarism:{' '}
             <b>
-              {s.plagiarismScore != null ? `${Math.round(s.plagiarismScore * 100) / 100}` : 'â€”'}
+              {s.plagiarismScore != null ? `${Math.round(s.plagiarismScore * 100) / 100}` : '—'}
             </b>
           </div>
           <div>
             AI probability:{' '}
-            <b>{s.aiProbability != null ? `${Math.round(s.aiProbability * 100) / 100}` : 'â€”'}</b>
+            <b>{s.aiProbability != null ? `${Math.round(s.aiProbability * 100) / 100}` : '—'}</b>
           </div>
           <div>
             Score: <b>{formatPct(s.scorePct)}</b>
@@ -526,7 +530,7 @@ export function TakeHomeStagePanel(props: { stage: TakeHomeStageReport }) {
               {s.rubric.map((r) => (
                 <li key={r.id} className="flex justify-between gap-4 border-b border-slate-100 py-1.5">
                   <span>
-                    {r.passed === true ? 'âœ“' : r.passed === false ? 'âœ—' : 'â€¢'} {r.label}
+                    {r.passed === true ? '✓' : r.passed === false ? '✗' : '•'} {r.label}
                   </span>
                   <span className="text-[var(--assessment-on-surface-variant)]">
                     {r.score != null
@@ -535,7 +539,7 @@ export function TakeHomeStagePanel(props: { stage: TakeHomeStageReport }) {
                         ? r.passed
                           ? 'Pass'
                           : 'Fail'
-                        : 'â€”'}
+                        : '—'}
                   </span>
                 </li>
               ))}
@@ -543,7 +547,7 @@ export function TakeHomeStagePanel(props: { stage: TakeHomeStageReport }) {
           </div>
         ) : null}
       </div>
-      <AiEvaluationSynthesisCard evaluation={s.aiEvaluation} title="AI Evaluation Synthesis â€” Take-home" />
+      <AiEvaluationSynthesisCard evaluation={s.aiEvaluation} title="AI Evaluation Synthesis — Take-home" />
       <RawAiPayloadPanel payload={s.rawAiPayload} />
     </div>
   );
@@ -568,8 +572,8 @@ export function VerbalStagePanel(props: { stage: VerbalStageReport; applicationI
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-sm font-bold text-red-950">
                   {isProjectInterview
-                    ? 'Defend Interview Disqualified â€” Proctoring Violation'
-                    : 'Interview Disqualified â€” Proctoring Violation'}
+                    ? 'Defend Interview Disqualified — Proctoring Violation'
+                    : 'Interview Disqualified — Proctoring Violation'}
                 </h4>
                 <span className="rounded-full bg-red-200 px-2 py-0.5 text-[10px] font-bold uppercase text-red-900">
                   Disqualified
@@ -585,13 +589,13 @@ export function VerbalStagePanel(props: { stage: VerbalStageReport; applicationI
                 ) : null}
                 {disq.criticalCount != null && disq.criticalCount > 0 ? (
                   <>
-                    <span>Â·</span>
+                    <span>·</span>
                     <span>{disq.criticalCount} critical violation(s)</span>
                   </>
                 ) : null}
                 {disq.eventTime ? (
                   <>
-                    <span>Â·</span>
+                    <span>·</span>
                     <span>
                       Violation time:{' '}
                       {new Date(disq.eventTime).toLocaleTimeString([], {
@@ -650,8 +654,8 @@ export function VerbalStagePanel(props: { stage: VerbalStageReport; applicationI
               )}
               {(c.timeSpent != null || c.turnCount != null) && (
                 <div className="mt-1 flex gap-3 text-[11px] text-[var(--assessment-on-surface-variant)] font-medium">
-                  {c.timeSpent != null && <span>â±ï¸ {Math.round(c.timeSpent / 60)} min spent</span>}
-                  {c.turnCount != null && <span>ðŸ—£ï¸ {c.turnCount} interactions</span>}
+                  {c.timeSpent != null && <span>⏱️ {Math.round(c.timeSpent / 60)} min spent</span>}
+                  {c.turnCount != null && <span>🗣️ {c.turnCount} interactions</span>}
                 </div>
               )}
             </div>
@@ -679,7 +683,7 @@ export function VerbalStagePanel(props: { stage: VerbalStageReport; applicationI
         <BehaviouralHrReport audit={s.hrVoiceAudit as HrVoiceAudit} variant="assessment" />
       ) : null}
 
-      <AiEvaluationSynthesisCard evaluation={s.aiEvaluation} title="AI Evaluation Synthesis â€” Verbal" />
+      <AiEvaluationSynthesisCard evaluation={s.aiEvaluation} title="AI Evaluation Synthesis — Verbal" />
       <RawAiPayloadPanel payload={s.rawAiPayload} />
     </div>
   );

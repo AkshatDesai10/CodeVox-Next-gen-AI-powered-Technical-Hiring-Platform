@@ -23,6 +23,7 @@ import {
   uploadBuffer,
 } from '../../files/local-storage';
 import { DynamicConfigService } from '../system-config/dynamic-config.service';
+import { isFaceEnabledValue } from '../system-config/system-config.keys';
 
 const pdfParse = require('pdf-parse');
 
@@ -137,11 +138,15 @@ export class CandidatePortalService {
 
   /** FACE from DynamicConfigService (DB) with .env fallback. */
   private isFaceVerificationEnabled(): boolean {
-    return this.dynamicConfig.isFaceEnabled();
+    return isFaceEnabledValue(this.dynamicConfig.getSync('FACE', 'on'));
   }
 
   private identityMode(): 'face' | 'permissions_only' {
-    return this.dynamicConfig.identityMode();
+    return this.isFaceVerificationEnabled() ? 'face' : 'permissions_only';
+  }
+
+  getRuntimeConfig() {
+    return this.dynamicConfig.getCandidateRuntimeConfig();
   }
 
   private isIdentityComplete(app: JobApplicationMysql): boolean {

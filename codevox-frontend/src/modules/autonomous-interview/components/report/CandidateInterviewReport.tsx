@@ -23,6 +23,7 @@ import { CandidateSessionRecordingPanel } from '@/modules/autonomous-interview/c
 import {
   DEPTH_SCORE_MAX,
   computeScorecard,
+  findProctorTermination,
   isTurnSkipped,
   resolveInterviewReportKind,
 } from '@/modules/autonomous-interview/utils/interview-report';
@@ -82,8 +83,13 @@ export function CandidateInterviewReport({ report, enrichment = null, candidateN
   const alignment = report.resume_alignment;
   const verified = alignment?.verified?.length ?? 0;
   const claimed = alignment?.resume_skills?.length ?? report.resume_skills?.length ?? 0;
+  const proctorTermination = findProctorTermination(enrichment);
   const isTerminated =
-    integrity?.proctor_events?.some((e) => e.event_type === 'media_permission_terminated') ?? false;
+    Boolean(proctorTermination) ||
+    (enrichment?.integrity?.proctor_summary as any)?.terminated_by === 'proctor' ||
+    (integrity?.proctor_events?.some(
+      (e) => e.event_type === 'media_permission_terminated' || e.event_type === 'focus_strike_terminated',
+    ) ?? false);
   const cameraStrikes =
     integrity?.proctor_events?.filter((e) => e.event_type === 'media_permission_revoked').length ?? 0;
   const criticalFlags =

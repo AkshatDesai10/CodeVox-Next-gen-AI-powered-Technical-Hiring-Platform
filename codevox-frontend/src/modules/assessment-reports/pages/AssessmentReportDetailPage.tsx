@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import { getAssessmentReport } from '../lib/assessment-report-api';
 import type {
   AssessmentStageReport,
   CodingStageReport,
+  TakeHomeStageReport,
   VerbalStageReport,
   AiScreeningStageReport,
 } from '../types/assessment-report';
@@ -21,7 +22,7 @@ import {
   stageIcon,
   stageSubtitle,
 } from '../components/detail/StageNavigator';
-import { VerbalStagePanel, AiScreeningStagePanel } from '../components/detail/StagePanels';
+import { TakeHomeStagePanel, VerbalStagePanel, AiScreeningStagePanel } from '../components/detail/StagePanels';
 import { OverallEvaluationPanel } from '../components/detail/OverallEvaluationPanel';
 import { AiEvaluationSynthesisCard, RawAiPayloadPanel } from '../components/AiEvaluationCard';
 
@@ -87,6 +88,7 @@ function StageHeader(props: { stage: AssessmentStageReport; index: number; total
 function StageBody(props: { stage: AssessmentStageReport; applicationId: string }) {
   const { stage, applicationId } = props;
   if (stage.stageType === 'coding') return <CodingQuestionsTable stage={stage as CodingStageReport} />;
+  if (stage.stageType === 'take_home') return <TakeHomeStagePanel stage={stage as TakeHomeStageReport} />;
   if (stage.stageType === 'ai_screening') {
     return <AiScreeningStagePanel stage={stage as AiScreeningStageReport} />;
   }
