@@ -1672,7 +1672,9 @@ export class SessionCoordinatorService {
       );
     }
 
-    const maxStrikes = this.dynamicConfig.getProctorMaxStrikes();
+    const maxStrikes = Number(
+      this.dynamicConfig.getSync('PROCTOR_MAX_MEDIA_STRIKES', '5'),
+    ) || 5;
     const strikeCount = Number(
       (active.proctorSummary as Record<string, unknown> | null)?.media_strike_count ?? 0,
     );

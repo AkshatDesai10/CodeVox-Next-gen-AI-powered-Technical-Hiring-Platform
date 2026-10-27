@@ -168,22 +168,107 @@ export function findMediaTermination(
   return null;
 }
 
+export type ProctorTerminationEvent = {
+  event_type: 'media_permission_terminated' | 'focus_strike_terminated' | string;
+  payload?: {
+    reason?: string;
+    details?: string;
+    focus_strikes?: number;
+    max_focus_strikes?: number;
+    message?: string;
+    strikes?: number;
+    phase?: string;
+    [key: string]: unknown;
+  };
+  created_at?: string;
+};
+
+export function findProctorTermination(
+  enrichment?: InterviewReportEnrichment | null,
+): ProctorTerminationEvent | null {
+  const events = enrichment?.integrity?.proctor_events ?? [];
+  const focusTerm = events.find((e) => e.event_type === 'focus_strike_terminated');
+  if (focusTerm) {
+    return {
+      event_type: 'focus_strike_terminated',
+      payload: {
+        reason: 'max_focus_strikes_exceeded',
+        details: 'The session was terminated after exceeding maximum allowed tab/window departures.',
+        message: String((focusTerm.payload as Record<string, unknown> | undefined)?.message ?? 'Focus limit reached'),
+        focus_strikes: Number((focusTerm.payload as Record<string, unknown> | undefined)?.focus_strikes ?? 3),
+      },
+      created_at: focusTerm.created_at,
+    };
+  }
+
+  const mediaTerm = findMediaTermination(enrichment);
+  if (mediaTerm) {
+    return {
+      event_type: mediaTerm.event_type,
+      payload: mediaTerm.payload as ProctorTerminationEvent['payload'],
+      created_at: mediaTerm.created_at,
+    };
+  }
+
+  const proctorSummary = enrichment?.integrity?.proctor_summary as
+    | {
+        terminated_by?: string;
+        termination_reason?: string;
+        by_type?: Record<string, number>;
+        focus_strike_count?: number;
+        media_strike_count?: number;
+      }
+    | undefined;
+
+  if (
+    proctorSummary?.terminated_by === 'proctor' ||
+    (proctorSummary?.focus_strike_count && proctorSummary.focus_strike_count >= 3) ||
+    (proctorSummary?.media_strike_count && proctorSummary.media_strike_count >= 3)
+  ) {
+    const isFocus =
+      proctorSummary.termination_reason?.includes('focus') ||
+      (proctorSummary.focus_strike_count && proctorSummary.focus_strike_count >= 3);
+    return {
+      event_type: isFocus ? 'focus_strike_terminated' : 'media_permission_terminated',
+      payload: {
+        reason: proctorSummary.termination_reason ?? (isFocus ? 'max_focus_strikes_exceeded' : 'max_media_strikes_exceeded'),
+        details: isFocus
+          ? 'The session was closed after exceeding allowed tab or fullscreen switches.'
+          : 'The session was closed after excessive camera or microphone interruptions.',
+      },
+    };
+  }
+
+  return null;
+}
+
 /** Recruiter-facing reason. Uses stored `details` when present, otherwise `reason`. */
-export function mediaTerminationDetail(event: MediaTerminationEvent): string {
-  const details = event.payload?.details;
+export function mediaTerminationDetail(event: MediaTerminationEvent | ProctorTerminationEvent): string {
+  const payload = event.payload as Record<string, unknown> | undefined;
+  const details = payload?.details;
   if (typeof details === 'string' && details.trim()) return details.trim();
-  if (event.payload?.reason === 'max_strikes_exceeded') {
+  const reason = String(payload?.reason ?? '');
+  if (reason === 'max_focus_strikes_exceeded') {
+    return 'The session was closed after exceeding allowed tab or fullscreen switches.';
+  }
+  if (reason === 'max_strikes_exceeded' || reason === 'max_media_strikes_exceeded') {
     return 'The session was closed after repeated camera or microphone interruptions.';
   }
   return 'The recovery window expired without restoring camera or microphone access.';
 }
 
-export function mediaTerminationMeta(event: MediaTerminationEvent): string {
-  const reason =
-    event.payload?.reason === 'max_strikes_exceeded' ? 'Strike limit reached' : 'Recovery window expired';
-  const strikes = event.payload?.strikes;
+export function mediaTerminationMeta(event: MediaTerminationEvent | ProctorTerminationEvent): string {
+  const payload = event.payload as Record<string, unknown> | undefined;
+  const reasonStr = String(payload?.reason ?? '');
+  const isFocus = event.event_type === 'focus_strike_terminated' || reasonStr.includes('focus');
+  const reason = isFocus
+    ? 'Focus strike limit reached'
+    : reasonStr === 'max_strikes_exceeded'
+      ? 'Strike limit reached'
+      : 'Recovery window expired';
+  const strikes = payload?.strikes ?? payload?.focus_strikes;
   const strikeLabel = typeof strikes === 'number' ? `Strike ${strikes}` : null;
-  const phase = typeof event.payload?.phase === 'string' ? event.payload.phase.trim() : '';
+  const phase = typeof payload?.phase === 'string' ? payload.phase.trim() : '';
   const phaseLabel = phase ? `Round: ${phase.replace(/_/g, ' ')}` : null;
   return [reason, strikeLabel, phaseLabel].filter(Boolean).join(' · ');
 }
@@ -204,7 +289,7 @@ export function deriveRecommendation(
   report: InterviewSessionReport,
   enrichment?: InterviewReportEnrichment | null,
 ): HiringRecommendation {
-  if (findMediaTermination(enrichment)) return 'DISQUALIFIED';
+  if (findProctorTermination(enrichment)) return 'DISQUALIFIED';
 
   const skipped = report.resume_alignment?.skipped_due_to_struggles?.length ?? 0;
   const verified = report.resume_alignment?.verified?.length ?? 0;
@@ -280,7 +365,11 @@ export function buildExecutiveSummary(
     sandbox?.codeQualityScore ?? enrichment?.codeQualityScore ?? null;
   const sandboxNote =
     codeQuality != null
-      ? ` Coding sandbox quality score: ${codeQuality}/100.`
+      ? codeQuality >= 70
+        ? ' Coding submission demonstrated strong implementation quality.'
+        : codeQuality >= 45
+          ? ' Coding submission showed functional implementation with room for improvement.'
+          : ' Coding submission revealed notable gaps in implementation quality.'
       : sandbox?.hasSubmission
         ? ' A coding sandbox submission was recorded.'
         : '';
@@ -290,12 +379,12 @@ export function buildExecutiveSummary(
   }
 
   if (scored === 'STRONG_HIRE' || scored === 'HIRE') {
-    return `${name} demonstrated solid depth in this ${roundLabel} (score ${report.depth_score}/${DEPTH_MAX}). Verified competencies include ${verified.join(', ') || 'core stack areas'}.${sandboxNote} Communication was clear under follow-up questioning.`;
+    return `${name} demonstrated solid technical depth in this ${roundLabel}. Verified competencies include ${verified.join(', ') || 'core stack areas'}.${sandboxNote} Communication was clear and structured under follow-up questioning.`;
   }
   if (scored === 'BORDERLINE') {
     return `${name} showed partial alignment with the role requirements in this ${roundLabel}. Some areas were verified (${verified.join(', ') || 'limited'}), but gaps remain in ${skipped.join(', ') || 'several resume skills'}.${sandboxNote} Additional probing or a focused coding review is recommended before advancing.`;
   }
-  return `${name} struggled to demonstrate mid-level depth in this ${roundLabel} (score ${report.depth_score}/${DEPTH_MAX}). Multiple resume skills were skipped after repeated follow-ups (${skipped.join(', ') || 'see skill grid'}).${sandboxNote} Verbal responses were often shallow or off-topic; proceed with caution for roles requiring hands-on depth.`;
+  return `${name} struggled to demonstrate sufficient depth in this ${roundLabel}. Multiple resume skills could not be adequately verified after follow-up questioning (${skipped.join(', ') || 'see skill grid'}).${sandboxNote} Verbal responses were often shallow or off-topic; proceed with caution for roles requiring hands-on depth.`;
 }
 
 function sandboxCodeDesignScore(enrichment?: InterviewReportEnrichment | null): {
@@ -335,19 +424,23 @@ function sandboxCodeDesignScore(enrichment?: InterviewReportEnrichment | null): 
     score = Math.max(1, score - 1);
   }
 
-  const testLine =
-    total > 0 ? ` Tests passed ${passed}/${total}.` : '';
-  const qualityLine =
-    codeQuality != null ? ` AI code quality ${codeQuality}/100.` : '';
-  const flawLine =
+  const flawNote =
     flaws.length > 0
-      ? ` Notes: ${flaws.slice(0, 3).join(', ').replace(/_/g, ' ')}.`
+      ? ` Areas noted: ${flaws.slice(0, 2).join(', ').replace(/_/g, ' ')}.`
       : '';
 
-  return {
-    score,
-    justification: `Sandbox submission reviewed.${qualityLine}${testLine}${flawLine}`.trim(),
-  };
+  let justification: string;
+  if (score >= 4) {
+    justification = `Code submission demonstrates clean structure and strong implementation quality.${flawNote}`;
+  } else if (score >= 3) {
+    justification = `Code submission shows functional implementation with room for architectural improvement.${flawNote}`;
+  } else if (score >= 2) {
+    justification = `Code submission has notable gaps in structure or test coverage.${flawNote}`;
+  } else {
+    justification = `Code submission shows limited implementation quality or was not provided.${flawNote}`;
+  }
+
+  return { score, justification: justification.trim() };
 }
 
 export function computeScorecard(
@@ -369,10 +462,16 @@ export function computeScorecard(
         `Score ${c.score ?? '—'}/5`,
     }));
     if (typeof hrAudit?.weighted_competency_score === 'number') {
+      const fitScore = Math.max(1, Math.min(5, Math.round(hrAudit.weighted_competency_score) || 1));
+      const fitJustification = fitScore >= 4
+        ? `${hrAudit.final_outcome ?? 'Strong alignment'} — candidate shows strong overall suitability for the role.`
+        : fitScore >= 3
+          ? `${hrAudit.final_outcome ?? 'Moderate alignment'} — candidate meets several key requirements with some areas to develop.`
+          : `${hrAudit.final_outcome ?? 'Limited alignment'} — notable gaps in role suitability were identified.`;
       mapped.push({
         competency: 'Overall Fit',
-        score: Math.max(1, Math.min(5, Math.round(hrAudit.weighted_competency_score) || 1)),
-        justification: `${hrAudit.final_outcome ?? 'Outcome pending'} · weighted ${hrAudit.weighted_competency_score}/5 (${hrAudit.platform_decision ?? '—'})`,
+        score: fitScore,
+        justification: fitJustification,
       });
     }
     return mapped;
@@ -397,10 +496,20 @@ export function computeScorecard(
           ? report.weighted_overall_rounded
           : null;
     if (overall10 != null) {
+      const overallStars = Math.max(1, Math.min(5, Math.round(overall10 / 2) || 1));
+      const overallJustification = overall10 >= 8.0
+        ? 'Exceptional overall performance — consistently strong across all evaluated competencies.'
+        : overall10 >= 6.5
+          ? 'Solid overall performance with good depth across most competencies.'
+          : overall10 >= 5.0
+            ? 'Developing proficiency — adequate in some areas but gaps remain in others.'
+            : overall10 >= 3.0
+              ? 'Limited overall performance — struggled in multiple competency areas.'
+              : 'Minimal overall readiness — significant development needed across core areas.';
       mapped.push({
         competency: 'Overall Fit',
-        score: Math.max(1, Math.min(5, Math.round(overall10 / 2) || 1)),
-        justification: `Weighted rubric overall ${overall10}/10 from per-competency diagnostic means.`,
+        score: overallStars,
+        justification: overallJustification,
       });
     }
     return mapped;
@@ -452,7 +561,13 @@ export function computeScorecard(
     {
       competency: 'Overall Fit',
       score: overallRounded,
-      justification: `Composite from depth score ${depth}/${DEPTH_MAX} and ${skipped} skill area(s) skipped via pivot rule.`,
+      justification: overallRounded >= 4
+        ? 'Strong overall technical depth with consistent performance across evaluated skill areas.'
+        : overallRounded >= 3
+          ? 'Adequate overall performance with partial coverage of required skill areas.'
+          : overallRounded >= 2
+            ? 'Below-average depth — multiple skill areas were not sufficiently demonstrated.'
+            : 'Significant gaps across most evaluated skill areas.',
     },
   ];
 }

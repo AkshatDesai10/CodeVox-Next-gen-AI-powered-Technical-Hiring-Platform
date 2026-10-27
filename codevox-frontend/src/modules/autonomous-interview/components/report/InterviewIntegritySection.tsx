@@ -10,6 +10,14 @@ type ProctorSummary = {
   warning_count?: number;
   last_event_at?: string | null;
   fraud_risk_score?: number;
+  media_strike_count?: number;
+  focus_strike_count?: number;
+  terminated_by?: string | null;
+  termination_reason?: string | null;
+  current_round_strikes?: {
+    media_strikes?: number;
+    focus_strikes?: number;
+  };
 };
 
 type ProctorEvent = {
@@ -85,11 +93,26 @@ function getEventStyle(type: string): {
       dotClass: 'bg-slate-500',
     };
   }
-  if (t === 'window_blur' || t === 'tab_hidden') {
+  if (
+    t === 'window_blur' ||
+    t === 'tab_hidden' ||
+    t === 'fullscreen_exited' ||
+    t === 'focus_strike' ||
+    t === 'focus_strike_terminated' ||
+    t === 'fullscreen_exited_strike'
+  ) {
     return {
       icon: 'tab_unselected',
       colorClass: 'text-amber-600',
       bgClass: 'bg-amber-50 text-amber-800 border-amber-200',
+      dotClass: 'bg-amber-500',
+    };
+  }
+  if (t === 'screen_share_dropped') {
+    return {
+      icon: 'present_to_all',
+      colorClass: 'text-amber-600',
+      bgClass: 'bg-amber-50 text-amber-900 border-amber-200',
       dotClass: 'bg-amber-500',
     };
   }
@@ -138,6 +161,10 @@ function eventTitle(type: string, payload?: Record<string, unknown>): string {
   }
   if (t === 'window_blur') return 'Window Focus Lost';
   if (t === 'tab_hidden') return 'Browser Tab Switched / Hidden';
+  if (t === 'fullscreen_exited') return 'Fullscreen Display Exited';
+  if (t === 'focus_strike') return 'Focus Strike (Away ≥ Grace Threshold)';
+  if (t === 'focus_strike_terminated') return 'Session Terminated: Focus Strike Limit';
+  if (t === 'screen_share_dropped') return 'Screen Share Stopped';
   if (t === 'face_absent') return 'Face Not Detected';
   if (t === 'multi_face') return 'Multiple Faces Detected';
   if (t === 'gaze_off_camera') return 'Gaze Shifted Off-Screen';
@@ -170,10 +197,25 @@ function eventDetail(evt: ProctorEvent): string {
     return 'Candidate reconnected required camera & microphone stream.';
   }
   if (t === 'window_blur') {
-    return 'Candidate clicked away or shifted focus to another desktop application.';
+    return 'Browser window lost focus (observable: blur event).';
   }
   if (t === 'tab_hidden') {
-    return 'Candidate switched browser tabs or minimized the interview window.';
+    return 'Browser tab switched or hidden (observable: visibilitychange).';
+  }
+  if (t === 'fullscreen_exited') {
+    return 'Fullscreen display exited.';
+  }
+  if (t === 'focus_strike') {
+    const dur = evt.payload?.duration_seconds;
+    return typeof dur === 'number'
+      ? `Browser tab/window away for ${dur} seconds (focus strike recorded).`
+      : 'Browser tab/window away past grace threshold (focus strike recorded).';
+  }
+  if (t === 'focus_strike_terminated') {
+    return 'Session closed after maximum focus / screen-departure strikes.';
+  }
+  if (t === 'screen_share_dropped') {
+    return 'Screen share track stopped or permission revoked (media strike).';
   }
   if (t === 'face_absent') {
     return 'Candidate moved outside the camera frame or camera lens was obstructed.';
@@ -213,17 +255,63 @@ export function InterviewIntegritySection({
 
   // Derived metrics
   const mediaRevokedEvents = useMemo(
-    () => displayEvents.filter((e) => e.event_type === 'media_permission_revoked'),
+    () =>
+      displayEvents.filter(
+        (e) =>
+          e.event_type === 'media_permission_revoked' ||
+          e.event_type === 'screen_share_dropped' ||
+          e.event_type === 'camera_dropped' ||
+          e.event_type === 'mic_dropped',
+      ),
     [displayEvents]
   );
   const mediaTermination = useMemo(
-    () => displayEvents.find((e) => e.event_type === 'media_permission_terminated'),
+    () =>
+      displayEvents.find(
+        (e) =>
+          e.event_type === 'media_permission_terminated' ||
+          e.event_type === 'focus_strike_terminated',
+      ),
     [displayEvents]
   );
   const tabFocusEvents = useMemo(
-    () => displayEvents.filter((e) => e.event_type === 'window_blur' || e.event_type === 'tab_hidden'),
+    () =>
+      displayEvents.filter(
+        (e) =>
+          e.event_type === 'window_blur' ||
+          e.event_type === 'tab_hidden' ||
+          e.event_type === 'fullscreen_exited' ||
+          e.event_type === 'focus_strike',
+      ),
     [displayEvents]
   );
+  const focusStrikeEvents = useMemo(
+    () => displayEvents.filter((e) => e.event_type === 'focus_strike'),
+    [displayEvents],
+  );
+  const mediaStrikeTotal = Math.max(
+    proctorSummary?.media_strike_count ?? 0,
+    mediaRevokedEvents.length,
+  );
+  const focusStrikeTotal = Math.max(
+    proctorSummary?.focus_strike_count ?? 0,
+    focusStrikeEvents.length,
+  );
+  const focusAwaySeconds = useMemo(() => {
+    return focusStrikeEvents.reduce((sum, e) => {
+      const d = e.payload?.duration_seconds;
+      return sum + (typeof d === 'number' ? d : 0);
+    }, 0);
+  }, [focusStrikeEvents]);
+  const proctorTerminated =
+    proctorSummary?.terminated_by === 'proctor' ||
+    Boolean(mediaTermination) ||
+    focusStrikeTotal >= 3 ||
+    displayEvents.some(
+      (e) =>
+        e.event_type === 'focus_strike_terminated' ||
+        e.event_type === 'media_permission_terminated',
+    );
   const presenceEvents = useMemo(
     () =>
       displayEvents.filter(
@@ -250,7 +338,14 @@ export function InterviewIntegritySection({
       case 'media':
         return displayEvents.filter((e) => e.event_type.startsWith('media_permission'));
       case 'focus':
-        return displayEvents.filter((e) => e.event_type === 'window_blur' || e.event_type === 'tab_hidden');
+        return displayEvents.filter(
+          (e) =>
+            e.event_type === 'window_blur' ||
+            e.event_type === 'tab_hidden' ||
+            e.event_type === 'fullscreen_exited' ||
+            e.event_type === 'focus_strike' ||
+            e.event_type === 'focus_strike_terminated',
+        );
       case 'presence':
         return presenceEvents;
       case 'all':
@@ -272,12 +367,14 @@ export function InterviewIntegritySection({
 
   const visibleEvents = showAllEvents ? filteredEvents : filteredEvents.slice(0, 8);
 
-  const isTerminated = !!mediaTermination;
-  const isFlagged = !isTerminated && (cameraDropCount > 0 || multiFaceEvents.length > 0 || tabFocusCount > 5);
+  const isTerminated = proctorTerminated;
+  const isFlagged =
+    !isTerminated &&
+    (cameraDropCount > 0 || multiFaceEvents.length > 0 || focusStrikeTotal > 0 || tabFocusCount > 5);
 
   const statusVerdict = isTerminated
     ? {
-        label: 'Terminated (Policy Violation)',
+        label: 'Terminated by Proctor',
         toneClass: 'text-red-800 bg-red-50 border-red-200',
         icon: 'gavel',
       }
@@ -292,6 +389,19 @@ export function InterviewIntegritySection({
           toneClass: 'text-emerald-800 bg-emerald-50 border-emerald-200',
           icon: 'verified_user',
         };
+
+  const isFocusReason =
+    proctorSummary?.termination_reason === 'max_focus_strikes_exceeded' ||
+    focusStrikeTotal >= 3 ||
+    displayEvents.some((e) => e.event_type === 'focus_strike_terminated');
+  const terminationReasonLabel = isFocusReason
+    ? 'Tab & Application Switches'
+    : proctorSummary?.termination_reason === 'max_media_strikes_exceeded' ||
+        proctorSummary?.termination_reason === 'media_grace_timeout' ||
+        mediaStrikeTotal >= 3
+      ? 'Camera / Mic / Screen Outages'
+      : proctorSummary?.termination_reason?.replace(/_/g, ' ') ??
+        'Integrity policy limit';
 
   return (
     <section
@@ -338,93 +448,86 @@ export function InterviewIntegritySection({
 
       {isExpanded && (
         <div className="p-6 space-y-6" id="proctoring-content">
-          {/* Top Metric Cards: Real dynamic signals */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Card 1: Camera Disconnects / Strikes */}
-            <div
-              className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
-                isTerminated
-                  ? 'bg-red-50/80 border-red-200 text-red-950'
-                  : cameraDropCount > 0
-                    ? 'bg-amber-50/70 border-amber-200 text-amber-950'
-                    : 'bg-[var(--assessment-surface-container-low)] border-[var(--assessment-outline-variant)] text-[var(--assessment-on-surface)]'
-              }`}
-            >
-              <div className="flex items-center justify-between text-[var(--assessment-on-surface-variant)]">
-                <span className="text-xs font-semibold uppercase tracking-wider">Camera Drops (Strikes)</span>
-                <AssessmentMaterialIcon
-                  name="videocam"
-                  size={18}
-                  className={
-                    isTerminated
-                      ? 'text-red-600'
-                      : cameraDropCount > 0
-                        ? 'text-amber-600'
-                        : 'text-emerald-600'
-                  }
-                />
-              </div>
-              <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono">
-                  {cameraDropCount}
-                </span>
-                <span
-                  className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                    isTerminated
-                      ? 'bg-red-100 text-red-800'
-                      : cameraDropCount > 0
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  {isTerminated ? 'Terminated' : cameraDropCount > 0 ? 'Logged' : 'No Drops'}
-                </span>
-              </div>
-              <span className="text-xs text-[var(--assessment-on-surface-variant)] mt-1.5">
-                {isTerminated
-                  ? 'Limit reached, session closed'
-                  : cameraDropCount > 0
-                    ? `${cameraDropCount} interruption(s) during session`
-                    : 'Continuous video feed maintained'}
-              </span>
+          {isTerminated ? (
+            <div className="rounded-xl border-2 border-red-400 bg-red-50 p-4 text-sm text-red-950">
+              <p className="font-bold">
+                Terminated by Proctor: Candidate reached the limit for {terminationReasonLabel}
+                {proctorSummary?.termination_reason?.includes('focus')
+                  ? ` (${focusStrikeTotal} focus strikes recorded).`
+                  : ` (${mediaStrikeTotal} media strikes recorded).`}
+              </p>
             </div>
+          ) : null}
 
-            {/* Card 2: Tab & Window Focus */}
+          {/* Top Metric Cards: dual strike budgets + presence */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Card 1: Hardware / Media Strikes */}
             <div
               className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
-                tabFocusCount > 5
+                mediaStrikeTotal > 0
                   ? 'bg-amber-50/70 border-amber-200 text-amber-950'
                   : 'bg-[var(--assessment-surface-container-low)] border-[var(--assessment-outline-variant)] text-[var(--assessment-on-surface)]'
               }`}
             >
               <div className="flex items-center justify-between text-[var(--assessment-on-surface-variant)]">
-                <span className="text-xs font-semibold uppercase tracking-wider">Tab / Window Focus Lost</span>
+                <span className="text-xs font-semibold uppercase tracking-wider">Hardware / Media Strikes</span>
                 <AssessmentMaterialIcon
-                  name="tab_unselected"
+                  name="videocam"
                   size={18}
-                  className={tabFocusCount > 5 ? 'text-amber-600' : 'text-slate-500'}
+                  className={mediaStrikeTotal > 0 ? 'text-amber-600' : 'text-emerald-600'}
                 />
               </div>
               <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono">
-                  {tabFocusCount}
-                </span>
+                <span className="text-2xl font-bold font-mono">{mediaStrikeTotal}</span>
                 <span
                   className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                    tabFocusCount > 5
+                    mediaStrikeTotal > 0
                       ? 'bg-amber-100 text-amber-800'
-                      : tabFocusCount > 0
-                        ? 'bg-slate-200 text-slate-800'
-                        : 'bg-emerald-100 text-emerald-800'
+                      : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
-                  {tabFocusCount > 5 ? 'Frequent' : tabFocusCount > 0 ? 'Low' : 'Continuous'}
+                  {mediaStrikeTotal > 0 ? 'Logged' : 'None'}
                 </span>
               </div>
               <span className="text-xs text-[var(--assessment-on-surface-variant)] mt-1.5">
-                {tabFocusCount > 0
-                  ? 'Navigated away or clicked out of window'
-                  : 'Candidate stayed in assessment window'}
+                Camera, mic, or screen-share drop events
+              </span>
+            </div>
+
+            {/* Card 2: Focus / Screen Departures */}
+            <div
+              className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
+                focusStrikeTotal > 0
+                  ? 'bg-amber-50/70 border-amber-200 text-amber-950'
+                  : 'bg-[var(--assessment-surface-container-low)] border-[var(--assessment-outline-variant)] text-[var(--assessment-on-surface)]'
+              }`}
+            >
+              <div className="flex items-center justify-between text-[var(--assessment-on-surface-variant)]">
+                <span className="text-xs font-semibold uppercase tracking-wider">Focus / Screen Departures</span>
+                <AssessmentMaterialIcon
+                  name="tab_unselected"
+                  size={18}
+                  className={focusStrikeTotal > 0 ? 'text-amber-600' : 'text-slate-500'}
+                />
+              </div>
+              <div className="mt-2.5 flex items-baseline gap-2">
+                <span className="text-2xl font-bold font-mono">{focusStrikeTotal}</span>
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                    focusStrikeTotal > 0
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  {focusStrikeTotal > 0 ? 'Strikes' : 'Continuous'}
+                </span>
+              </div>
+              <span className="text-xs text-[var(--assessment-on-surface-variant)] mt-1.5">
+                {focusAwaySeconds > 0
+                  ? `Total away duration on strikes: ${focusAwaySeconds}s`
+                  : tabFocusCount > 0
+                    ? `${tabFocusCount} soft focus signal(s) logged`
+                    : 'Candidate stayed in assessment window'}
               </span>
             </div>
 

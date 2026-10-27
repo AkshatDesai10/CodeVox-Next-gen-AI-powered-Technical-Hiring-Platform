@@ -7,9 +7,10 @@ import { recruitmentApiBase } from '@/lib/recruitment-api-base';
 import { withBasePath } from '@/lib/with-base-path';
 import {
   getCandidateDashboard,
-  getPortalRuntimeConfig,
   saveCandidatePortalPreferences,
 } from '@/lib/candidate-api';
+import { getCandidateRuntimeConfig } from '@/modules/recruitment/lib/configurations-api';
+import { applyRuntimeProctorConfig } from '@/modules/autonomous-interview/lib/runtime-proctor-config';
 import { CandidatePortalOnboardingGate } from '@/modules/job-profiles/components/CandidatePortalOnboardingGate';
 import { SystemReadinessLobby } from '@/modules/job-profiles/components/SystemReadinessLobby';
 
@@ -321,10 +322,14 @@ export default function CandidatePortalPage({
   });
 
   const runtimeQuery = useQuery({
-    queryKey: ['portal-runtime-config'],
-    queryFn: getPortalRuntimeConfig,
-    staleTime: 30_000,
+    queryKey: ['candidate-runtime-config'],
+    queryFn: getCandidateRuntimeConfig,
+    staleTime: 15_000,
   });
+
+  useEffect(() => {
+    if (runtimeQuery.data) applyRuntimeProctorConfig(runtimeQuery.data);
+  }, [runtimeQuery.data]);
 
   useEffect(() => {
     try {
@@ -487,7 +492,7 @@ export default function CandidatePortalPage({
           faceAlreadyCaptured={Boolean(identity?.face_captured)}
           startLabel="Enter Assessment Dashboard"
           title="System check"
-          subtitle="Confirm camera, mic, and network before you enter — just like joining a video call."
+          subtitle="Confirm camera, mic, and network before you enter � just like joining a video call."
           onComplete={async () => {
             if (!faceMode) {
               try {
@@ -531,11 +536,11 @@ export default function CandidatePortalPage({
               <div>
                 <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#7C3AED]/20 border border-[#7C3AED]/40 text-xs font-bold uppercase tracking-wider text-[#C4B5FD] mb-4">
                   <span className="h-2 w-2 rounded-full bg-[#55E63B]" />
-                  CodeVox Assessment Portal • ID: {data.application.id.slice(0, 8).toUpperCase()}
+                  CodeVox Assessment Portal � ID: {data.application.id.slice(0, 8).toUpperCase()}
                 </div>
 
                 <h1 className="text-3xl lg:text-5xl font-black text-white tracking-tight">
-                  Welcome, {data.candidate.name} 👋
+                  Welcome, {data.candidate.name} ??
                 </h1>
                 <h2 className="mt-2 text-xl lg:text-2xl font-bold text-[#A78BFA]">
                   {data.job.title}
@@ -624,7 +629,7 @@ export default function CandidatePortalPage({
             <div className="flex items-center gap-2 shrink-0">
               {([
                 ['en', 'English'],
-                ['hi', 'हिन्दी (Hindi)'],
+                ['hi', '?????? (Hindi)'],
               ] as const).map(([code, label]) => (
                 <button
                   key={code}
@@ -682,7 +687,7 @@ export default function CandidatePortalPage({
                 <div>
                   <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7C3AED]/20 text-[#A78BFA] text-sm font-black">
-                      🛡️
+                      ???
                     </span>
                     Assessment Rules & Code of Conduct
                   </h2>
@@ -831,7 +836,7 @@ export default function CandidatePortalPage({
                                 : 'bg-[#2D1B69] text-[#94A3B8]'
                             }`}
                           >
-                            {isCompleted ? '✓' : idx + 1}
+                            {isCompleted ? '?' : idx + 1}
                           </div>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#A78BFA]">
@@ -863,7 +868,7 @@ export default function CandidatePortalPage({
                             <svg className="h-3.5 w-3.5 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Est. 30–45 mins
+                            Est. 30�45 mins
                           </span>
                           <span className="flex items-center gap-1.5 rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1">
                             <svg className="h-3.5 w-3.5 text-[#55E63B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -981,7 +986,7 @@ export default function CandidatePortalPage({
                   <ul className="space-y-2.5">
                     {data.job.responsibilities.map((resp, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-[#C4B5FD] leading-relaxed">
-                        <span className="text-[#55E63B] font-bold mt-0.5">•</span>
+                        <span className="text-[#55E63B] font-bold mt-0.5">�</span>
                         <span>{resp}</span>
                       </li>
                     ))}
@@ -1020,7 +1025,7 @@ export default function CandidatePortalPage({
             {/* Pro-Tips Card */}
             <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-[#160A30] to-[#160A30] p-6 shadow-xl">
               <div className="flex items-center gap-2.5 mb-3">
-                <span className="text-lg">💡</span>
+                <span className="text-lg">??</span>
                 <h3 className="text-sm font-extrabold text-amber-300">Candidate Pro-Tip</h3>
               </div>
               <p className="text-xs text-[#C4B5FD] leading-relaxed">

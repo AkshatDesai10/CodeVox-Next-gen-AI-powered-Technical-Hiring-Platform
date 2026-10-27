@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { withBasePath } from '@/lib/with-base-path';
 import {
   getAutonomousSession,
@@ -12,6 +12,7 @@ import { InterviewRoomProvider } from '@/modules/autonomous-interview/context/In
 import { LiveKitVoiceStagePanel } from '@/modules/autonomous-interview/components/LiveKitVoiceStagePanel';
 import { VoiceStagePanel } from '@/modules/autonomous-interview/components/VoiceStagePanel';
 import { SystemReadinessLobby } from '@/modules/job-profiles/components/SystemReadinessLobby';
+import { ensureRuntimeProctorConfig } from '@/modules/autonomous-interview/lib/runtime-proctor-config';
 import { releaseInterviewLeaveGuard } from '@/modules/autonomous-interview/lib/interview-leave-guard';
 
 type Props = {
@@ -44,15 +45,27 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const readinessKey = `interviewSystemReady:${candidateToken}`;
   const [systemReady, setSystemReady] = useState(false);
+  const [countdown, setCountdown] = useState<number>(5);
   const [referenceDescriptor, setReferenceDescriptor] = useState<number[] | null>(null);
   const [liveKitSessionActive, setLiveKitSessionActive] = useState(false);
   const [screenShareGranted, setScreenShareGranted] = useState(false);
   const [preAcquiredScreenTrack, setPreAcquiredScreenTrack] = useState<MediaStreamTrack | null>(null);
+  const [mobileDeviceWarning, setMobileDeviceWarning] = useState(false);
   const [voiceTransport] = useState<VoiceTransport>(() => {
     const mode = process.env.NEXT_PUBLIC_VOICE_TRANSPORT?.toLowerCase();
     if (mode === 'browser' || mode === 'livekit') return mode;
     return 'livekit';
   });
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const ua = navigator.userAgent || '';
+    const mobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua));
+    setMobileDeviceWarning(mobile);
+  }, []);
+
   const {
     phase: wsPhase,
     payload: wsPayload,
@@ -70,6 +83,10 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
       setSystemReady(false);
     }
   }, [readinessKey]);
+
+  useEffect(() => {
+    void ensureRuntimeProctorConfig();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,9 +124,9 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
     };
   }, [candidateToken, wsPhase]);
 
-  const router = useRouter();
-
   const activePhase = normalizeViewportPhase(wsPhase ?? session?.currentPhase ?? 'ai_verbal');
+  const showSandbox = false;
+  const showCompleted = activePhase === 'completed';
 
   useEffect(() => {
     const submissionToken =
@@ -123,20 +140,27 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
       window.location.href = withBasePath(
         `/assessments/candidate/project-interview/${submissionToken}`,
       );
-      return;
     }
-    if (activePhase !== 'completed') return;
-    // After a portal-linked session, return to the candidate dashboard.
-    const linkedPortal =
-      searchParams.get('portalToken') ||
-      (typeof window !== 'undefined' ? localStorage.getItem(`portalToken:${candidateToken}`) : null);
-    if (!linkedPortal) return;
-    releaseInterviewLeaveGuard();
-    window.location.href = withBasePath(`/candidate/portal/${linkedPortal}`);
-  }, [activePhase, candidateToken, searchParams, wsPayload]);
+  }, [activePhase, wsPayload]);
 
-  const showSandbox = false;
-  const showCompleted = activePhase === 'completed';
+  useEffect(() => {
+    if (!showCompleted) return;
+
+    releaseInterviewLeaveGuard();
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          window.location.href = portalHref;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showCompleted, portalHref]);
   const buildMode =
     searchParams.get('bndPhase') === 'build' ||
     activePhase === 'bnd_assessment' ||
@@ -278,14 +302,29 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
       forceScreenShare={forceScreenShare}
       initialScreenTrack={preAcquiredScreenTrack}
       phase={voicePhaseForPanel}
+      proctorConfig={session?.proctorConfig}
     >
       <div className="assessments-root flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--assessment-surface)]">
+        {mobileDeviceWarning ? (
+          <div className="z-40 shrink-0 border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-950">
+            This interview works best on a desktop or laptop. Mobile/tablet browsers may not
+            enforce fullscreen or focus checks reliably. Continue on a computer if possible.
+            <button
+              type="button"
+              className="ml-3 underline"
+              onClick={() => setMobileDeviceWarning(false)}
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
         {voiceTransport === 'livekit' && (showVoiceFull || showVoiceCompact) ? (
           <div className={showVoiceFull ? 'flex min-h-0 flex-1 flex-col' : undefined}>
             <LiveKitVoiceStagePanel
               onForceExit={() => {
                 releaseInterviewLeaveGuard();
-                window.location.href = portalHref;
+                setPhase('completed');
+                setSession((prev) => (prev ? { ...prev, currentPhase: 'completed' } : prev));
               }}
               visible
               compact={showVoiceCompact}
@@ -312,14 +351,22 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
           !session.finalDecision ? (
             <div className="flex-1 flex items-center justify-center bg-slate-50 h-full overflow-y-auto">
               <div className="mx-auto max-w-2xl space-y-6 p-6 py-12 text-center w-full">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-8">
-                  <h1 className="text-2xl font-semibold text-emerald-900">Interview complete</h1>
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 shadow-sm">
+                  <h1 className="text-2xl font-bold text-emerald-900">Interview complete</h1>
                   <p className="mt-2 text-sm text-emerald-800">
-                    Thank you for completing the interview. We&apos;ll get back to you once your assessment
-                    has been evaluated. Returning you to the dashboard…
+                    Thank you for completing the interview. Your answers have been submitted for evaluation.
                   </p>
-                  <div className="mt-8 flex justify-center">
-                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+                  <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-xs font-semibold text-emerald-900">
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                    <span>Returning to dashboard in {countdown}s…</span>
+                  </div>
+                  <div className="mt-6 flex justify-center">
+                    <a
+                      href={portalHref}
+                      className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-all active:scale-95"
+                    >
+                      Return to dashboard now
+                    </a>
                   </div>
                 </div>
               </div>
@@ -339,12 +386,13 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
                       <p className="text-slate-600 font-medium">Required passing score: {Math.round(((session as any).thresholdInfo?.required_score || 7.5) * 10)}%</p>
                     </div>
                   )}
+                  <p className="text-xs text-slate-500 font-medium">Returning to dashboard in {countdown}s…</p>
                   <div className="mt-6">
                     <a
                       href={portalHref}
                       className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
                     >
-                      Return to portal
+                      Return to portal now
                     </a>
                   </div>
                 </div>
@@ -364,12 +412,13 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
                       <p className="text-slate-600 font-medium">Your score for this round</p>
                     </div>
                   )}
+                  <p className="text-xs text-slate-500 font-medium">Returning to dashboard in {countdown}s…</p>
                   <div className="mt-6">
                     <a
                       href={portalHref}
                       className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
                     >
-                      Return to portal
+                      Return to portal now
                     </a>
                   </div>
                 </div>
@@ -391,12 +440,13 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
                       <p className="text-slate-600 font-medium">Your score for this round</p>
                     </div>
                   )}
+                  <p className="text-xs text-slate-500 font-medium">Returning to dashboard in {countdown}s…</p>
                   <div className="mt-8">
                     <a
                       href={portalHref}
                       className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
                     >
-                      Return to portal
+                      Return to portal now
                     </a>
                   </div>
                 </div>

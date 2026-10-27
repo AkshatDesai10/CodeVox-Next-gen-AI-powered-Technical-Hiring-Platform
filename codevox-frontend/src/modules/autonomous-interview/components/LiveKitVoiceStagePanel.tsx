@@ -12,22 +12,25 @@ import {
   type ChatMessage,
 } from '@/modules/autonomous-interview/components/InterviewLiveTranscript';
 import { postInterviewProctorEvents, forceCompleteAutonomous, leaveBuildWithoutSubmission } from '@/modules/autonomous-interview/lib/autonomous-interview-api';
-import { getMaxMediaStrikes, getMediaGraceSeconds, isAutoSubmitOnStrikeEnabled } from '@/modules/autonomous-interview/lib/media-recovery';
+import {
+  getFocusStrikeThresholdSeconds,
+  getMaxFocusStrikes,
+  getMaxMediaStrikes,
+  getMediaGraceSeconds,
+  isAutoSubmitOnFocusStrikeEnabled,
+  isAutoSubmitOnMediaStrikeEnabled,
+  isFocusStrikesEnabled,
+  isMediaStrikesEnabled,
+} from '@/modules/autonomous-interview/lib/media-recovery';
 import { useFocusIntegrity } from '@/modules/proctor/useFocusIntegrity';
 import { useProctorEventBatch } from '@/modules/proctor/useProctorEventBatch';
 import { useSessionProctor } from '@/modules/proctor/useSessionProctor';
-import { useVoiceConsistency } from '@/modules/proctor/useVoiceConsistency';
 import { BuildAssessmentSidePanel } from '@/modules/autonomous-interview/components/BuildAssessmentSidePanel';
+import { FullscreenEnforcementModal } from '@/modules/autonomous-interview/components/FullscreenEnforcementModal';
 import { getProjectInterviewSubmission } from '@/modules/assessments/lib/project-interview-api';
 import { AI_INTERVIEWER_AVATAR_URL } from '@/modules/autonomous-interview/lib/ai-interviewer-avatar';
 import { disconnectLiveKitRoom } from '@/modules/autonomous-interview/lib/livekit-session';
 import { useInterviewLeaveGuard, releaseInterviewLeaveGuard, type LeaveAttempt } from '@/modules/autonomous-interview/lib/interview-leave-guard';
-import { InterviewRecBadge } from '@/modules/autonomous-interview/components/InterviewRecBadge';
-import { VoicePhasePillStrip } from '@/modules/autonomous-interview/components/VoicePhasePillStrip';
-import {
-  resolveSpeakingState,
-  useVoicePhaseProgress,
-} from '@/modules/autonomous-interview/hooks/useVoicePhaseProgress';
 import type { ProctorEventInput } from '@/modules/proctor/types';
 
 const NOTES_PREFIX = 'nexus-interview-notes:';
@@ -51,6 +54,13 @@ type Props = {
     faceMatchThreshold: number;
     requireCameraForStart: boolean;
     requireVoiceEnroll?: boolean;
+    enableMediaStrikes?: boolean;
+    maxMediaStrikes?: number;
+    autoSubmitOnMediaStrike?: boolean;
+    enableFocusStrikes?: boolean;
+    maxFocusStrikes?: number;
+    autoSubmitOnFocusStrike?: boolean;
+    focusStrikeThresholdSeconds?: number;
   };
   proctorWarning?: string | null;
   onProctorWarningDismiss?: () => void;
@@ -138,29 +148,39 @@ export function LiveKitVoiceStagePanel({
   const [notes, setNotes] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const [buildDueAtMs, setBuildDueAtMs] = useState<number | null>(null);
-  const [backendVoicePhase, setBackendVoicePhase] = useState<string | null>(null);
-  const [backendEngine, setBackendEngine] = useState<string | null>(null);
+  const focusTerminationStartedRef = useRef(false);
+  const focusRoundKeyRef = useRef(`${buildMode ? 'build' : 'interview'}:${phase}`);
 
-  const analyzingResponse =
-    status === 'live' && hasSpokenThisTurn && !candidateSpeaking;
-  const avatarGlowState = resolveSpeakingState({
-    agentSpeaking: status === 'agent_speaking',
-    analyzing: analyzingResponse,
-    listening: status === 'live' && !analyzingResponse,
-  });
-  const voicePillPhase = useVoicePhaseProgress({
-    visible: visible && !compact && !buildMode,
-    speakingState: avatarGlowState,
-    backendPhase: backendVoicePhase ?? subPhase ?? phase,
-    backendEngine,
-  });
-  const showRecBadge =
+  const enableMediaStrikes =
+    proctorConfig?.enableMediaStrikes ?? isMediaStrikesEnabled();
+  const enableFocusStrikes =
+    proctorConfig?.enableFocusStrikes ?? isFocusStrikesEnabled();
+  const maxFocusStrikes =
+    proctorConfig?.maxFocusStrikes ?? getMaxFocusStrikes();
+  const focusThresholdSeconds =
+    proctorConfig?.focusStrikeThresholdSeconds ?? getFocusStrikeThresholdSeconds();
+  const autoSubmitFocus =
+    proctorConfig?.autoSubmitOnFocusStrike ?? isAutoSubmitOnFocusStrikeEnabled();
+  const autoSubmitMedia =
+    proctorConfig?.autoSubmitOnMediaStrike ?? isAutoSubmitOnMediaStrikeEnabled();
+
+  /** Interview is live and actively speaking / interacting */
+  const isInterviewLive =
+    agentConnected &&
+    (status === 'live' || status === 'agent_speaking') &&
+    (!forceScreenShare || screenShareGranted);
+
+  /** Focus/fullscreen lockdown: Screening / Verbal / Defend — never Build. Active only when focus strikes enabled and interview is live. */
+  const shouldEnforceIntegrity =
     visible &&
     !compact &&
-    (status === 'connecting' ||
-      status === 'waiting_agent' ||
-      status === 'live' ||
-      status === 'agent_speaking');
+    !buildMode &&
+    enableFocusStrikes &&
+    isInterviewLive &&
+    (phase === 'ai_screening' ||
+      phase === 'ai_verbal' ||
+      phase === 'hr_verbal' ||
+      phase === 'bnd_interview');
 
   const { enqueue } = useProctorEventBatch(
     (events: ProctorEventInput[]) => postInterviewProctorEvents(candidateToken, events),
@@ -172,7 +192,25 @@ export function LiveKitVoiceStagePanel({
       if (proctorInterventionRef.current && event.type === 'extra_voice_suspected') {
         return;
       }
-      enqueue(event);
+      const withRound: ProctorEventInput = {
+        ...event,
+        payload: {
+          ...(event.payload ?? {}),
+          phase,
+          round_type:
+            (event.payload?.round_type as string | undefined) ??
+            (buildMode
+              ? 'bnd_build'
+              : phase === 'bnd_interview'
+                ? 'project_defense'
+                : phase === 'ai_screening'
+                  ? 'screening'
+                  : phase === 'hr_verbal'
+                    ? 'hr_verbal'
+                    : 'intro_verbal'),
+        },
+      };
+      enqueue(withRound);
       if (event.type === 'multi_face') {
         const multiFaceAt = new Date().toLocaleTimeString([], {
           hour: '2-digit',
@@ -184,7 +222,7 @@ export function LiveKitVoiceStagePanel({
         setProctorAlert(`Integrity alert: ${event.type.replace(/_/g, ' ')}`);
       }
     },
-    [enqueue, publishProctorTelemetry],
+    [buildMode, enqueue, phase, publishProctorTelemetry],
   );
 
   const handleFaceTelemetry = useCallback(
@@ -200,7 +238,44 @@ export function LiveKitVoiceStagePanel({
     [publishProctorTelemetry],
   );
 
-  useFocusIntegrity(visible && !compact, handleProctorEvent);
+  const terminateForProctor = useCallback(
+    async (terminationReason: string) => {
+      beginIntentionalExit();
+      try {
+        await endInterview('proctor_termination');
+      } catch (err) {
+        console.warn('[proctor] LiveKit end_interview signal failed', err);
+      }
+      try {
+        await forceCompleteAutonomous(candidateToken, {
+          endedBy: 'proctor',
+          terminationReason,
+        });
+      } catch (err) {
+        console.warn('[proctor] force-complete failed', err);
+      }
+    },
+    [beginIntentionalExit, candidateToken, endInterview],
+  );
+
+  const {
+    isAway,
+    secondsLeft: focusSecondsLeft,
+    strikePendingAck,
+    focusStrikeCount,
+    returnToFullscreen,
+    hydrateFocusStrikes,
+    resetFocusStrikes,
+  } = useFocusIntegrity({
+    enabled: shouldEnforceIntegrity,
+    thresholdSeconds: focusThresholdSeconds,
+    onEvent: handleProctorEvent,
+    onFocusStrike: ({ durationSeconds }) => {
+      setProctorAlert(
+        `Focus strike: browser tab/window away for ${durationSeconds}s`,
+      );
+    },
+  });
 
   useSessionProctor({
     enabled: visible && !compact && videoEnabled,
@@ -215,8 +290,94 @@ export function LiveKitVoiceStagePanel({
     onFaceTelemetry: handleFaceTelemetry,
   });
 
-  // HACK: Disabled since InterviewConsentGate (and voice enrollment) is bypassed
-  // useVoiceConsistency(candidateToken, visible && !compact && micEnabled, phase, handleProctorEvent);
+  // Hydrate / reset focus strikes with round transitions (Build never enforces).
+  useEffect(() => {
+    const nextKey = `${buildMode ? 'build' : 'interview'}:${phase}`;
+    if (focusRoundKeyRef.current !== nextKey) {
+      focusRoundKeyRef.current = nextKey;
+      resetFocusStrikes();
+      focusTerminationStartedRef.current = false;
+    }
+    if (!visible || buildMode) return;
+    let cancelled = false;
+    void getAutonomousSession(candidateToken).then((session) => {
+      if (cancelled) return;
+      const summary = session.proctorSummary as Record<string, unknown> | null | undefined;
+      const round = summary?.current_round_strikes as
+        | { focus_strikes?: number }
+        | undefined;
+      if (typeof round?.focus_strikes === 'number') {
+        hydrateFocusStrikes(round.focus_strikes);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    buildMode,
+    candidateToken,
+    hydrateFocusStrikes,
+    phase,
+    resetFocusStrikes,
+    visible,
+  ]);
+
+  // Focus auto-terminate (two-step: LiveKit signal then force-complete).
+  useEffect(() => {
+    if (!enableFocusStrikes || !autoSubmitFocus || !shouldEnforceIntegrity) return;
+    if (focusStrikeCount < maxFocusStrikes) return;
+    if (focusTerminationStartedRef.current) return;
+    focusTerminationStartedRef.current = true;
+    const displayDeadline = Date.now() + 4000;
+    void (async () => {
+      try {
+        await handleProctorEvent({
+          type: 'focus_strike_terminated',
+          severity: 'critical',
+          client_ts: Date.now(),
+          payload: {
+            focus_strikes: focusStrikeCount,
+            max_focus_strikes: maxFocusStrikes,
+            message: 'Session closed after maximum focus strikes',
+          },
+        });
+      } catch {
+        /* ignore */
+      }
+      await terminateForProctor('max_focus_strikes_exceeded');
+      const remainingMs = Math.max(0, displayDeadline - Date.now());
+      window.setTimeout(() => {
+        void disconnectLiveKitRoom(room);
+        releaseInterviewLeaveGuard();
+        onForceExit?.();
+      }, remainingMs);
+    })();
+  }, [
+    autoSubmitFocus,
+    focusStrikeCount,
+    handleProctorEvent,
+    maxFocusStrikes,
+    onForceExit,
+    room,
+    shouldEnforceIntegrity,
+    terminateForProctor,
+  ]);
+
+  // Verbal stages: block copy/paste (coding sandbox keeps clipboard).
+  useEffect(() => {
+    if (!shouldEnforceIntegrity) return;
+    const block = (e: ClipboardEvent) => {
+      e.preventDefault();
+    };
+    document.addEventListener('copy', block, true);
+    document.addEventListener('cut', block, true);
+    document.addEventListener('paste', block, true);
+    return () => {
+      document.removeEventListener('copy', block, true);
+      document.removeEventListener('cut', block, true);
+      document.removeEventListener('paste', block, true);
+    };
+  }, [shouldEnforceIntegrity]);
 
   useEffect(() => {
     if (compact) {
@@ -240,33 +401,11 @@ export function LiveKitVoiceStagePanel({
           : (session.introMaxTurns ?? 50),
       );
       setRoomName(`interview-${candidateToken}`);
-      setBackendVoicePhase(session.voicePhase ?? session.currentPhase ?? phase ?? null);
-      if (session.engine) setBackendEngine(session.engine);
-      else if (
-        session.isBehavioral ||
-        session.currentPhase === 'hr_verbal' ||
-        phase === 'hr_verbal'
-      ) {
-        setBackendEngine('behavioral');
-      }
     });
     return () => {
       cancelled = true;
     };
   }, [candidateToken, visible, phase, buildMode]);
-
-  // Keep phase pills in sync when parent viewport shifts (e.g. screening→verbal merge).
-  useEffect(() => {
-    if (!phase) return;
-    setBackendVoicePhase(phase);
-    if (phase === 'hr_verbal') setBackendEngine('behavioral');
-    else if (phase === 'ai_screening') setBackendEngine('screening');
-    else if (phase === 'ai_verbal') setBackendEngine('technical');
-  }, [phase]);
-
-  useEffect(() => {
-    if (subPhase === 'transition') setBackendVoicePhase('transition');
-  }, [subPhase]);
 
   useEffect(() => {
     try {
@@ -442,9 +581,8 @@ export function LiveKitVoiceStagePanel({
         void endInterview().catch(() => {});
       }
 
-      // Build & Defend: do NOT inject fake SYSTEM "silence" turns — that advances
-      // questions without listening to the candidate and inflates exchange counts.
-      if (buildMode || isBndInterview) return;
+      // Build: candidate works on deliverables; no AI voice interviewer countdown.
+      if (buildMode) return;
 
       if (status === 'live' && connectionState === 'connected') {
         if (mediaRecoveryRequiredRef.current || proctorInterventionRef.current) {
@@ -462,6 +600,11 @@ export function LiveKitVoiceStagePanel({
           setCountdown((c) => {
             if (c <= 1) {
               timerPausedRef.current = true;
+              // Defend: do NOT inject fake SYSTEM "silence" turns — that advances
+              // questions without listening to the candidate and inflates exchange counts.
+              if (isBndInterview) {
+                return 0;
+              }
               setTimeout(() => {
                 consecutiveTimeoutsRef.current += 1;
                 if (consecutiveTimeoutsRef.current >= 3) {
@@ -487,12 +630,11 @@ export function LiveKitVoiceStagePanel({
   }, [visible, endInterview, status, room, buildMode, buildDueAtMs, phase, connectionState]);
 
   useEffect(() => {
-    if (!isAutoSubmitOnStrikeEnabled()) return;
+    if (!enableMediaStrikes || !autoSubmitMedia) return;
     if (!mediaRecovery.terminated || mediaTerminationStartedRef.current) return;
     mediaTerminationStartedRef.current = true;
-    const maxStrikes = getMaxMediaStrikes();
+    const maxStrikes = proctorConfig?.maxMediaStrikes ?? getMaxMediaStrikes();
     const graceSeconds = getMediaGraceSeconds();
-    beginIntentionalExit();
     const displayDeadline = Date.now() + 4000;
     void (async () => {
       try {
@@ -517,7 +659,13 @@ export function LiveKitVoiceStagePanel({
       }
       try {
         if (buildMode) await leaveBuildWithoutSubmission(candidateToken);
-        else await forceCompleteAutonomous(candidateToken);
+        else {
+          await terminateForProctor(
+            mediaRecovery.terminationReason === 'max_strikes_exceeded'
+              ? 'max_media_strikes_exceeded'
+              : 'media_grace_timeout',
+          );
+        }
       } catch (err) {
         console.warn('[termination] Backend complete call threw, proceeding with exit', err);
       } finally {
@@ -530,7 +678,7 @@ export function LiveKitVoiceStagePanel({
       }
     })();
   }, [
-    beginIntentionalExit,
+    autoSubmitMedia,
     buildMode,
     candidateToken,
     mediaRecovery.strike,
@@ -538,7 +686,9 @@ export function LiveKitVoiceStagePanel({
     mediaRecovery.terminationReason,
     onForceExit,
     phase,
+    proctorConfig?.maxMediaStrikes,
     room,
+    terminateForProctor,
   ]);
 
   const handleEndInterview = useCallback(async () => {
@@ -675,6 +825,13 @@ export function LiveKitVoiceStagePanel({
         setPreAcquiredScreenTrack?.(track);
         setScreenShareGranted?.(true);
         setScreenShareDialogOpen(false);
+        if (enableFocusStrikes && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch {
+            /* ignore if browser policy blocks */
+          }
+        }
       } catch (err) {
         const name = err instanceof DOMException || err instanceof Error ? err.name : '';
         setScreenShareGateError(
@@ -1023,8 +1180,16 @@ export function LiveKitVoiceStagePanel({
   return (
     <div className="conversation-session flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden antialiased">
       {dialogs}
+      <FullscreenEnforcementModal
+        open={shouldEnforceIntegrity && isAway}
+        secondsLeft={focusSecondsLeft}
+        strikePendingAck={strikePendingAck}
+        focusStrikeCount={focusStrikeCount}
+        maxFocusStrikes={maxFocusStrikes}
+        onReturn={() => void returnToFullscreen()}
+      />
 
-      {/* TOP HEADER BAR — CodeVox Assessment shell */}
+      {/* TOP HEADER BAR — Nexus Assessment shell */}
       <header className="z-30 flex h-14 shrink-0 items-center justify-between bg-[var(--assessment-primary)] px-4 shadow-md sm:px-6">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex items-center gap-2">
@@ -1032,7 +1197,7 @@ export function LiveKitVoiceStagePanel({
               <AssessmentMaterialIcon name="neurology" size={18} />
             </div>
             <span className="shrink-0 text-base font-bold text-[var(--assessment-on-primary)]">
-              CodeVox Assessment
+              Nexus Assessment
             </span>
           </div>
           <div className="hidden h-6 w-px bg-white/30 sm:block" />
@@ -1050,9 +1215,6 @@ export function LiveKitVoiceStagePanel({
         </div>
 
         <div className="flex items-center gap-3">
-          {showRecBadge ? (
-            <InterviewRecBadge elapsed={elapsed} compact className="hidden sm:inline-flex" />
-          ) : null}
           <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 sm:px-4">
             <AssessmentMaterialIcon name="timer" size={16} className="text-white" />
             <span className="font-mono-label text-xs font-medium text-white">
@@ -1113,17 +1275,7 @@ export function LiveKitVoiceStagePanel({
 
           <div className="custom-scrollbar relative z-10 flex h-full w-full flex-col justify-between overflow-y-auto p-6">
             {/* Active question card */}
-            <div className="w-full shrink-0 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-5 shadow-sm">
-              {!buildMode && (phase === 'ai_verbal' || phase === 'hr_verbal' || phase === 'ai_screening') ? (
-                <div className="mb-3">
-                  <VoicePhasePillStrip active={voicePillPhase} />
-                </div>
-              ) : null}
-              {showRecBadge ? (
-                <div className="mb-3 sm:hidden">
-                  <InterviewRecBadge elapsed={elapsed} />
-                </div>
-              ) : null}
+            <div className="w-full shrink-0 rounded-xl border border-[var(--assessment-outline-variant)] bg-white p-5 shadow-sm">
               <div className="mb-2.5 flex items-center justify-between gap-3 border-b border-[var(--assessment-outline-variant)]/40 pb-2.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-2.5">
                   <span className="font-mono-label inline-flex items-center gap-1.5 rounded-full border border-[var(--assessment-primary)]/30 bg-[var(--assessment-primary)]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--assessment-primary)]">
@@ -1166,10 +1318,6 @@ export function LiveKitVoiceStagePanel({
             {/* Middle: interviewer tile + HUD */}
             <div className="my-4 grid min-h-0 flex-1 grid-cols-12 items-stretch gap-5">
               <div className="group relative col-span-8 flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[#1d3054] shadow-sm">
-                <div
-                  className={`avatar-glow-ring rounded-xl is-${avatarGlowState}`}
-                  aria-hidden
-                />
                 <img
                   alt="AI interviewer"
                   className="absolute inset-0 h-full w-full scale-[1.02] object-cover object-[center_18%] brightness-[0.96] contrast-[1.04] saturate-[1.05] transition-transform duration-500 group-hover:scale-[1.04]"
@@ -1203,9 +1351,7 @@ export function LiveKitVoiceStagePanel({
                 <div className="relative z-10 flex w-full items-end justify-between p-3.5">
                   <div className="flex flex-1 items-end justify-start">
                     {showWave ? (
-                      <div
-                        className={`glass-card wave-container rounded-full px-3 py-2 shadow-sm is-${avatarGlowState}`}
-                      >
+                      <div className="glass-card wave-container rounded-full px-3 py-2 shadow-sm">
                         {Array.from({ length: 8 }).map((_, i) => (
                           <div
                             key={i}
@@ -1282,7 +1428,7 @@ export function LiveKitVoiceStagePanel({
                 </div>
 
                 {/* HUD */}
-                <div className="flex shrink-0 flex-col justify-between rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4 shadow-sm">
+                <div className="flex shrink-0 flex-col justify-between rounded-xl border border-[var(--assessment-outline-variant)] bg-white p-4 shadow-sm">
                   <div>
                     <div className="mb-2.5 flex items-center justify-between border-b border-[var(--assessment-outline-variant)]/40 pb-2">
                       <span className="font-mono-label flex items-center gap-1.5 text-[11px] font-semibold uppercase text-[var(--assessment-on-surface-variant)]">
@@ -1442,12 +1588,12 @@ export function LiveKitVoiceStagePanel({
         </main>
 
         {/* RIGHT SIDEBAR */}
-        <aside className="z-10 flex h-full w-[30%] min-w-[280px] flex-col border-l border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] shadow-sm">
+        <aside className="z-10 flex h-full w-[30%] min-w-[280px] flex-col border-l border-[var(--assessment-outline-variant)] bg-white shadow-sm">
           {buildMode && buildLookupToken ? (
             <BuildAssessmentSidePanel lookupToken={buildLookupToken} />
           ) : (
             <>
-          <div className="shrink-0 border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4">
+          <div className="shrink-0 border-b border-[var(--assessment-outline-variant)] bg-white p-4">
             <div className="mb-3 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-2.5 shadow-sm">
               <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-[var(--assessment-outline-variant)]/40 pb-1.5">
                 <div className="flex min-w-0 items-center gap-1.5">

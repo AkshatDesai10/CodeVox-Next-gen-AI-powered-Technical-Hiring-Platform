@@ -39,12 +39,11 @@ import {
   ScreenShareRequiredOverlay,
 } from '@/modules/autonomous-interview/components/LiveKitConnectionBanner';
 import { MediaPermissionGateModal } from '@/modules/autonomous-interview/components/MediaPermissionGateModal';
-import { getPortalRuntimeConfig } from '@/lib/candidate-api';
 import {
-  applyRuntimeProctorConfig,
   getMaxMediaStrikes,
   getMediaGraceSeconds,
-  isAutoSubmitOnStrikeEnabled,
+  isAutoSubmitOnMediaStrikeEnabled,
+  isMediaStrikesEnabled,
   INITIAL_MEDIA_RECOVERY,
   classifyMediaError,
   safeStopTrack,
@@ -98,8 +97,12 @@ type InterviewRoomContextValue = {
   toggleMic: () => Promise<void>;
   toggleVideo: () => Promise<void>;
   toggleScreenShare: () => Promise<void>;
-  /** Pass a reason only for the candidate's End interview confirmation. */
-  endInterview: (reason?: 'candidate_ended_interview') => Promise<void>;
+  /** Pass a reason for candidate exit or proctor termination (LiveKit DataChannel). */
+  endInterview: (
+    reason?: 'candidate_ended_interview' | 'proctor_termination',
+  ) => Promise<void>;
+  /** Authoritative media strike count for this round (hydrated / reset with round). */
+  mediaStrikeCount: number;
   /** Confirmed Leave: a later room delete must not start auto-rejoin. */
   beginIntentionalExit: () => void;
   /** Leave was rejected; the candidate is still in the round. */
@@ -200,6 +203,7 @@ type ProviderProps = {
   initialScreenTrack?: MediaStreamTrack | null;
   /** Current interview phase. Closing and completed stay unguarded. */
   phase?: string;
+  proctorConfig?: Record<string, unknown> | null;
   children: ReactNode;
 };
 
@@ -211,8 +215,11 @@ export function InterviewRoomProvider({
   forceScreenShare = false,
   initialScreenTrack = null,
   phase = '',
+  proctorConfig,
   children,
 }: ProviderProps) {
+  const proctorConfigRef = useRef(proctorConfig);
+  proctorConfigRef.current = proctorConfig;
   const buildMode = mode === 'build';
   // Build always requires camera + screen share; callers may also force for Defend / AI Screening.
   const lockCamera = forceCamera || buildMode;
@@ -282,7 +289,10 @@ export function InterviewRoomProvider({
   const recoveryRef = useRef(mediaRecovery);
   recoveryRef.current = mediaRecovery;
   const outageActiveRef = useRef(false);
-  const strikesRef = useRef(0);
+  const mediaStrikesRef = useRef(0);
+  const [mediaStrikeCount, setMediaStrikeCount] = useState(0);
+  const roundKeyRef = useRef(`${mode}:${phase}`);
+  const hydratedRef = useRef(false);
   const graceDeadlineRef = useRef<number | null>(null);
   const outageStartedAtRef = useRef<number | null>(null);
   const revokedEventSentRef = useRef(false);
@@ -413,7 +423,7 @@ export function InterviewRoomProvider({
       const payload = {
         type: PROCTOR_TELEMETRY_TYPE,
         timestamp: Date.now(),
-        strikeCount: recovery.strike,
+        strikeCount: mediaStrikesRef.current,
         maxStrikes: getMaxMediaStrikes(),
         lookingAway: lastTelemetryRef.current.lookingAway,
         multiFace: lastTelemetryRef.current.multiFace,
@@ -424,7 +434,7 @@ export function InterviewRoomProvider({
           : 0,
       };
       void target.localParticipant
-        .publishData(encodeProctorData(payload) as any, { reliable: true })
+        .publishData(encodeProctorData(payload), { reliable: true })
         .catch(() => undefined);
     },
     [],
@@ -481,9 +491,28 @@ export function InterviewRoomProvider({
     }
 
     outageActiveRef.current = true;
-    strikesRef.current += 1;
-    const strike = strikesRef.current;
-    const terminated = isAutoSubmitOnStrikeEnabled() && strike >= getMaxMediaStrikes();
+    const enableMedia =
+      typeof proctorConfigRef.current?.enableMediaStrikes === 'boolean'
+        ? proctorConfigRef.current.enableMediaStrikes
+        : isMediaStrikesEnabled();
+    const autoSubmitMedia =
+      typeof proctorConfigRef.current?.autoSubmitOnMediaStrike === 'boolean'
+        ? proctorConfigRef.current.autoSubmitOnMediaStrike
+        : isAutoSubmitOnMediaStrikeEnabled();
+    const maxMedia =
+      typeof proctorConfigRef.current?.maxMediaStrikes === 'number'
+        ? proctorConfigRef.current.maxMediaStrikes
+        : getMaxMediaStrikes();
+
+    if (enableMedia) {
+      mediaStrikesRef.current += 1;
+      setMediaStrikeCount(mediaStrikesRef.current);
+    }
+    const strike = mediaStrikesRef.current;
+    const terminated =
+      enableMedia &&
+      autoSubmitMedia &&
+      strike >= maxMedia;
     outageStartedAtRef.current = Date.now();
     if (terminated) {
       graceDeadlineRef.current = null;
@@ -522,7 +551,7 @@ export function InterviewRoomProvider({
             client_ts: Date.now(),
             payload: {
               missing,
-              strike: strikesRef.current,
+              strike: mediaStrikesRef.current,
               reason,
               phase: phaseRef.current,
             },
@@ -626,7 +655,7 @@ export function InterviewRoomProvider({
       throw new Error('Not connected to the interview room.');
     }
     await waitForConnected(room, PUBLISH_WAIT_MS);
-    const data = new TextEncoder().encode(JSON.stringify(payload));
+    const data = new TextEncoder().encode(JSON.stringify(payload)) as Uint8Array<ArrayBuffer>;
     await room.localParticipant.publishData(data, { reliable: true });
   }, []);
 
@@ -706,7 +735,9 @@ export function InterviewRoomProvider({
     leftRef.current = false;
   }, []);
 
-  const endInterview = useCallback(async (reason?: 'candidate_ended_interview') => {
+  const endInterview = useCallback(async (
+    reason?: 'candidate_ended_interview' | 'proctor_termination',
+  ) => {
     // Explicit Leave only: from here on a disconnect must not trigger an auto-rejoin.
     leftRef.current = true;
     try {
@@ -720,6 +751,49 @@ export function InterviewRoomProvider({
       throw err;
     }
   }, [publishJson]);
+
+  // Hydrate media strikes from backend on mount/refresh; reset only when round changes.
+  useEffect(() => {
+    const nextKey = `${mode}:${phase}`;
+    if (roundKeyRef.current !== nextKey) {
+      roundKeyRef.current = nextKey;
+      mediaStrikesRef.current = 0;
+      setMediaStrikeCount(0);
+      hydratedRef.current = false;
+      commitRecovery(INITIAL_MEDIA_RECOVERY);
+      outageActiveRef.current = false;
+      revokedEventSentRef.current = false;
+      graceDeadlineRef.current = null;
+    }
+    if (hydratedRef.current || !candidateToken || !enabled) return;
+    let cancelled = false;
+    void getAutonomousSession(candidateToken).then((session) => {
+      if (cancelled) return;
+      const summary = session.proctorSummary as Record<string, unknown> | null | undefined;
+      const round = summary?.current_round_strikes as
+        | { media_strikes?: number }
+        | undefined;
+      const fromRound =
+        typeof round?.media_strikes === 'number' ? round.media_strikes : null;
+      const fromLifetime =
+        typeof summary?.media_strike_count === 'number'
+          ? Number(summary.media_strike_count)
+          : 0;
+      const serverMax = session.proctorConfig?.maxMediaStrikes;
+      const count = Math.max(0, fromRound ?? fromLifetime);
+      mediaStrikesRef.current = count;
+      setMediaStrikeCount(count);
+      if (typeof serverMax === 'number' && serverMax >= 1) {
+        /* FE UX still uses NEXT_PUBLIC_* for countdowns; BE auto-submit is authoritative */
+      }
+      hydratedRef.current = true;
+    }).catch(() => {
+      hydratedRef.current = true;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [candidateToken, commitRecovery, enabled, mode, phase]);
 
   const confirmCoding = useCallback(async () => {
     await publishJson({ type: 'confirm_coding' });
@@ -745,30 +819,6 @@ export function InterviewRoomProvider({
     return () => window.removeEventListener('unhandledrejection', handleUnhandledRejection);
   }, []);
 
-  // One-time fetch: apply dynamic proctor limits over NEXT_PUBLIC_* env fallbacks.
-  useEffect(() => {
-    let cancelled = false;
-    void getPortalRuntimeConfig()
-      .then((cfg) => {
-        if (cancelled) return;
-        applyRuntimeProctorConfig({
-          maxStrikes: cfg.maxStrikes,
-          autoSubmitOnStrike: cfg.autoSubmitOnStrike,
-          graceSeconds: cfg.graceSeconds,
-        });
-        setGraceSecondsLeft((prev) => {
-          const next = getMediaGraceSeconds();
-          return prev === next ? prev : next;
-        });
-      })
-      .catch(() => {
-        /* keep env / defaults */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   useEffect(() => {
     const onOnline = () => flushLinkLogs();
     window.addEventListener('online', onOnline);
@@ -790,6 +840,9 @@ export function InterviewRoomProvider({
       try {
         const session = await getAutonomousSession(candidateToken);
         if (cancelled) return;
+        if (session.proctorConfig) {
+          proctorConfigRef.current = session.proctorConfig as Record<string, unknown>;
+        }
 
         // candidate-ready (re)starts the agent, so it is called once per round start. A reload or
         // reopened link mid-round joins the running agent's room via /init instead.
@@ -947,6 +1000,57 @@ export function InterviewRoomProvider({
                 } else if (lockScreenShareRef.current) {
                   screenTrackRef.current = null;
                   setScreenReshareRequired(true);
+                  // Screen-share drop counts as a media strike (separate from camera/mic).
+                  if (
+                    !isRejoiningRef.current &&
+                    !mediaSwapRef.current &&
+                    !intentionalExitRef.current &&
+                    !leftRef.current
+                  ) {
+                    const enableMedia =
+                      typeof proctorConfigRef.current?.enableMediaStrikes === 'boolean'
+                        ? proctorConfigRef.current.enableMediaStrikes
+                        : isMediaStrikesEnabled();
+                    const autoSubmitMedia =
+                      typeof proctorConfigRef.current?.autoSubmitOnMediaStrike === 'boolean'
+                        ? proctorConfigRef.current.autoSubmitOnMediaStrike
+                        : isAutoSubmitOnMediaStrikeEnabled();
+                    const maxMedia =
+                      typeof proctorConfigRef.current?.maxMediaStrikes === 'number'
+                        ? proctorConfigRef.current.maxMediaStrikes
+                        : getMaxMediaStrikes();
+
+                    if (enableMedia) {
+                      mediaStrikesRef.current += 1;
+                      setMediaStrikeCount(mediaStrikesRef.current);
+                    }
+                    const strike = mediaStrikesRef.current;
+                    const terminated =
+                      enableMedia &&
+                      autoSubmitMedia &&
+                      strike >= maxMedia;
+                    void postInterviewProctorEvents(candidateToken, [
+                      {
+                        type: 'screen_share_dropped',
+                        severity: 'critical',
+                        client_ts: Date.now(),
+                        payload: {
+                          strike,
+                          phase: phaseRef.current,
+                          message: 'Screen share stopped / permission revoked',
+                        },
+                      },
+                    ]).catch(() => {});
+                    if (terminated) {
+                      commitRecovery({
+                        ...recoveryRef.current,
+                        required: true,
+                        strike,
+                        terminated: true,
+                        terminationReason: 'max_strikes_exceeded',
+                      });
+                    }
+                  }
                 } else {
                   screenWantedRef.current = false;
                 }
@@ -1200,7 +1304,7 @@ export function InterviewRoomProvider({
             client_ts: Date.now(),
             payload: {
               restored,
-              strike: strikesRef.current,
+              strike: mediaStrikesRef.current,
               duration_ms: Date.now() - startedAt,
               phase: phaseRef.current,
             },
@@ -1239,20 +1343,34 @@ export function InterviewRoomProvider({
     graceDeadlineRef.current = null;
     commitRecovery({
       ...INITIAL_MEDIA_RECOVERY,
-      strike: strikesRef.current,
+      strike: mediaStrikesRef.current,
     });
   }, [commitRecovery, requireCamera, requireMic]);
 
   useEffect(() => {
     if (!mediaRecovery.required || mediaRecovery.terminated) return;
-    if (isAutoSubmitOnStrikeEnabled() && mediaRecovery.strike >= getMaxMediaStrikes()) return;
+    if (
+      isAutoSubmitOnMediaStrikeEnabled() &&
+      mediaRecovery.strike >= getMaxMediaStrikes()
+    ) {
+      return;
+    }
     const tick = () => {
       const deadline = graceDeadlineRef.current;
       if (deadline == null || recoveryRef.current.terminated) return;
       const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setGraceSecondsLeft((prev) => (prev === left ? prev : left));
+      const enableMedia =
+        typeof proctorConfigRef.current?.enableMediaStrikes === 'boolean'
+          ? proctorConfigRef.current.enableMediaStrikes
+          : isMediaStrikesEnabled();
+      const autoSubmitMedia =
+        typeof proctorConfigRef.current?.autoSubmitOnMediaStrike === 'boolean'
+          ? proctorConfigRef.current.autoSubmitOnMediaStrike
+          : isAutoSubmitOnMediaStrikeEnabled();
+
       if (left > 0) return;
-      if (!isAutoSubmitOnStrikeEnabled()) return;
+      if (!enableMedia || !autoSubmitMedia) return;
       commitRecovery({
         ...recoveryRef.current,
         required: true,
@@ -1370,6 +1488,7 @@ export function InterviewRoomProvider({
     toggleVideo,
     toggleScreenShare,
     endInterview,
+    mediaStrikeCount,
     beginIntentionalExit,
     releaseIntentionalExit,
     confirmCoding,

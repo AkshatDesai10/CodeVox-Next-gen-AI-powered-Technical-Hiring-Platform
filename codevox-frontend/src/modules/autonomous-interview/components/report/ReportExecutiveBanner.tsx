@@ -11,6 +11,7 @@ import {
   deriveRecommendation,
   findCandidateEnded,
   findMediaTermination,
+  findProctorTermination,
   formatFinalizedAt,
   formatProctorEventTime,
   formatSessionIdAsName,
@@ -47,8 +48,25 @@ export function ReportExecutiveBanner({ report, enrichment, candidateName }: Pro
   const summary = report.executive_summary?.trim() || buildExecutiveSummary(report, summaryRecommendation, enrichment, name);
   const reportLabel = interviewReportKindLabel(resolveInterviewReportKind(report, enrichment), report.tech_stack);
   const identityVerified = Boolean(enrichment?.integrity?.identity_verified_at);
-  const termination = findMediaTermination(enrichment);
+  const termination = findProctorTermination(enrichment);
   const candidateEnded = findCandidateEnded(enrichment);
+  const proctorSummary = enrichment?.integrity?.proctor_summary as
+    | { terminated_by?: string; termination_reason?: string; media_strike_count?: number; focus_strike_count?: number }
+    | null
+    | undefined;
+  const proctorTerminated =
+    proctorSummary?.terminated_by === 'proctor' || Boolean(termination);
+  const isFocusTermination =
+    termination?.event_type === 'focus_strike_terminated' ||
+    proctorSummary?.termination_reason === 'max_focus_strikes_exceeded';
+  const proctorReason = isFocusTermination
+    ? `Tab & application switches (${proctorSummary?.focus_strike_count ?? termination?.payload?.focus_strikes ?? '—'} focus strikes)`
+    : proctorSummary?.termination_reason === 'max_media_strikes_exceeded' ||
+        proctorSummary?.termination_reason === 'media_grace_timeout'
+      ? `Camera / mic / screen outages (${proctorSummary?.media_strike_count ?? '—'} media strikes)`
+      : termination
+        ? mediaTerminationDetail(termination)
+        : 'Integrity policy limit reached';
 
   const depth = Math.max(0, Math.min(DEPTH_SCORE_MAX, report.depth_score ?? 0));
   const r = 44;
@@ -79,7 +97,7 @@ export function ReportExecutiveBanner({ report, enrichment, candidateName }: Pro
           </div>
         </div>
       ) : null}
-      {termination ? (
+      {proctorTerminated ? (
         <div className="rounded-2xl border-2 border-red-500 bg-red-50 p-5 shadow-sm">
           <div className="flex items-start gap-4">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
@@ -88,20 +106,22 @@ export function ReportExecutiveBanner({ report, enrichment, candidateName }: Pro
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-bold text-red-950">
-                  Interview terminated early — proctoring integrity violation
+                  Terminated by Proctor
                 </h2>
                 <span className="rounded-full bg-red-200 px-3 py-0.5 text-xs font-bold uppercase tracking-wide text-red-900">
-                  Disqualified
+                  Integrity
                 </span>
               </div>
               <p className="mt-1 text-sm font-medium leading-relaxed text-red-800">
-                {mediaTerminationDetail(termination)}
+                Candidate reached the limit for {proctorReason}.
               </p>
-              <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs font-semibold text-red-700">
-                <span>Violation logged: {formatProctorEventTime(termination.created_at)}</span>
-                <span>·</span>
-                <span>{mediaTerminationMeta(termination)}</span>
-              </div>
+              {termination ? (
+                <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs font-semibold text-red-700">
+                  <span>Violation logged: {formatProctorEventTime(termination.created_at)}</span>
+                  <span>·</span>
+                  <span>{mediaTerminationMeta(termination)}</span>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { listJobProfiles } from '@/modules/job-profiles/lib/job-profiles-api';
 import {
   bulkInviteCandidates,
@@ -17,9 +18,15 @@ type Props = {
   onCreated: () => void;
 };
 
-type DialogTab = 'single' | 'bulk';
+type TabMode = 'single' | 'bulk';
+type BulkInputMode = 'excel' | 'paste';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+export interface ParsedCandidateRow {
+  name: string;
+  email: string;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function todayIsoLocal() {
   const d = new Date();
@@ -31,88 +38,164 @@ function todayIsoLocal() {
 
 function parseEmailPaste(raw: string) {
   const tokens = raw
-    .split(/[,;\s\n\r]+/)
+    .split(/[,;\s]+/)
     .map((t) => t.trim())
     .filter(Boolean);
-
+  const valid: string[] = [];
+  const invalid: string[] = [];
   const seen = new Set<string>();
-  const validEmails: string[] = [];
-  let invalid = 0;
-  let duplicatesRemoved = 0;
-
+  let duplicateCount = 0;
   for (const token of tokens) {
-    if (!EMAIL_RE.test(token)) {
-      invalid += 1;
+    const email = token.toLowerCase();
+    if (!EMAIL_RE.test(email)) {
+      invalid.push(token);
       continue;
     }
-    const key = token.toLowerCase();
-    if (seen.has(key)) {
-      duplicatesRemoved += 1;
+    if (seen.has(email)) {
+      duplicateCount += 1;
       continue;
     }
-    seen.add(key);
-    validEmails.push(token);
+    seen.add(email);
+    valid.push(email);
   }
-
-  return {
-    validEmails,
-    invalid,
-    duplicatesRemoved,
-    rawTokenCount: tokens.length,
-  };
+  return { valid, invalid, duplicateCount, totalTokens: tokens.length };
 }
 
-function buildWaterfallPreview(slots: RecruitmentTimeSlot[], emailCount: number) {
-  const ordered = [...slots]
-    .filter((s) => (s.remaining ?? 0) > 0)
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+function parseExcelBuffer(buffer: ArrayBuffer): {
+  candidates: ParsedCandidateRow[];
+  invalidCount: number;
+  duplicateCount: number;
+} {
+  const wb = XLSX.read(buffer, { type: 'array' });
+  const firstSheetName = wb.SheetNames[0];
+  if (!firstSheetName) return { candidates: [], invalidCount: 0, duplicateCount: 0 };
+  const ws = wb.Sheets[firstSheetName];
+  const rawRows: Array<Record<string, unknown>> = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-  let leftover = emailCount;
-  const rows: Array<{
-    slot: RecruitmentTimeSlot;
-    assigned: number;
-    remainingAfter: number;
-  }> = [];
-  let totalRemaining = 0;
+  const seen = new Set<string>();
+  const candidates: ParsedCandidateRow[] = [];
+  let invalidCount = 0;
+  let duplicateCount = 0;
 
-  for (const slot of ordered) {
-    const remaining = Math.max(0, Number(slot.remaining ?? 0));
-    totalRemaining += remaining;
-    const assigned = leftover > 0 ? Math.min(remaining, leftover) : 0;
-    leftover -= assigned;
-    rows.push({
-      slot,
-      assigned,
-      remainingAfter: remaining - assigned,
+  for (const row of rawRows) {
+    let name = '';
+    let email = '';
+
+    // First, look for matching keys
+    for (const [key, val] of Object.entries(row)) {
+      const k = key.trim().toLowerCase().replace(/[^a-z]/g, '');
+      const strVal = String(val ?? '').trim();
+      if (!email && (k === 'email' || k === 'emailaddress' || k === 'mail' || k === 'candidateemail')) {
+        email = strVal;
+      } else if (!name && (k === 'name' || k === 'fullname' || k === 'candidatename' || k === 'firstname')) {
+        name = strVal;
+      }
+    }
+
+    // Fallback: If not found by header name, detect email by regex in any column
+    if (!email) {
+      for (const val of Object.values(row)) {
+        const strVal = String(val ?? '').trim();
+        if (EMAIL_RE.test(strVal)) {
+          email = strVal;
+          break;
+        }
+      }
+    }
+
+    // Fallback: If name still empty, pick first non-email non-empty string column
+    if (!name) {
+      for (const val of Object.values(row)) {
+        const strVal = String(val ?? '').trim();
+        if (strVal && strVal !== email && !EMAIL_RE.test(strVal)) {
+          name = strVal;
+          break;
+        }
+      }
+    }
+
+    const normEmail = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(normEmail)) {
+      if (email.trim()) invalidCount += 1;
+      continue;
+    }
+    if (seen.has(normEmail)) {
+      duplicateCount += 1;
+      continue;
+    }
+    seen.add(normEmail);
+    candidates.push({
+      name: name.trim(),
+      email: normEmail,
     });
   }
 
-  return { rows, totalRemaining, slotCount: ordered.length };
+  return { candidates, invalidCount, duplicateCount };
 }
 
-function formatLinksForWhatsApp(items: BulkInviteResult['items']) {
-  return items
-    .filter((item) => item.interview_url)
-    .map((item) => `${item.email}\n${item.interview_url}`)
-    .join('\n\n');
+function downloadSampleExcelTemplate() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Full Name', 'Email Address'],
+    ['Ram Sharma', 'ram.sharma@example.com'],
+    ['Priya Verma', 'priya.verma@example.com'],
+    ['Akshat Desai', 'akshat.desai@example.com'],
+  ]);
+  ws['!cols'] = [{ wch: 25 }, { wch: 35 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Candidates');
+  XLSX.writeFile(wb, 'candidates_bulk_invite_template.xlsx');
+}
+
+function computeWaterfallPreview(slots: RecruitmentTimeSlot[], candidateCount: number) {
+  const allocation: Array<{
+    id: string;
+    label: string;
+    capacity: number;
+    remainingBefore: number;
+    assigned: number;
+    remainingAfter: number;
+  }> = [];
+  let left = candidateCount;
+  for (const slot of slots) {
+    const remainingBefore = Math.max(0, Number(slot.remaining ?? 0));
+    if (remainingBefore <= 0) continue;
+    const assigned = Math.min(remainingBefore, left);
+    allocation.push({
+      id: slot.id,
+      label: slot.display_label || `${slot.start_time} – ${slot.end_time}`,
+      capacity: Number(slot.capacity ?? 0),
+      remainingBefore,
+      assigned,
+      remainingAfter: remainingBefore - assigned,
+    });
+    left -= assigned;
+    if (left <= 0) break;
+  }
+  const totalRemaining = slots.reduce((sum, s) => sum + Math.max(0, Number(s.remaining ?? 0)), 0);
+  return { allocation, totalRemaining, overflow: Math.max(0, candidateCount - totalRemaining) };
 }
 
 export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
-  const [tab, setTab] = useState<DialogTab>('single');
-
+  const [tab, setTab] = useState<TabMode>('bulk');
+  const [bulkInputMode, setBulkInputMode] = useState<BulkInputMode>('excel');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [jobProfileId, setJobProfileId] = useState('');
+  const [selectedDate, setSelectedDate] = useState(todayIsoLocal);
+  const [slotId, setSlotId] = useState('');
   const [resume, setResume] = useState<File | null>(null);
+  const [bulkEmailsRaw, setBulkEmailsRaw] = useState('');
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [excelCandidates, setExcelCandidates] = useState<ParsedCandidateRow[]>([]);
+  const [excelStats, setExcelStats] = useState<{ invalidCount: number; duplicateCount: number }>({
+    invalidCount: 0,
+    duplicateCount: 0,
+  });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  const [bulkJobProfileId, setBulkJobProfileId] = useState('');
-  const [slotDate, setSlotDate] = useState(todayIsoLocal);
-  const [emailsRaw, setEmailsRaw] = useState('');
+  const [bulkProgress, setBulkProgress] = useState<{ sent: number; total: number } | null>(null);
   const [bulkResult, setBulkResult] = useState<BulkInviteResult | null>(null);
-  const [copiedAll, setCopiedAll] = useState(false);
-  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const profilesQuery = useQuery({
     queryKey: ['job-profiles', 'active-for-manual-candidate'],
@@ -121,57 +204,88 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
   });
 
   const slotsQuery = useQuery({
-    queryKey: ['recruitment-time-slots-available', slotDate],
+    queryKey: ['recruitment-time-slots-available', selectedDate],
     queryFn: () =>
       listRecruitmentTimeSlots({
         availableOnly: true,
-        forDate: slotDate || undefined,
+        forDate: selectedDate || undefined,
       }),
-    enabled: open && tab === 'bulk' && Boolean(slotDate) && Boolean(bulkJobProfileId),
+    enabled: open && Boolean(selectedDate),
   });
 
+  const minDate = useMemo(() => todayIsoLocal(), []);
   const profiles = profilesQuery.data?.items ?? [];
   const slots: RecruitmentTimeSlot[] = slotsQuery.data?.items ?? [];
-  const parsed = useMemo(() => parseEmailPaste(emailsRaw), [emailsRaw]);
+
+  const emailParse = useMemo(() => parseEmailPaste(bulkEmailsRaw), [bulkEmailsRaw]);
+
+  // Candidates list depending on input mode
+  const effectiveCandidates: ParsedCandidateRow[] = useMemo(() => {
+    if (bulkInputMode === 'excel') {
+      return excelCandidates;
+    }
+    return emailParse.valid.map((em) => ({ name: '', email: em }));
+  }, [bulkInputMode, excelCandidates, emailParse.valid]);
+
   const waterfall = useMemo(
-    () => buildWaterfallPreview(slots, parsed.validEmails.length),
-    [slots, parsed.validEmails.length],
+    () => computeWaterfallPreview(slots, effectiveCandidates.length),
+    [slots, effectiveCandidates.length],
   );
-
-  const capacityOverflow =
-    Boolean(bulkJobProfileId) &&
-    Boolean(slotDate) &&
-    parsed.validEmails.length > 0 &&
-    !slotsQuery.isLoading &&
-    parsed.validEmails.length > waterfall.totalRemaining;
-
-  const capacityAlert = capacityOverflow
-    ? `Total capacity is ${waterfall.totalRemaining} across ${waterfall.slotCount} slots, but ${parsed.validEmails.length} emails pasted. Please add another slot or reduce ${parsed.validEmails.length - waterfall.totalRemaining} candidates.`
-    : waterfall.totalRemaining === 0 &&
-        Boolean(bulkJobProfileId) &&
-        Boolean(slotDate) &&
-        parsed.validEmails.length > 0 &&
-        !slotsQuery.isLoading
-      ? 'No open time slots with remaining capacity for the selected date. Please add or reopen a slot.'
-      : '';
-
-  const minDate = useMemo(() => todayIsoLocal(), []);
 
   if (!open) return null;
 
-  const resetBulk = () => {
-    setBulkJobProfileId('');
-    setSlotDate(todayIsoLocal());
-    setEmailsRaw('');
+  const resetAndClose = () => {
+    setName('');
+    setEmail('');
+    setJobProfileId('');
+    setSlotId('');
+    setResume(null);
+    setBulkEmailsRaw('');
+    setExcelFile(null);
+    setExcelCandidates([]);
+    setExcelStats({ invalidCount: 0, duplicateCount: 0 });
     setBulkResult(null);
-    setCopiedAll(false);
-    setCopiedEmail(null);
+    setBulkProgress(null);
+    setError('');
+    setCopiedKey(null);
+    setTab('bulk');
+    setBulkInputMode('excel');
+    onClose();
   };
 
-  const handleClose = () => {
+  const handleExcelUpload = async (file: File | null) => {
+    if (!file) {
+      setExcelFile(null);
+      setExcelCandidates([]);
+      return;
+    }
     setError('');
-    setBulkResult(null);
-    onClose();
+    setExcelFile(file);
+    try {
+      const buffer = await file.arrayBuffer();
+      const result = parseExcelBuffer(buffer);
+      setExcelCandidates(result.candidates);
+      setExcelStats({
+        invalidCount: result.invalidCount,
+        duplicateCount: result.duplicateCount,
+      });
+      if (result.candidates.length === 0) {
+        setError('No valid candidates found in the Excel file. Please ensure there is a Name and Email column.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not read Excel file.');
+      setExcelCandidates([]);
+    }
+  };
+
+  const copyText = async (key: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((cur) => (cur === key ? null : cur)), 1500);
+    } catch {
+      setError('Could not copy to clipboard');
+    }
   };
 
   const submitSingle = async () => {
@@ -184,20 +298,22 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
       setError('Select a job role.');
       return;
     }
+    if (!selectedDate || !slotId) {
+      setError('Select the interview date and time.');
+      return;
+    }
     setSubmitting(true);
     try {
       await createManualCandidate({
         name: name.trim(),
         email: email.trim(),
         jobProfileId,
+        slotId,
+        slotDate: selectedDate,
         resume,
       });
-      setName('');
-      setEmail('');
-      setJobProfileId('');
-      setResume(null);
+      resetAndClose();
       onCreated();
-      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the candidate.');
     } finally {
@@ -207,66 +323,93 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
 
   const submitBulk = async () => {
     setError('');
-    if (!bulkJobProfileId) {
+    if (!jobProfileId) {
       setError('Select a job role.');
       return;
     }
-    if (!slotDate) {
+    if (!selectedDate) {
       setError('Select an interview date.');
       return;
     }
-    if (!parsed.validEmails.length) {
-      setError('Provide at least one valid email.');
+    if (!effectiveCandidates.length) {
+      setError(
+        bulkInputMode === 'excel'
+          ? 'Upload an Excel file with valid candidates first.'
+          : 'Paste at least one valid candidate email address.',
+      );
       return;
     }
-    if (capacityOverflow || waterfall.totalRemaining === 0) {
-      setError(capacityAlert || 'Not enough capacity for these emails.');
+    if (waterfall.overflow > 0) {
+      setError(
+        `Total capacity is ${waterfall.totalRemaining} across ${waterfall.allocation.length || slots.length} slots, but ${effectiveCandidates.length} candidates provided. Please add another slot or reduce ${waterfall.overflow} candidates.`,
+      );
       return;
     }
+
     setSubmitting(true);
+    setBulkProgress({ sent: 0, total: effectiveCandidates.length });
+    const items: BulkInviteResult['items'] = [];
+    const failed: BulkInviteResult['failed'] = [];
+    const allocationMap = new Map<
+      string,
+      { slot_id: string; slot_label: string; assigned_count: number; remaining: number }
+    >();
+
     try {
-      const result = await bulkInviteCandidates({
-        emails: parsed.validEmails,
-        jobProfileId: bulkJobProfileId,
-        slotDate,
+      for (let i = 0; i < effectiveCandidates.length; i += 1) {
+        const cand = effectiveCandidates[i];
+        setBulkProgress({ sent: i, total: effectiveCandidates.length });
+        try {
+          const chunk = await bulkInviteCandidates({
+            jobProfileId,
+            slotDate: selectedDate,
+            candidates: [cand],
+            emails: [cand.email],
+          });
+          items.push(...(chunk.items ?? []));
+          for (const row of chunk.failed ?? []) failed.push(row);
+          for (const row of chunk.allocation ?? []) {
+            const prev = allocationMap.get(row.slot_id);
+            if (prev) {
+              prev.assigned_count += row.assigned_count;
+              prev.remaining = row.remaining;
+            } else {
+              allocationMap.set(row.slot_id, { ...row });
+            }
+          }
+        } catch (err) {
+          failed.push({
+            email: cand.email,
+            error: err instanceof Error ? err.message : 'Invite failed',
+          });
+        }
+        setBulkProgress({ sent: i + 1, total: effectiveCandidates.length });
+      }
+
+      setBulkResult({
+        total: effectiveCandidates.length,
+        invited: items.length,
+        failed,
+        allocation: Array.from(allocationMap.values()),
+        items,
       });
-      setBulkResult(result);
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bulk invite failed.');
+      setError(err instanceof Error ? err.message : 'Could not send bulk invites.');
     } finally {
       setSubmitting(false);
+      setBulkProgress(null);
     }
   };
-
-  const copyText = async (text: string, emailKey?: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      if (emailKey) {
-        setCopiedEmail(emailKey);
-        setTimeout(() => setCopiedEmail(null), 1500);
-      } else {
-        setCopiedAll(true);
-        setTimeout(() => setCopiedAll(false), 1500);
-      }
-    } catch {
-      setError('Could not copy to clipboard.');
-    }
-  };
-
-  const inputClass =
-    'w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm font-normal text-[var(--assessment-on-surface)] outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30';
-  const labelClass =
-    'flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]';
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={handleClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+      onClick={resetAndClose}
       role="presentation"
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-5 shadow-xl"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--assessment-outline-variant)] bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -274,19 +417,17 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 id="add-candidate-title" className="text-lg font-semibold text-[var(--assessment-on-surface)]">
-              Add candidate
+            <h2 id="add-candidate-title" className="text-xl font-black text-[var(--assessment-on-surface)]">
+              Candidate Invitation Center
             </h2>
-            <p className="mt-1 text-sm text-[var(--assessment-on-surface-variant)]">
-              {tab === 'single'
-                ? 'Create the candidate here. They get a magic link by email and open their dashboard directly.'
-                : 'Paste emails and auto-allocate interview slots by capacity.'}
+            <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)] leading-relaxed">
+              Invite candidates directly or in bulk via Excel. Candidates receive magic links with auto-capacity distribution across interview slots.
             </p>
           </div>
           <button
             type="button"
-            onClick={handleClose}
-            className="rounded p-1 text-[var(--assessment-on-surface-variant)] hover:bg-[var(--assessment-surface-container-low)]"
+            onClick={resetAndClose}
+            className="rounded-lg p-1 text-[var(--assessment-on-surface-variant)] hover:bg-[var(--assessment-surface-container-low)]"
             aria-label="Close"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -294,127 +435,121 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
         </div>
 
         {!bulkResult ? (
-          <div className="mb-4 flex gap-1 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setTab('single');
-                setError('');
-              }}
-              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition ${
-                tab === 'single'
-                  ? 'bg-[var(--assessment-surface-container)] text-[var(--assessment-on-surface)] shadow-sm'
-                  : 'text-[var(--assessment-on-surface-variant)]'
-              }`}
-            >
-              Single
-            </button>
+          <div className="mb-5 flex gap-1 rounded-xl border border-[var(--assessment-outline-variant)] bg-slate-50 p-1">
             <button
               type="button"
               onClick={() => {
                 setTab('bulk');
                 setError('');
               }}
-              className={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
                 tab === 'bulk'
-                  ? 'bg-[var(--assessment-surface-container)] text-[var(--assessment-on-surface)] shadow-sm'
-                  : 'text-[var(--assessment-on-surface-variant)]'
+                  ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
+                  : 'text-[var(--assessment-on-surface-variant)] hover:bg-white'
               }`}
             >
-              Bulk Invite (Auto Slot Allocation)
+              🚀 Bulk Invite (Excel / Multi)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTab('single');
+                setError('');
+              }}
+              className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                tab === 'single'
+                  ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
+                  : 'text-[var(--assessment-on-surface-variant)] hover:bg-white'
+              }`}
+            >
+              👤 Single Candidate
             </button>
           </div>
         ) : null}
 
         {bulkResult ? (
           <div className="flex flex-col gap-4">
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-              Invited {bulkResult.invited} candidate{bulkResult.invited === 1 ? '' : 's'}
-              {bulkResult.skipped ? ` · ${bulkResult.skipped} skipped` : ''}
-              {bulkResult.failed ? ` · ${bulkResult.failed} failed` : ''}
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-900 flex items-center gap-3">
+              <span className="material-symbols-outlined text-2xl text-emerald-600">check_circle</span>
+              <div>
+                <p className="font-bold text-sm">Successfully invited {bulkResult.invited} of {bulkResult.total} candidates.</p>
+                {bulkResult.failed.length ? (
+                  <p className="text-amber-800 mt-0.5">
+                    {bulkResult.failed.length} had delivery issues — copy their direct magic links below.
+                  </p>
+                ) : null}
+              </div>
             </div>
 
-            {bulkResult.allocation && bulkResult.allocation.length > 0 ? (
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--assessment-on-surface-variant)]">
-                  Allocation
-                </h3>
-                <ul className="space-y-1 text-sm text-[var(--assessment-on-surface)]">
+            {bulkResult.allocation.length ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Slot Allocation Summary</p>
+                <ul className="space-y-1 text-xs text-slate-700">
                   {bulkResult.allocation.map((row) => (
-                    <li key={row.slot_id}>
-                      {row.slot_label}: {row.assigned} candidate{row.assigned === 1 ? '' : 's'} assigned
+                    <li key={row.slot_id} className="flex justify-between">
+                      <span className="font-semibold">{row.slot_label}</span>
+                      <span>{row.assigned_count} assigned {row.remaining > 0 ? `(${row.remaining} left)` : ''}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             ) : null}
 
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--assessment-on-surface-variant)]">
-                  Magic links
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => void copyText(formatLinksForWhatsApp(bulkResult.items))}
-                  className="rounded-lg border border-[var(--assessment-outline-variant)] px-3 py-1.5 text-xs font-semibold text-[var(--assessment-on-surface)] hover:bg-[var(--assessment-surface-container-low)]"
-                >
-                  {copiedAll ? 'Copied!' : 'Copy All Links'}
-                </button>
-              </div>
-              <ul className="max-h-56 space-y-2 overflow-y-auto">
-                {bulkResult.items.map((item) => (
-                  <li
-                    key={`${item.email}-${item.invite_token ?? item.status}`}
-                    className="rounded-lg border border-[var(--assessment-outline-variant)] px-3 py-2 text-sm"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-[var(--assessment-on-surface)]">
-                          {item.email}
-                        </div>
-                        <div className="text-xs text-[var(--assessment-on-surface-variant)]">
-                          {item.slot_label || item.status}
-                          {item.error ? ` · ${item.error}` : ''}
-                        </div>
-                        {item.interview_url ? (
-                          <div className="mt-0.5 truncate font-mono text-[11px] text-[var(--assessment-primary)]">
-                            {item.interview_url}
-                          </div>
-                        ) : null}
-                      </div>
-                      {item.interview_url ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void copyText(`${item.email}\n${item.interview_url}`, item.email)
-                          }
-                          className="shrink-0 text-xs font-semibold text-[var(--assessment-primary)] hover:underline"
-                        >
-                          {copiedEmail === item.email ? 'Copied' : 'Copy'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Generated Magic Links</p>
+              <button
+                type="button"
+                className="rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs"
+                onClick={() =>
+                  void copyText(
+                    'all',
+                    bulkResult.items
+                      .map((item) => `${item.email}\t${item.interview_url}`)
+                      .join('\n'),
+                  )
+                }
+              >
+                {copiedKey === 'all' ? 'Copied ✓' : 'Copy All Links'}
+              </button>
             </div>
 
-            <div className="mt-1 flex justify-end gap-2">
+            <ul className="max-h-60 space-y-2 overflow-y-auto">
+              {bulkResult.items.map((item) => (
+                <li
+                  key={item.invite_token}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-bold text-slate-800">
+                      {item.email}
+                    </div>
+                    <div className="truncate text-[11px] text-slate-500">
+                      {item.slot_label}
+                    </div>
+                    {!item.email_sent ? (
+                      <div className="text-[10px] font-semibold text-amber-700">Email not sent — use copy link</div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold hover:bg-slate-100"
+                    onClick={() => void copyText(item.invite_token, item.interview_url)}
+                  >
+                    {copiedKey === item.invite_token ? 'Copied' : 'Copy'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {error ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">{error}</div>
+            ) : null}
+
+            <div className="mt-2 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  resetBulk();
-                  setTab('bulk');
-                }}
-                className="rounded-lg border border-[var(--assessment-outline-variant)] px-4 py-2 text-sm font-semibold"
-              >
-                Invite more
-              </button>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="rounded-lg bg-[var(--assessment-primary)] px-4 py-2 text-sm font-semibold text-white"
+                onClick={resetAndClose}
+                className="rounded-xl bg-[var(--assessment-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-90"
               >
                 Done
               </button>
@@ -422,30 +557,30 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
           </div>
         ) : tab === 'single' ? (
           <>
-            <div className="flex flex-col gap-3">
-              <label className={labelClass}>
-                Name
+            <div className="flex flex-col gap-3.5">
+              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                Full Name
                 <input
-                  className={inputClass}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Candidate name"
+                  placeholder="e.g. Ram Sharma"
                 />
               </label>
-              <label className={labelClass}>
-                Email
+              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                Email Address
                 <input
                   type="email"
-                  className={inputClass}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@email.com"
+                  placeholder="ram.sharma@example.com"
                 />
               </label>
-              <label className={labelClass}>
-                Job role
+              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                Target Job Role
                 <select
-                  className={inputClass}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   value={jobProfileId}
                   onChange={(e) => setJobProfileId(e.target.value)}
                 >
@@ -457,27 +592,84 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                   ))}
                 </select>
               </label>
-              <label className={labelClass}>
-                Resume (optional)
+              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                Resume (Optional)
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="w-full text-sm font-normal text-[var(--assessment-on-surface)]"
+                  className="w-full text-xs text-slate-600"
                   onChange={(e) => setResume(e.target.files?.[0] ?? null)}
                 />
               </label>
-              {error ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                  {error}
+              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                Interview Date
+                <input
+                  type="date"
+                  min={minDate}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setSlotId('');
+                  }}
+                />
+              </label>
+
+              {!selectedDate ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  Select a date to see available time slots.
                 </div>
+              ) : slotsQuery.isLoading ? (
+                <p className="text-xs text-slate-500">Loading available times...</p>
+              ) : slots.length === 0 ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  No open time slots for this date. Add slots under Recruitment → Time Slots, or pick another day.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-700">Choose Time Slot</span>
+                  <ul className="max-h-40 space-y-1.5 overflow-y-auto">
+                    {slots.map((slot) => {
+                      const checked = slotId === slot.id;
+                      return (
+                        <li key={slot.id}>
+                          <label
+                            className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 text-xs transition-colors ${
+                              checked
+                                ? 'border-[var(--assessment-primary)] bg-indigo-50/60 font-bold text-indigo-950'
+                                : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <input
+                                type="radio"
+                                name="manual-candidate-slot"
+                                checked={checked}
+                                onChange={() => setSlotId(slot.id)}
+                              />
+                              <span>{slot.display_label || `${slot.start_time} – ${slot.end_time}`}</span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-normal">
+                              {slot.remaining} seats left
+                            </span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {error ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">{error}</div>
               ) : null}
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-2.5">
               <button
                 type="button"
-                onClick={handleClose}
-                className="rounded-lg border border-[var(--assessment-outline-variant)] px-4 py-2 text-sm font-semibold"
+                onClick={resetAndClose}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
@@ -485,130 +677,265 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                 type="button"
                 disabled={submitting}
                 onClick={() => void submitSingle()}
-                className="rounded-lg bg-[var(--assessment-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-xl bg-[var(--assessment-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-60"
               >
-                {submitting ? 'Sending...' : 'Create and send link'}
+                {submitting ? 'Sending...' : 'Create & Send Magic Link'}
               </button>
             </div>
           </>
         ) : (
+          /* Bulk Invite Tab */
           <>
-            <div className="flex flex-col gap-3">
-              <label className={labelClass}>
-                Job role
-                <select
-                  className={inputClass}
-                  value={bulkJobProfileId}
-                  onChange={(e) => setBulkJobProfileId(e.target.value)}
-                >
-                  <option value="">Select a role</option>
-                  {profiles.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={labelClass}>
-                Interview date
-                <input
-                  type="date"
-                  min={minDate}
-                  className={inputClass}
-                  value={slotDate}
-                  onChange={(e) => setSlotDate(e.target.value)}
-                />
-              </label>
-              <label className={labelClass}>
-                Emails
-                <textarea
-                  className={`${inputClass} min-h-[120px] resize-y font-mono`}
-                  value={emailsRaw}
-                  onChange={(e) => setEmailsRaw(e.target.value)}
-                  placeholder="Paste emails separated by commas, spaces, or new lines"
-                />
-              </label>
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                  Target Job Role
+                  <select
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    value={jobProfileId}
+                    onChange={(e) => setJobProfileId(e.target.value)}
+                  >
+                    <option value="">Select a role</option>
+                    {profiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                  Interview Date
+                  <input
+                    type="date"
+                    min={minDate}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                  />
+                </label>
+              </div>
 
-              {emailsRaw.trim() ? (
-                <div className="flex flex-wrap gap-2 text-xs text-[var(--assessment-on-surface-variant)]">
-                  <span className="rounded-md bg-[var(--assessment-surface-container-low)] px-2 py-1 font-semibold">
-                    Valid: {parsed.validEmails.length}
-                  </span>
-                  <span className="rounded-md bg-[var(--assessment-surface-container-low)] px-2 py-1 font-semibold">
-                    Invalid: {parsed.invalid}
-                  </span>
-                  <span className="rounded-md bg-[var(--assessment-surface-container-low)] px-2 py-1 font-semibold">
-                    Duplicates removed: {parsed.duplicatesRemoved}
-                  </span>
+              {/* Mode Toggle: Excel File vs Text Paste */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkInputMode('excel');
+                      setError('');
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      bulkInputMode === 'excel'
+                        ? 'bg-white text-indigo-700 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">description</span>
+                    Excel / CSV File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkInputMode('paste');
+                      setError('');
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      bulkInputMode === 'paste'
+                        ? 'bg-white text-indigo-700 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                    Paste Emails
+                  </button>
                 </div>
-              ) : null}
 
-              {bulkJobProfileId && slotDate ? (
-                <div className="rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-3">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--assessment-on-surface-variant)]">
-                    Capacity preview
-                  </h3>
-                  {slotsQuery.isLoading ? (
-                    <p className="text-sm text-[var(--assessment-on-surface-variant)]">
-                      Loading available slots...
-                    </p>
-                  ) : waterfall.rows.length === 0 && waterfall.totalRemaining === 0 ? (
-                    <p className="text-sm text-[var(--assessment-on-surface-variant)]">
-                      No open slots with remaining capacity for this date.
-                    </p>
-                  ) : (
-                    <>
-                      <ul className="space-y-1 text-sm text-[var(--assessment-on-surface)]">
-                        {waterfall.rows.map(({ slot, assigned, remainingAfter }) => (
-                          <li key={slot.id}>
-                            {slot.display_label || `${slot.start_time} – ${slot.end_time}`}:{' '}
-                            {assigned} candidate{assigned === 1 ? '' : 's'} assigned ({remainingAfter}{' '}
-                            seat{remainingAfter === 1 ? '' : 's'} remaining)
-                          </li>
+                {bulkInputMode === 'excel' && (
+                  <button
+                    type="button"
+                    onClick={downloadSampleExcelTemplate}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">download</span>
+                    Download Template (.xlsx)
+                  </button>
+                )}
+              </div>
+
+              {/* Excel Upload Section */}
+              {bulkInputMode === 'excel' ? (
+                <div className="flex flex-col gap-3">
+                  <label className="group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/40 px-4 py-6 text-center hover:bg-indigo-50/80 transition-colors">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                      className="absolute inset-0 cursor-pointer opacity-0"
+                      onChange={(e) => void handleExcelUpload(e.target.files?.[0] ?? null)}
+                    />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                      <span className="material-symbols-outlined text-2xl">upload_file</span>
+                    </div>
+                    {excelFile ? (
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">{excelFile.name}</p>
+                        <p className="text-[11px] text-indigo-700 font-semibold mt-0.5">
+                          {excelCandidates.length} candidate{excelCandidates.length === 1 ? '' : 's'} detected · Click to replace
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">
+                          Drop candidates Excel (.xlsx, .xls, .csv) here
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Must contain columns: <span className="font-semibold text-slate-700">Full Name</span> &amp; <span className="font-semibold text-slate-700">Email Address</span>
+                        </p>
+                      </div>
+                    )}
+                  </label>
+
+                  {/* Excel Candidates Preview */}
+                  {excelCandidates.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2">
+                        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                          Candidates Preview ({excelCandidates.length})
+                        </span>
+                        {excelStats.duplicateCount > 0 && (
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            {excelStats.duplicateCount} duplicate(s) filtered
+                          </span>
+                        )}
+                      </div>
+                      <div className="max-h-36 overflow-y-auto divide-y divide-slate-100">
+                        {excelCandidates.map((c, idx) => (
+                          <div key={idx} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                            <span className="font-bold text-slate-800 truncate mr-2">
+                              {c.name || <span className="italic text-slate-400 font-normal">No name</span>}
+                            </span>
+                            <span className="text-slate-500 font-mono-data text-[11px] shrink-0">{c.email}</span>
+                          </div>
                         ))}
-                      </ul>
-                      <p className="mt-2 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
-                        Total available capacity: {waterfall.totalRemaining}
-                      </p>
-                    </>
+                      </div>
+                    </div>
                   )}
                 </div>
-              ) : null}
-
-              {capacityAlert ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                  {capacityAlert}
+              ) : (
+                /* Textarea Paste Section */
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    rows={4}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 font-mono-data"
+                    value={bulkEmailsRaw}
+                    onChange={(e) => setBulkEmailsRaw(e.target.value)}
+                    placeholder="Paste emails separated by comma, space, or new lines"
+                  />
+                  <div className="text-[11px] text-slate-500 flex gap-2">
+                    <span className="font-semibold text-slate-700">Valid: {emailParse.valid.length}</span>
+                    {emailParse.invalid.length ? <span>· Invalid: {emailParse.invalid.length}</span> : null}
+                    {emailParse.duplicateCount ? <span>· Duplicates: {emailParse.duplicateCount}</span> : null}
+                  </div>
                 </div>
-              ) : null}
+              )}
+
+              {/* Slot Allocation Waterfall Preview */}
+              {!selectedDate ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  Select an interview date to view slot capacity.
+                </div>
+              ) : slotsQuery.isLoading ? (
+                <p className="text-xs text-slate-500">Loading slot capacity...</p>
+              ) : slots.length === 0 ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  No open time slots for this date. Please add slots or select another date.
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-800">
+                      Auto-Capacity Allocation Preview
+                    </span>
+                    <span className="rounded-md bg-white border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-indigo-700 shadow-2xs">
+                      Total Capacity: {waterfall.totalRemaining}
+                    </span>
+                  </div>
+
+                  {effectiveCandidates.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">
+                      Upload an Excel sheet or paste emails to see how candidates are assigned across slots.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5 text-xs text-slate-700">
+                      {waterfall.allocation.map((row) => (
+                        <li key={row.id} className="flex items-center justify-between rounded-lg bg-white p-2 border border-slate-100 shadow-2xs">
+                          <span className="font-semibold">{row.label}</span>
+                          <span className="text-emerald-700 font-bold">
+                            {row.assigned} assigned {row.remainingAfter > 0 ? `(${row.remainingAfter} remaining)` : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {waterfall.overflow > 0 ? (
+                    <div className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-800 font-medium">
+                      ⚠️ Capacity limit reached: {waterfall.totalRemaining} available across {waterfall.allocation.length || slots.length} slots, but {effectiveCandidates.length} candidates uploaded. Please add another slot or reduce {waterfall.overflow} candidates.
+                    </div>
+                  ) : null}
+                </div>
+              )}
 
               {error ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                  {error}
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 font-medium">{error}</div>
+              ) : null}
+
+              {submitting && bulkProgress ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-800">
+                    <span>
+                      {bulkProgress.sent}/{bulkProgress.total} invites sent
+                      {bulkProgress.sent < bulkProgress.total
+                        ? ` · sending invite ${bulkProgress.sent + 1}...`
+                        : ''}
+                    </span>
+                    <span className="font-mono-data text-indigo-700">
+                      {Math.round((bulkProgress.sent / Math.max(bulkProgress.total, 1)) * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full bg-[var(--assessment-primary)] transition-all duration-300"
+                      style={{
+                        width: `${Math.round((bulkProgress.sent / Math.max(bulkProgress.total, 1)) * 100)}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               ) : null}
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-2.5">
               <button
                 type="button"
-                onClick={handleClose}
-                className="rounded-lg border border-[var(--assessment-outline-variant)] px-4 py-2 text-sm font-semibold"
+                onClick={resetAndClose}
+                disabled={submitting}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={
-                  submitting ||
-                  !parsed.validEmails.length ||
-                  !bulkJobProfileId ||
-                  !slotDate ||
-                  Boolean(capacityAlert)
-                }
+                disabled={submitting || waterfall.overflow > 0 || !effectiveCandidates.length}
                 onClick={() => void submitBulk()}
-                className="rounded-lg bg-[var(--assessment-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-xl bg-[var(--assessment-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
               >
-                {submitting ? 'Sending...' : 'Send invites'}
+                {submitting && bulkProgress
+                  ? bulkProgress.sent < bulkProgress.total
+                    ? `Sending ${bulkProgress.sent + 1}/${bulkProgress.total}...`
+                    : `${bulkProgress.sent}/${bulkProgress.total} sent`
+                  : submitting
+                    ? 'Sending...'
+                    : `Send ${effectiveCandidates.length > 0 ? `${effectiveCandidates.length} ` : ''}Bulk Invites`}
               </button>
             </div>
           </>

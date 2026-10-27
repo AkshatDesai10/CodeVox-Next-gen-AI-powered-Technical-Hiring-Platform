@@ -1355,14 +1355,15 @@ ${JSON.stringify(result.draft, null, 2)}`;
           return detailed.data;
         };
 
-        const geminiKey = this.dynamicConfig.getGeminiApiKey();
+        const geminiKey = this.dynamicConfig.getSync('GEMINI_API_KEY', '');
         if (geminiKey) {
           const geminiUrl =
             process.env.TAKEHOME_LLM_URL ||
             'https://generativelanguage.googleapis.com/v1beta/openai/';
-          const geminiModel = this.dynamicConfig.getGeminiModel();
-          const maxTokens = this.dynamicConfig.getMaxTokens();
-          const reasoningEffort = this.dynamicConfig.getReasoningEffort();
+          const geminiModel = this.dynamicConfig.getSync('GEMINI_MODEL', 'gemini-3.6-flash');
+          const maxTokens =
+            Number(this.dynamicConfig.getSync('MAX_TOKENS', '16384')) || 16_384;
+          const reasoningEffort = this.dynamicConfig.getSync('REASONING_EFFORT', 'low');
           try {
             const geminiClient = new OpenAI({
               apiKey: geminiKey,

@@ -195,6 +195,7 @@ export class RecruitmentController {
     @Body()
     body: {
       emails?: string[];
+      candidates?: Array<{ name?: string; email: string }>;
       job_profile_id?: string;
       slot_date?: string;
     },

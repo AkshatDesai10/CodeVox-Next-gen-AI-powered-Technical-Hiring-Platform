@@ -10,4 +10,9 @@ export type ProctorConfig = {
   faceMatchThreshold: number;
   requireCameraForStart: boolean;
   requireVoiceEnroll?: boolean;
+  maxMediaStrikes?: number;
+  autoSubmitOnMediaStrike?: boolean;
+  maxFocusStrikes?: number;
+  autoSubmitOnFocusStrike?: boolean;
+  focusStrikeThresholdSeconds?: number;
 };
