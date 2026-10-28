@@ -409,7 +409,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
       role="presentation"
     >
       <div
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--assessment-outline-variant)] bg-white p-6 shadow-2xl"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] text-[var(--assessment-on-surface)] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -435,7 +435,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
         </div>
 
         {!bulkResult ? (
-          <div className="mb-5 flex gap-1 rounded-xl border border-[var(--assessment-outline-variant)] bg-slate-50 p-1">
+          <div className="mb-5 flex gap-1 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] p-1">
             <button
               type="button"
               onClick={() => {
@@ -445,7 +445,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
               className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
                 tab === 'bulk'
                   ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
-                  : 'text-[var(--assessment-on-surface-variant)] hover:bg-white'
+                  : 'text-[var(--assessment-on-surface-variant)] hover:bg-[var(--assessment-surface-container)]'
               }`}
             >
               🚀 Bulk Invite (Excel / Multi)
@@ -459,7 +459,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
               className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
                 tab === 'single'
                   ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
-                  : 'text-[var(--assessment-on-surface-variant)] hover:bg-white'
+                  : 'text-[var(--assessment-on-surface-variant)] hover:bg-[var(--assessment-surface-container)]'
               }`}
             >
               👤 Single Candidate
@@ -482,9 +482,9 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
             </div>
 
             {bulkResult.allocation.length ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Slot Allocation Summary</p>
-                <ul className="space-y-1 text-xs text-slate-700">
+              <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] p-3">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--assessment-on-surface-variant)] mb-2">Slot Allocation Summary</p>
+                <ul className="space-y-1 text-xs text-[var(--assessment-on-surface)]">
                   {bulkResult.allocation.map((row) => (
                     <li key={row.slot_id} className="flex justify-between">
                       <span className="font-semibold">{row.slot_label}</span>
@@ -496,10 +496,10 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
             ) : null}
 
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Generated Magic Links</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--assessment-on-surface-variant)]">Generated Magic Links</p>
               <button
                 type="button"
-                className="rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs"
+                className="rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)] hover:bg-slate-50 shadow-2xs"
                 onClick={() =>
                   void copyText(
                     'all',
@@ -517,13 +517,13 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
               {bulkResult.items.map((item) => (
                 <li
                   key={item.invite_token}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2 text-xs"
                 >
                   <div className="min-w-0">
-                    <div className="truncate font-bold text-slate-800">
+                    <div className="truncate font-bold text-[var(--assessment-on-surface)]">
                       {item.email}
                     </div>
-                    <div className="truncate text-[11px] text-slate-500">
+                    <div className="truncate text-[11px] text-[var(--assessment-on-surface-variant)]">
                       {item.slot_label}
                     </div>
                     {!item.email_sent ? (
@@ -532,7 +532,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                   </div>
                   <button
                     type="button"
-                    className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold hover:bg-slate-100"
+                    className="shrink-0 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-2.5 py-1 text-xs font-bold hover:bg-slate-100"
                     onClick={() => void copyText(item.invite_token, item.interview_url)}
                   >
                     {copiedKey === item.invite_token ? 'Copied' : 'Copy'}
@@ -558,29 +558,29 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
         ) : tab === 'single' ? (
           <>
             <div className="flex flex-col gap-3.5">
-              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+              <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
                 Full Name
                 <input
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2.5 text-xs font-normal text-[var(--assessment-on-surface)] outline-none focus:border-[var(--assessment-primary)] focus:ring-2 focus:ring-[var(--assessment-primary)]/20"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Ram Sharma"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+              <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
                 Email Address
                 <input
                   type="email"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2.5 text-xs font-normal text-[var(--assessment-on-surface)] outline-none focus:border-[var(--assessment-primary)] focus:ring-2 focus:ring-[var(--assessment-primary)]/20"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ram.sharma@example.com"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+              <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
                 Target Job Role
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2.5 text-xs font-normal text-[var(--assessment-on-surface)] outline-none focus:border-[var(--assessment-primary)] focus:ring-2 focus:ring-[var(--assessment-primary)]/20"
                   value={jobProfileId}
                   onChange={(e) => setJobProfileId(e.target.value)}
                 >
@@ -592,21 +592,21 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+              <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
                 Resume (Optional)
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  className="w-full text-xs text-slate-600"
+                  className="w-full text-xs text-[var(--assessment-on-surface-variant)]"
                   onChange={(e) => setResume(e.target.files?.[0] ?? null)}
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+              <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
                 Interview Date
                 <input
                   type="date"
                   min={minDate}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2.5 text-xs font-normal text-[var(--assessment-on-surface)] outline-none focus:border-[var(--assessment-primary)] focus:ring-2 focus:ring-[var(--assessment-primary)]/20"
                   value={selectedDate}
                   onChange={(e) => {
                     setSelectedDate(e.target.value);
@@ -620,14 +620,14 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                   Select a date to see available time slots.
                 </div>
               ) : slotsQuery.isLoading ? (
-                <p className="text-xs text-slate-500">Loading available times...</p>
+                <p className="text-xs text-[var(--assessment-on-surface-variant)]">Loading available times...</p>
               ) : slots.length === 0 ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                   No open time slots for this date. Add slots under Recruitment → Time Slots, or pick another day.
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-slate-700">Choose Time Slot</span>
+                  <span className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">Choose Time Slot</span>
                   <ul className="max-h-40 space-y-1.5 overflow-y-auto">
                     {slots.map((slot) => {
                       const checked = slotId === slot.id;
@@ -636,8 +636,8 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                           <label
                             className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 text-xs transition-colors ${
                               checked
-                                ? 'border-[var(--assessment-primary)] bg-indigo-50/60 font-bold text-indigo-950'
-                                : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                                ? 'border-[var(--assessment-primary)] bg-[var(--assessment-primary)]/15 font-bold text-[var(--assessment-primary)]'
+                                : 'border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] text-[var(--assessment-on-surface)] hover:border-[var(--assessment-primary)]'
                             }`}
                           >
                             <div className="flex items-center gap-2.5">
@@ -649,7 +649,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                               />
                               <span>{slot.display_label || `${slot.start_time} – ${slot.end_time}`}</span>
                             </div>
-                            <span className="text-[11px] text-slate-500 font-normal">
+                            <span className="text-[11px] text-[var(--assessment-on-surface-variant)] font-normal">
                               {slot.remaining} seats left
                             </span>
                           </label>
@@ -669,7 +669,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
               <button
                 type="button"
                 onClick={resetAndClose}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                className="rounded-xl border border-[var(--assessment-outline-variant)] px-4 py-2 text-xs font-semibold text-[var(--assessment-on-surface-variant)] hover:bg-slate-50"
               >
                 Cancel
               </button>
@@ -688,10 +688,10 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
           <>
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
                   Target Job Role
                   <select
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2.5 text-xs font-normal text-[var(--assessment-on-surface)] outline-none focus:border-[var(--assessment-primary)] focus:ring-2 focus:ring-[var(--assessment-primary)]/20"
                     value={jobProfileId}
                     onChange={(e) => setJobProfileId(e.target.value)}
                   >
@@ -703,12 +703,12 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-xs font-bold text-slate-700">
+                <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
                   Interview Date
                   <input
                     type="date"
                     min={minDate}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2.5 text-xs font-normal text-[var(--assessment-on-surface)] outline-none focus:border-[var(--assessment-primary)] focus:ring-2 focus:ring-[var(--assessment-primary)]/20"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                   />
@@ -716,8 +716,8 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
               </div>
 
               {/* Mode Toggle: Excel File vs Text Paste */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+              <div className="flex items-center justify-between border-b border-[var(--assessment-outline-variant)] pb-2">
+                <div className="flex items-center gap-1.5 p-1 bg-[var(--assessment-surface-container-low)] rounded-xl border border-[var(--assessment-outline-variant)]">
                   <button
                     type="button"
                     onClick={() => {
@@ -726,8 +726,8 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                       bulkInputMode === 'excel'
-                        ? 'bg-white text-indigo-700 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
+                        : 'text-[var(--assessment-on-surface-variant)] hover:text-[var(--assessment-on-surface)]'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px]">description</span>
@@ -741,8 +741,8 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                       bulkInputMode === 'paste'
-                        ? 'bg-white text-indigo-700 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-[var(--assessment-primary)] text-white shadow-xs'
+                        : 'text-[var(--assessment-on-surface-variant)] hover:text-[var(--assessment-on-surface)]'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[16px]">edit_note</span>
@@ -754,7 +754,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                   <button
                     type="button"
                     onClick={downloadSampleExcelTemplate}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[var(--assessment-primary)] hover:text-indigo-900 transition-colors"
                   >
                     <span className="material-symbols-outlined text-[15px]">download</span>
                     Download Template (.xlsx)
@@ -765,7 +765,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
               {/* Excel Upload Section */}
               {bulkInputMode === 'excel' ? (
                 <div className="flex flex-col gap-3">
-                  <label className="group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/40 px-4 py-6 text-center hover:bg-indigo-50/80 transition-colors">
+                  <label className="group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)]/60 px-4 py-6 text-center hover:bg-[var(--assessment-surface-container-high)] hover:border-[var(--assessment-primary)] transition-colors">
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
@@ -777,18 +777,18 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                     </div>
                     {excelFile ? (
                       <div>
-                        <p className="text-xs font-bold text-slate-800">{excelFile.name}</p>
-                        <p className="text-[11px] text-indigo-700 font-semibold mt-0.5">
+                        <p className="text-xs font-semibold text-[var(--assessment-on-surface)]">{excelFile.name}</p>
+                        <p className="text-[11px] text-[var(--assessment-primary)] font-semibold mt-0.5">
                           {excelCandidates.length} candidate{excelCandidates.length === 1 ? '' : 's'} detected · Click to replace
                         </p>
                       </div>
                     ) : (
                       <div>
-                        <p className="text-xs font-bold text-slate-800">
+                        <p className="text-xs font-semibold text-[var(--assessment-on-surface)]">
                           Drop candidates Excel (.xlsx, .xls, .csv) here
                         </p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Must contain columns: <span className="font-semibold text-slate-700">Full Name</span> &amp; <span className="font-semibold text-slate-700">Email Address</span>
+                        <p className="text-[11px] text-[var(--assessment-on-surface-variant)] mt-0.5">
+                          Must contain columns: <span className="font-semibold text-[var(--assessment-on-surface)]">Full Name</span> &amp; <span className="font-semibold text-[var(--assessment-on-surface)]">Email Address</span>
                         </p>
                       </div>
                     )}
@@ -796,13 +796,13 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
 
                   {/* Excel Candidates Preview */}
                   {excelCandidates.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
-                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2">
-                        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] overflow-hidden shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-[var(--assessment-outline-variant)] bg-slate-50 px-3 py-2">
+                        <span className="text-[11px] font-bold text-[var(--assessment-on-surface)] uppercase tracking-wider">
                           Candidates Preview ({excelCandidates.length})
                         </span>
                         {excelStats.duplicateCount > 0 && (
-                          <span className="text-[10px] text-slate-500 font-medium">
+                          <span className="text-[10px] text-[var(--assessment-on-surface-variant)] font-medium">
                             {excelStats.duplicateCount} duplicate(s) filtered
                           </span>
                         )}
@@ -810,10 +810,10 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                       <div className="max-h-36 overflow-y-auto divide-y divide-slate-100">
                         {excelCandidates.map((c, idx) => (
                           <div key={idx} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                            <span className="font-bold text-slate-800 truncate mr-2">
+                            <span className="font-bold text-[var(--assessment-on-surface)] truncate mr-2">
                               {c.name || <span className="italic text-slate-400 font-normal">No name</span>}
                             </span>
-                            <span className="text-slate-500 font-mono-data text-[11px] shrink-0">{c.email}</span>
+                            <span className="text-[var(--assessment-on-surface-variant)] font-mono-data text-[11px] shrink-0">{c.email}</span>
                           </div>
                         ))}
                       </div>
@@ -825,13 +825,13 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                 <div className="flex flex-col gap-2">
                   <textarea
                     rows={4}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-normal text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 font-mono-data"
+                    className="w-full rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-3 py-2.5 text-xs font-normal text-[var(--assessment-on-surface)] outline-none focus:border-[var(--assessment-primary)] focus:ring-2 focus:ring-[var(--assessment-primary)]/20 font-mono-data"
                     value={bulkEmailsRaw}
                     onChange={(e) => setBulkEmailsRaw(e.target.value)}
                     placeholder="Paste emails separated by comma, space, or new lines"
                   />
-                  <div className="text-[11px] text-slate-500 flex gap-2">
-                    <span className="font-semibold text-slate-700">Valid: {emailParse.valid.length}</span>
+                  <div className="text-[11px] text-[var(--assessment-on-surface-variant)] flex gap-2">
+                    <span className="font-semibold text-[var(--assessment-on-surface)]">Valid: {emailParse.valid.length}</span>
                     {emailParse.invalid.length ? <span>· Invalid: {emailParse.invalid.length}</span> : null}
                     {emailParse.duplicateCount ? <span>· Duplicates: {emailParse.duplicateCount}</span> : null}
                   </div>
@@ -844,30 +844,30 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                   Select an interview date to view slot capacity.
                 </div>
               ) : slotsQuery.isLoading ? (
-                <p className="text-xs text-slate-500">Loading slot capacity...</p>
+                <p className="text-xs text-[var(--assessment-on-surface-variant)]">Loading slot capacity...</p>
               ) : slots.length === 0 ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                   No open time slots for this date. Please add slots or select another date.
                 </div>
               ) : (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] p-3.5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-800">
+                    <span className="text-xs font-semibold text-[var(--assessment-on-surface)]">
                       Auto-Capacity Allocation Preview
                     </span>
-                    <span className="rounded-md bg-white border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-indigo-700 shadow-2xs">
+                    <span className="rounded-md bg-white border border-[var(--assessment-outline-variant)] px-2 py-0.5 text-[11px] font-bold text-[var(--assessment-primary)] shadow-2xs">
                       Total Capacity: {waterfall.totalRemaining}
                     </span>
                   </div>
 
                   {effectiveCandidates.length === 0 ? (
-                    <p className="text-xs text-slate-500 italic">
+                    <p className="text-xs text-[var(--assessment-on-surface-variant)] italic">
                       Upload an Excel sheet or paste emails to see how candidates are assigned across slots.
                     </p>
                   ) : (
-                    <ul className="space-y-1.5 text-xs text-slate-700">
+                    <ul className="space-y-1.5 text-xs text-[var(--assessment-on-surface)]">
                       {waterfall.allocation.map((row) => (
-                        <li key={row.id} className="flex items-center justify-between rounded-lg bg-white p-2 border border-slate-100 shadow-2xs">
+                        <li key={row.id} className="flex items-center justify-between rounded-lg bg-white p-2 border border-[var(--assessment-outline-variant)] shadow-2xs">
                           <span className="font-semibold">{row.label}</span>
                           <span className="text-emerald-700 font-bold">
                             {row.assigned} assigned {row.remainingAfter > 0 ? `(${row.remainingAfter} remaining)` : ''}
@@ -890,19 +890,19 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
               ) : null}
 
               {submitting && bulkProgress ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-800">
+                <div className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] p-3">
+                  <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[var(--assessment-on-surface)]">
                     <span>
                       {bulkProgress.sent}/{bulkProgress.total} invites sent
                       {bulkProgress.sent < bulkProgress.total
                         ? ` · sending invite ${bulkProgress.sent + 1}...`
                         : ''}
                     </span>
-                    <span className="font-mono-data text-indigo-700">
+                    <span className="font-mono-data text-[var(--assessment-primary)]">
                       {Math.round((bulkProgress.sent / Math.max(bulkProgress.total, 1)) * 100)}%
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--assessment-surface-container-low)]">
                     <div
                       className="h-full rounded-full bg-[var(--assessment-primary)] transition-all duration-300"
                       style={{
@@ -919,7 +919,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                 type="button"
                 onClick={resetAndClose}
                 disabled={submitting}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-xl border border-[var(--assessment-outline-variant)] px-4 py-2 text-xs font-semibold text-[var(--assessment-on-surface-variant)] hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>

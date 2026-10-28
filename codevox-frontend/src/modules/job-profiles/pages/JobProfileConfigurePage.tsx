@@ -956,13 +956,7 @@ export function JobProfileConfigurePage() {
 
 
 
-      {/* Publishing draft alert if on Step 3 */}
-      {profile.status === 'draft' && !publishReady && viewStep === 3 ? (
-        <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-500/30 text-xs text-amber-300">
-          To publish: Complete your round configuration, ensuring all rounds have rubrics and questions configured, then save draft.
-        </div>
-      ) : null}
-
+      
       {/* Main Step 2 or Step 3 View */}
       {viewStep === 2 ? (
         <div className="grid grid-cols-12 gap-6 items-start">

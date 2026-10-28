@@ -13,6 +13,7 @@ import { getCandidateRuntimeConfig } from '@/modules/recruitment/lib/configurati
 import { applyRuntimeProctorConfig } from '@/modules/autonomous-interview/lib/runtime-proctor-config';
 import { CandidatePortalOnboardingGate } from '@/modules/job-profiles/components/CandidatePortalOnboardingGate';
 import { SystemReadinessLobby } from '@/modules/job-profiles/components/SystemReadinessLobby';
+import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 
 interface StageDto {
   id: string;
@@ -349,10 +350,10 @@ export default function CandidatePortalPage({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#090414] text-white">
+      <div className="flex min-h-screen items-center justify-center bg-[#050B18] text-white">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7C3AED] border-t-transparent shadow-lg shadow-purple-500/20" />
-          <span className="text-xs font-bold uppercase tracking-widest text-[#C4B5FD]">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1685FF] border-t-transparent shadow-lg shadow-purple-500/20" />
+          <span className="text-xs font-bold uppercase tracking-widest text-[#BAE6FD]">
             Loading Candidate Portal...
           </span>
         </div>
@@ -362,15 +363,15 @@ export default function CandidatePortalPage({
 
   if (error || !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#090414] p-6 text-white">
-        <div className="max-w-md rounded-2xl border border-red-500/20 bg-[#160A30] p-8 text-center shadow-2xl">
+      <div className="flex min-h-screen items-center justify-center bg-[#050B18] p-6 text-white">
+        <div className="max-w-md rounded-2xl border border-red-500/20 bg-[#0B1930] p-8 text-center shadow-2xl">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 text-red-400">
             <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
           <h2 className="text-xl font-extrabold text-white">Session Unavailable</h2>
-          <p className="mt-2 text-sm text-[#94A3B8]">
+          <p className="mt-2 text-sm text-[var(--assessment-on-surface-variant)]">
             This assessment link may have expired or is invalid. Please contact the recruiting team if you believe this is an error.
           </p>
         </div>
@@ -398,7 +399,7 @@ export default function CandidatePortalPage({
 
   if (needsOnboarding && data.onboarding) {
     return (
-      <div className="min-h-screen bg-[#090414] text-white font-sans">
+      <div className="min-h-screen bg-[#050B18] text-white font-sans">
         <CandidatePortalOnboardingGate
           token={token}
           jobTitle={data.job.title}
@@ -427,16 +428,16 @@ export default function CandidatePortalPage({
 
   if (eliminated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#090414] p-6 text-white font-sans">
-        <div className="mx-auto max-w-xl rounded-3xl border border-red-500/20 bg-[#160A30] p-10 text-center shadow-2xl">
+      <div className="flex min-h-screen items-center justify-center bg-[#050B18] p-6 text-white font-sans">
+        <div className="mx-auto max-w-xl rounded-3xl border border-red-500/20 bg-[#0B1930] p-10 text-center shadow-2xl">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 text-red-400">
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Assessment Concluded</h1>
-          <h2 className="mt-2 text-lg font-medium text-[#C4B5FD]">Thank you for your time and participation</h2>
-          <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#090414]/50 p-6 text-sm text-[#94A3B8]">
+          <h2 className="mt-2 text-lg font-medium text-[#BAE6FD]">Thank you for your time and participation</h2>
+          <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#050B18]/50 p-6 text-sm text-[var(--assessment-on-surface-variant)]">
             <p>
               Unfortunately, your score criteria in this assessment did not meet the advancement threshold for this role.
             </p>
@@ -458,18 +459,18 @@ export default function CandidatePortalPage({
 
   if (allCompleted && identityComplete) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#090414] p-6 text-white font-sans">
-        <div className="mx-auto max-w-xl rounded-3xl border border-emerald-500/30 bg-[#160A30] p-10 text-center shadow-2xl">
+      <div className="flex min-h-screen items-center justify-center bg-[#050B18] p-6 text-white font-sans">
+        <div className="mx-auto max-w-xl rounded-3xl border border-emerald-500/30 bg-[#0B1930] p-10 text-center shadow-2xl">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/20">
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">All Rounds Complete!</h1>
-          <h2 className="mt-2 text-lg font-medium text-[#55E63B]">Your submission has been safely recorded</h2>
-          <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#090414]/50 p-6 text-sm text-[#C4B5FD]">
+          <h2 className="mt-2 text-lg font-medium text-[#34D399]">Your submission has been safely recorded</h2>
+          <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#050B18]/50 p-6 text-sm text-[#BAE6FD]">
             <p>All evaluation stages for this role have been finished successfully.</p>
-            <p className="text-[#94A3B8]">The talent team will review your proctoring logs and performance metrics and follow up via email.</p>
+            <p className="text-[var(--assessment-on-surface-variant)]">The talent team will review your proctoring logs and performance metrics and follow up via email.</p>
           </div>
         </div>
       </div>
@@ -477,7 +478,7 @@ export default function CandidatePortalPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#090414] text-white font-sans selection:bg-[#7C3AED]/30">
+    <div className="assessments-root min-h-screen bg-[#050B18] text-[#F8FAFC] font-sans selection:bg-[#1685FF]/30">
       {/* Unified Meet/Zoom-style system readiness lobby */}
       {needsIdentityGate ? (
         <SystemReadinessLobby
@@ -492,7 +493,7 @@ export default function CandidatePortalPage({
           faceAlreadyCaptured={Boolean(identity?.face_captured)}
           startLabel="Enter Assessment Dashboard"
           title="System check"
-          subtitle="Confirm camera, mic, and network before you enter � just like joining a video call."
+          subtitle="Confirm camera, mic, and network before you enter — just like joining a video call."
           onComplete={async () => {
             if (!faceMode) {
               try {
@@ -511,10 +512,10 @@ export default function CandidatePortalPage({
 
       <div className="mx-auto max-w-[1340px] p-6 lg:p-10 space-y-8">
         {/* Hero Header Card */}
-        <div className="relative overflow-hidden rounded-3xl border border-[#2D1B69] bg-[#160A30] p-8 lg:p-12 shadow-2xl backdrop-blur-md">
+        <div className="relative overflow-hidden rounded-3xl border border-[#293B57] bg-[#0B1930] p-8 lg:p-12 shadow-2xl backdrop-blur-md">
           {/* Ambient background glows */}
-          <div className="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-[#7C3AED]/20 blur-3xl" />
-          <div className="pointer-events-none absolute right-1/3 -bottom-20 h-72 w-72 rounded-full bg-[#55E63B]/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-[#1685FF]/20 blur-3xl" />
+          <div className="pointer-events-none absolute right-1/3 -bottom-20 h-72 w-72 rounded-full bg-[#34D399]/10 blur-3xl" />
 
           <div className="relative z-10 flex flex-col md:flex-row items-start justify-between gap-8">
             <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -524,43 +525,43 @@ export default function CandidatePortalPage({
                   <img
                     src={identity.face_photo_url}
                     alt={`${data.candidate.name} identity photo`}
-                    className="h-24 w-24 lg:h-28 lg:w-28 rounded-2xl object-cover border-2 border-[#55E63B] shadow-xl ring-4 ring-[#55E63B]/20"
+                    className="h-24 w-24 lg:h-28 lg:w-28 rounded-2xl object-cover border-2 border-[#34D399] shadow-xl ring-4 ring-[#34D399]/20"
                   />
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#55E63B]/10 border border-[#55E63B]/30 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#55E63B]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#55E63B] animate-pulse" />
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#34D399]/10 border border-[#34D399]/30 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#34D399]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#34D399] animate-pulse" />
                     Verified
                   </div>
                 </div>
               ) : null}
 
               <div>
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#7C3AED]/20 border border-[#7C3AED]/40 text-xs font-bold uppercase tracking-wider text-[#C4B5FD] mb-4">
-                  <span className="h-2 w-2 rounded-full bg-[#55E63B]" />
-                  CodeVox Assessment Portal � ID: {data.application.id.slice(0, 8).toUpperCase()}
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#1685FF]/20 border border-[#1685FF]/40 text-xs font-bold uppercase tracking-wider text-[#BAE6FD] mb-4">
+                  <span className="h-2 w-2 rounded-full bg-[#34D399]" />
+                  CodeVox Assessment Portal • ID: {data.application.id.slice(0, 8).toUpperCase()}
                 </div>
 
                 <h1 className="text-3xl lg:text-5xl font-black text-white tracking-tight">
-                  Welcome, {data.candidate.name} ??
+                  Welcome, {data.candidate.name} 👋
                 </h1>
-                <h2 className="mt-2 text-xl lg:text-2xl font-bold text-[#A78BFA]">
+                <h2 className="mt-2 text-xl lg:text-2xl font-bold text-[#38BDF8]">
                   {data.job.title}
                 </h2>
 
                 <div className="mt-5 flex flex-wrap gap-2.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#2D1B69] bg-[#090414]/60 px-3.5 py-1.5 text-xs font-semibold text-[#C4B5FD]">
-                    <svg className="h-3.5 w-3.5 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#293B57] bg-[#050B18]/60 px-3.5 py-1.5 text-xs font-semibold text-[#BAE6FD]">
+                    <svg className="h-3.5 w-3.5 text-[#1685FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     {data.job.department || 'Engineering'}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#2D1B69] bg-[#090414]/60 px-3.5 py-1.5 text-xs font-semibold text-[#C4B5FD]">
-                    <svg className="h-3.5 w-3.5 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#293B57] bg-[#050B18]/60 px-3.5 py-1.5 text-xs font-semibold text-[#BAE6FD]">
+                    <svg className="h-3.5 w-3.5 text-[#1685FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Full-Time
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#2D1B69] bg-[#090414]/60 px-3.5 py-1.5 text-xs font-semibold text-[#C4B5FD]">
-                    <svg className="h-3.5 w-3.5 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#293B57] bg-[#050B18]/60 px-3.5 py-1.5 text-xs font-semibold text-[#BAE6FD]">
+                    <svg className="h-3.5 w-3.5 text-[#1685FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -575,33 +576,33 @@ export default function CandidatePortalPage({
                 <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
                 {data.application.status === 'in_progress' ? 'IN PROGRESS' : data.application.status.replace('_', ' ').toUpperCase()}
               </div>
-              <div className="text-xs font-medium text-[#94A3B8]">
+              <div className="text-xs font-medium text-[var(--assessment-on-surface-variant)]">
                 Applied on {new Date(data.application.appliedAt).toLocaleDateString()}
               </div>
 
               {data.resume_screening ? (
-                <div className="mt-3 w-full max-w-xs rounded-2xl border border-[#7C3AED]/30 bg-[#090414]/80 p-4 shadow-xl">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-[#A78BFA]">
+                <div className="mt-3 w-full max-w-xs rounded-2xl border border-[#1685FF]/30 bg-[#050B18]/80 p-4 shadow-xl">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-[#38BDF8]">
                     Resume Match Score
                   </div>
                   {data.resume_screening.status === 'PENDING' ? (
-                    <p className="mt-2 text-xs font-bold text-[#C4B5FD] animate-pulse">Analyzing resume...</p>
+                    <p className="mt-2 text-xs font-bold text-[#BAE6FD] animate-pulse">Analyzing resume...</p>
                   ) : data.resume_screening.score != null ? (
                     <>
                       <div className="mt-1 flex items-baseline gap-1.5">
                         <span className="text-3xl font-black text-white">
                           {Math.round(data.resume_screening.score)}
                         </span>
-                        <span className="text-xs font-bold text-[#94A3B8]">/ 100</span>
+                        <span className="text-xs font-bold text-[var(--assessment-on-surface-variant)]">/ 100</span>
                       </div>
                       {data.resume_screening.summary ? (
-                        <p className="mt-2 text-[11px] leading-relaxed text-[#94A3B8] line-clamp-2">
+                        <p className="mt-2 text-[11px] leading-relaxed text-[var(--assessment-on-surface-variant)] line-clamp-2">
                           {data.resume_screening.summary}
                         </p>
                       ) : null}
                     </>
                   ) : (
-                    <p className="mt-2 text-xs font-medium text-[#94A3B8]">
+                    <p className="mt-2 text-xs font-medium text-[var(--assessment-on-surface-variant)]">
                       {data.resume_screening.status === 'FAILED' ? 'Resume analysis failed' : 'Awaiting analysis'}
                     </p>
                   )}
@@ -612,16 +613,16 @@ export default function CandidatePortalPage({
         </div>
 
         {/* Language Selection Card */}
-        <div className="rounded-2xl border border-[#2D1B69] bg-[#160A30] p-6 shadow-xl">
+        <div className="rounded-2xl border border-[#293B57] bg-[#0B1930] p-6 shadow-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-[#55E63B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-[#34D399]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                 </svg>
                 Autonomous Interview Language
               </h2>
-              <p className="mt-1 text-xs text-[#94A3B8]">
+              <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
                 The AI conversational interviewer will communicate in your preferred dialect. English is the default setting.
               </p>
             </div>
@@ -629,7 +630,7 @@ export default function CandidatePortalPage({
             <div className="flex items-center gap-2 shrink-0">
               {([
                 ['en', 'English'],
-                ['hi', '?????? (Hindi)'],
+                ['hi', 'हिन्दी (Hindi)'],
               ] as const).map(([code, label]) => (
                 <button
                   key={code}
@@ -651,8 +652,8 @@ export default function CandidatePortalPage({
                   }}
                   className={`rounded-xl px-4 py-2 text-xs font-extrabold transition-all border ${
                     language === code
-                      ? 'bg-[#7C3AED] text-white border-[#A78BFA] shadow-lg shadow-purple-500/20'
-                      : 'bg-[#090414] text-[#C4B5FD] border-[#2D1B69] hover:border-[#7C3AED] hover:text-white'
+                      ? 'bg-[#1685FF] text-white border-[#38BDF8] shadow-lg shadow-purple-500/20'
+                      : 'bg-[#050B18] text-[#BAE6FD] border-[#293B57] hover:border-[#1685FF] hover:text-white'
                   }`}
                 >
                   {label}
@@ -682,22 +683,22 @@ export default function CandidatePortalPage({
             )}
 
             {/* Assessment Rules & Guidelines Section */}
-            <div className="rounded-3xl border border-[#2D1B69] bg-[#160A30] p-6 lg:p-8 shadow-xl relative overflow-hidden">
+            <div className="rounded-3xl border border-[#293B57] bg-[#0B1930] p-6 lg:p-8 shadow-xl relative overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7C3AED]/20 text-[#A78BFA] text-sm font-black">
-                      ???
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--assessment-primary)]/20 text-[var(--assessment-primary)] text-sm font-black">
+                      <AssessmentMaterialIcon name="verified_user" size={18} />
                     </span>
                     Assessment Rules & Code of Conduct
                   </h2>
-                  <p className="mt-1 text-xs text-[#94A3B8]">
+                  <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
                     Review the strict integrity parameters enforced across each assessment stage.
                   </p>
                 </div>
 
                 {activeStage ? (
-                  <span className="self-start sm:self-auto rounded-full bg-[#7C3AED]/20 border border-[#7C3AED]/40 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#C4B5FD]">
+                  <span className="self-start sm:self-auto rounded-full bg-[#1685FF]/20 border border-[#1685FF]/40 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#BAE6FD]">
                     Round {data.stages.findIndex((s) => s.id === activeStage.id) + 1}: {formatStageType(activeStage.type, activeStage.name)}
                   </span>
                 ) : null}
@@ -705,7 +706,7 @@ export default function CandidatePortalPage({
 
               {/* Stage Rules Selector Tabs */}
               {data.stages.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6 border-b border-[#2D1B69] pb-4">
+                <div className="flex flex-wrap gap-2 mb-6 border-b border-[#293B57] pb-4">
                   {data.stages.map((stage, idx) => {
                     const isActive = currentRuleTab === stage.id;
                     const isAvailable = stage.status === 'IN_PROGRESS' || stage.status === 'NOT_STARTED';
@@ -716,10 +717,10 @@ export default function CandidatePortalPage({
                         disabled={!isAvailable}
                         className={`rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all border ${
                           isActive
-                            ? 'bg-[#7C3AED] text-white border-[#A78BFA] shadow-md shadow-purple-500/20'
+                            ? 'bg-[#1685FF] text-white border-[#38BDF8] shadow-md shadow-purple-500/20'
                             : isAvailable
-                            ? 'bg-[#090414] text-[#C4B5FD] border-[#2D1B69] hover:border-[#7C3AED]'
-                            : 'bg-[#090414]/40 text-[#94A3B8]/40 border-transparent cursor-not-allowed'
+                            ? 'bg-[#050B18] text-[#BAE6FD] border-[#293B57] hover:border-[#1685FF]'
+                            : 'bg-[#050B18]/40 text-[var(--assessment-on-surface-variant)]/40 border-transparent cursor-not-allowed'
                         }`}
                       >
                         Round {idx + 1}: {formatStageType(stage.type, stage.name)}
@@ -734,15 +735,15 @@ export default function CandidatePortalPage({
                 {currentRules.map((rule) => (
                   <div
                     key={rule.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-[#2D1B69]/60 bg-[#090414]/70 p-4 transition-all hover:border-[#7C3AED]/40"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-[#293B57]/60 bg-[#050B18]/70 p-4 transition-all hover:border-[#1685FF]/40"
                   >
                     <div className="flex items-start gap-3.5">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#7C3AED]/20 border border-[#7C3AED]/40 text-xs font-black text-[#55E63B]">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#1685FF]/20 border border-[#1685FF]/40 text-xs font-black text-[#34D399]">
                         {rule.id}
                       </div>
                       <div>
                         <h4 className="text-sm font-extrabold text-white">{rule.title}</h4>
-                        <p className="mt-1 text-xs text-[#94A3B8] leading-relaxed">{rule.desc}</p>
+                        <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)] leading-relaxed">{rule.desc}</p>
                       </div>
                     </div>
                     {rule.tag && (
@@ -755,7 +756,7 @@ export default function CandidatePortalPage({
               </div>
 
               {/* Guidelines Acceptance Checkbox */}
-              <div className="mt-6 rounded-2xl border border-[#7C3AED]/40 bg-[#7C3AED]/10 p-4 flex items-start gap-3 transition-colors hover:bg-[#7C3AED]/15">
+              <div className="mt-6 rounded-2xl border border-[#1685FF]/40 bg-[#1685FF]/10 p-4 flex items-start gap-3 transition-colors hover:bg-[#1685FF]/15">
                 <input
                   type="checkbox"
                   id="guidelines-consent"
@@ -776,11 +777,11 @@ export default function CandidatePortalPage({
                       alert('Could not record your agreement. Please try again.');
                     }
                   }}
-                  className="mt-0.5 h-5 w-5 rounded border-[#7C3AED] bg-[#090414] text-[#7C3AED] focus:ring-[#7C3AED] cursor-pointer disabled:cursor-default"
+                  className="mt-0.5 h-5 w-5 rounded border-[#1685FF] bg-[#050B18] text-[#1685FF] focus:ring-[#1685FF] cursor-pointer disabled:cursor-default"
                 />
                 <label
                   htmlFor="guidelines-consent"
-                  className="text-xs font-bold text-[#C4B5FD] leading-relaxed select-none cursor-pointer"
+                  className="text-xs font-bold text-[#BAE6FD] leading-relaxed select-none cursor-pointer"
                 >
                   {data.guidelines_accepted
                     ? 'You have already verified and accepted these proctoring rules. This integrity agreement is valid for all rounds.'
@@ -794,7 +795,7 @@ export default function CandidatePortalPage({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-black text-white tracking-tight">Application Stages</h3>
-                  <p className="text-xs text-[#94A3B8] mt-0.5">Complete each evaluation stage sequentially.</p>
+                  <p className="text-xs text-[var(--assessment-on-surface-variant)] mt-0.5">Complete each evaluation stage sequentially.</p>
                 </div>
               </div>
 
@@ -804,13 +805,13 @@ export default function CandidatePortalPage({
                   const isLocked = stage.status === 'LOCKED';
                   const isAvailable = stage.status === 'IN_PROGRESS' || stage.status === 'NOT_STARTED';
 
-                  let statusBadgeBg = 'bg-[#090414] text-[#94A3B8] border-[#2D1B69]';
+                  let statusBadgeBg = 'bg-[#050B18] text-[var(--assessment-on-surface-variant)] border-[#293B57]';
                   let statusText = stage.status.replace('_', ' ');
                   if (isCompleted) {
                     statusBadgeBg = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
                     statusText = 'Completed';
                   } else if (isAvailable) {
-                    statusBadgeBg = 'bg-[#7C3AED]/20 text-[#55E63B] border-[#7C3AED]/40';
+                    statusBadgeBg = 'bg-[#1685FF]/20 text-[#34D399] border-[#1685FF]/40';
                     statusText = stage.status === 'IN_PROGRESS' ? 'In Progress' : 'Ready to Start';
                   }
 
@@ -819,10 +820,10 @@ export default function CandidatePortalPage({
                       key={stage.id}
                       className={`relative overflow-hidden rounded-2xl border transition-all ${
                         isAvailable
-                          ? 'border-[#7C3AED] bg-[#160A30] shadow-xl shadow-purple-900/10'
+                          ? 'border-[#1685FF] bg-[#0B1930] shadow-xl shadow-purple-900/10'
                           : isCompleted
-                          ? 'border-[#2D1B69]/80 bg-[#160A30]/50'
-                          : 'border-[#2D1B69]/40 bg-[#160A30]/30 opacity-70'
+                          ? 'border-[#293B57]/80 bg-[#0B1930]/50'
+                          : 'border-[#293B57]/40 bg-[#0B1930]/30 opacity-70'
                       } p-6`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -832,14 +833,14 @@ export default function CandidatePortalPage({
                               isCompleted
                                 ? 'bg-emerald-500 text-black'
                                 : isAvailable
-                                ? 'bg-[#55E63B] text-black ring-4 ring-[#55E63B]/20'
-                                : 'bg-[#2D1B69] text-[#94A3B8]'
+                                ? 'bg-[#34D399] text-black ring-4 ring-[#34D399]/20'
+                                : 'bg-[#2D1B69] text-[var(--assessment-on-surface-variant)]'
                             }`}
                           >
-                            {isCompleted ? '?' : idx + 1}
+                            {isCompleted ? '✓' : idx + 1}
                           </div>
                           <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#A78BFA]">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#38BDF8]">
                               Round {idx + 1}
                             </span>
                             <h4 className="text-lg font-black text-white">{stage.name}</h4>
@@ -847,7 +848,7 @@ export default function CandidatePortalPage({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#C4B5FD]">
+                          <span className="rounded-lg border border-[#293B57] bg-[#050B18] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#BAE6FD]">
                             {formatStageType(stage.type, stage.name)}
                           </span>
                           <span className={`rounded-lg border px-2.5 py-1 text-[11px] font-black uppercase tracking-wider ${statusBadgeBg}`}>
@@ -857,21 +858,21 @@ export default function CandidatePortalPage({
                       </div>
 
                       {stage.description ? (
-                        <p className="text-xs text-[#94A3B8] leading-relaxed mb-6">
+                        <p className="text-xs text-[var(--assessment-on-surface-variant)] leading-relaxed mb-6">
                           {stage.description}
                         </p>
                       ) : null}
 
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#2D1B69]/50">
-                        <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-[#94A3B8]">
-                          <span className="flex items-center gap-1.5 rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1">
-                            <svg className="h-3.5 w-3.5 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#293B57]/50">
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-[var(--assessment-on-surface-variant)]">
+                          <span className="flex items-center gap-1.5 rounded-lg border border-[#293B57] bg-[#050B18] px-2.5 py-1">
+                            <svg className="h-3.5 w-3.5 text-[#1685FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Est. 30�45 mins
+                            Est. 30–45 mins
                           </span>
-                          <span className="flex items-center gap-1.5 rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1">
-                            <svg className="h-3.5 w-3.5 text-[#55E63B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <span className="flex items-center gap-1.5 rounded-lg border border-[#293B57] bg-[#050B18] px-2.5 py-1">
+                            <svg className="h-3.5 w-3.5 text-[#34D399]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             AI Proctoring Active
@@ -889,7 +890,7 @@ export default function CandidatePortalPage({
                           ) : isLocked ? (
                             <button
                               disabled
-                              className="rounded-xl border border-[#2D1B69] bg-[#090414] px-6 py-2.5 text-xs font-bold text-[#94A3B8]/60 cursor-not-allowed"
+                              className="rounded-xl border border-[#293B57] bg-[#050B18] px-6 py-2.5 text-xs font-bold text-[var(--assessment-on-surface-variant)]/60 cursor-not-allowed"
                             >
                               Locked
                             </button>
@@ -937,8 +938,8 @@ export default function CandidatePortalPage({
                               disabled={startingStage === stage.id || needsIdentityGate}
                               className={`group inline-flex items-center gap-2 rounded-xl px-7 py-3 text-xs font-black transition-all ${
                                 agreed && !needsIdentityGate
-                                  ? 'bg-[#55E63B] text-black hover:bg-[#4bd133] shadow-lg shadow-emerald-500/20 active:scale-95'
-                                  : 'bg-[#090414] text-[#94A3B8] border border-[#2D1B69] cursor-not-allowed'
+                                  ? 'bg-[#34D399] text-black hover:bg-[#10B981] shadow-lg shadow-emerald-500/20 active:scale-95'
+                                  : 'bg-[#050B18] text-[var(--assessment-on-surface-variant)] border border-[#293B57] cursor-not-allowed'
                               }`}
                             >
                               {startingStage === stage.id
@@ -968,9 +969,9 @@ export default function CandidatePortalPage({
           {/* Right Column: Role Overview, Skills, Tips */}
           <div className="lg:col-span-4 space-y-6">
             {/* Role Overview */}
-            <div className="rounded-3xl border border-[#2D1B69] bg-[#160A30] p-6 shadow-xl">
+            <div className="rounded-3xl border border-[#293B57] bg-[#0B1930] p-6 shadow-xl">
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#7C3AED]/20 text-[#A78BFA]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1685FF]/20 text-[#38BDF8]">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -980,28 +981,28 @@ export default function CandidatePortalPage({
 
               {data.job.responsibilities && data.job.responsibilities.length > 0 ? (
                 <div className="space-y-3">
-                  <p className="text-xs text-[#94A3B8] leading-relaxed">
+                  <p className="text-xs text-[var(--assessment-on-surface-variant)] leading-relaxed">
                     As a {data.job.title}, you will be evaluated against the core responsibilities outlined below:
                   </p>
                   <ul className="space-y-2.5">
                     {data.job.responsibilities.map((resp, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-[#C4B5FD] leading-relaxed">
-                        <span className="text-[#55E63B] font-bold mt-0.5">�</span>
+                      <li key={i} className="flex items-start gap-2 text-xs text-[#BAE6FD] leading-relaxed">
+                        <span className="text-[#34D399] font-bold mt-0.5">•</span>
                         <span>{resp}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               ) : (
-                <p className="text-xs italic text-[#94A3B8]">No specific responsibilities specified for this role.</p>
+                <p className="text-xs italic text-[var(--assessment-on-surface-variant)]">No specific responsibilities specified for this role.</p>
               )}
             </div>
 
             {/* Required Skills */}
             {data.job.requiredSkills && data.job.requiredSkills.length > 0 && (
-              <div className="rounded-3xl border border-[#2D1B69] bg-[#160A30] p-6 shadow-xl">
+              <div className="rounded-3xl border border-[#293B57] bg-[#0B1930] p-6 shadow-xl">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#55E63B]/10 text-[#55E63B]">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#34D399]/10 text-[#34D399]">
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
@@ -1013,7 +1014,7 @@ export default function CandidatePortalPage({
                   {data.job.requiredSkills.map((skill, i) => (
                     <span
                       key={i}
-                      className="rounded-xl border border-[#2D1B69] bg-[#090414] px-3 py-1.5 text-xs font-bold text-[#C4B5FD]"
+                      className="rounded-xl border border-[#293B57] bg-[#050B18] px-3 py-1.5 text-xs font-bold text-[#BAE6FD]"
                     >
                       {skill}
                     </span>
@@ -1025,10 +1026,10 @@ export default function CandidatePortalPage({
             {/* Pro-Tips Card */}
             <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-[#160A30] to-[#160A30] p-6 shadow-xl">
               <div className="flex items-center gap-2.5 mb-3">
-                <span className="text-lg">??</span>
+                <span className="flex items-center text-[var(--color-primary)]"><AssessmentMaterialIcon name="lightbulb" size={20} /></span>
                 <h3 className="text-sm font-extrabold text-amber-300">Candidate Pro-Tip</h3>
               </div>
-              <p className="text-xs text-[#C4B5FD] leading-relaxed">
+              <p className="text-xs text-[#BAE6FD] leading-relaxed">
                 Block uninterrupted time for Coding and AI Voice interview stages. Use headphones with a built-in microphone for clean audio fidelity, and keep an active window to prevent idle flags.
               </p>
             </div>
@@ -1036,9 +1037,9 @@ export default function CandidatePortalPage({
         </div>
 
         {/* Footer */}
-        <div className="mt-12 pb-10 text-center text-xs text-[#94A3B8]">
+        <div className="mt-12 pb-10 text-center text-xs text-[var(--assessment-on-surface-variant)]">
           Need technical assistance or accessibility accommodations?{' '}
-          <a href="#" className="font-bold text-[#A78BFA] hover:text-[#55E63B] underline transition-colors">
+          <a href="#" className="font-bold text-[#38BDF8] hover:text-[#34D399] underline transition-colors">
             Contact Support
           </a>
         </div>

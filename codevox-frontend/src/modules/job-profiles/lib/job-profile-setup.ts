@@ -25,19 +25,38 @@ export function isTakeHomeStageConfigured(_stage: JobProfileStage): boolean {
 }
 
 export function isQuestionsStepComplete(
-  questions: Array<{ prompt: string; kind?: string }>,
+  questions: Array<{ prompt: string; kind?: string; stage_id?: string | null; metadata?: Record<string, unknown> | null }>,
   stages: JobProfileStage[] = [],
 ): boolean {
-  // If pipeline stages are configured, CodeVox generates/selects questions dynamically
   if (stages && stages.length > 0) {
-    const hasManualCoding = stages.some(
+    const manualCodingStages = stages.filter(
       (s) => s.stage_type === 'coding' && (s.round_config as any)?.question_strategy === 'manual'
     );
-    const hasManualVerbal = stages.some(
+    for (const stage of manualCodingStages) {
+      const hasProblem = questions.some(
+        (q) =>
+          (!q.stage_id || q.stage_id === stage.id) &&
+          (q.kind === 'coding' ||
+            (q.metadata as any)?.source === 'problem_bank' ||
+            (q.metadata as any)?.problem_bank_id != null)
+      );
+      if (!hasProblem) return false;
+    }
+
+    const manualVerbalStages = stages.filter(
       (s) => s.stage_type === 'ai_verbal' && (s.round_config as any)?.question_strategy === 'manual'
     );
-    if (hasManualCoding && !questions.some((q) => q.kind === 'coding')) return false;
-    if (hasManualVerbal && !questions.some((q) => q.kind !== 'coding')) return false;
+    for (const stage of manualVerbalStages) {
+      const hasQuestion = questions.some(
+        (q) =>
+          (!q.stage_id || q.stage_id === stage.id) &&
+          (q.kind === 'anchor' ||
+            q.kind === 'manual' ||
+            (q.metadata as any)?.source === 'question_bank' ||
+            (q.metadata as any)?.question_bank_id != null)
+      );
+      if (!hasQuestion) return false;
+    }
     return true;
   }
   return true;

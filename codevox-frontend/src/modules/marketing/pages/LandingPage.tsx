@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import '@/modules/marketing/styles/landing.css';
 
@@ -73,8 +73,366 @@ const ADVANTAGES = [
   },
 ];
 
+const INTERVIEW_CONVERSATION = [
+  {
+    sender: 'ai',
+    text: 'How would you optimize a function that processes a large collection of records?',
+    time: '00:42',
+    speakerLabel: 'AI Interviewer',
+    activeSkill: 'Problem Solving',
+  },
+  {
+    sender: 'candidate',
+    text: 'I would first analyze its time complexity and look for unnecessary iterations...',
+    time: '00:56',
+    speakerLabel: 'Candidate',
+    activeSkill: 'Algorithms',
+  },
+  {
+    sender: 'ai',
+    text: 'What data structures could help reduce the processing time?',
+    time: '01:15',
+    speakerLabel: 'AI Interviewer',
+    activeSkill: 'Data Structures',
+  },
+  {
+    sender: 'candidate',
+    text: 'Using a HashMap or inverted index to achieve O(1) lookups instead of nested searches.',
+    time: '01:30',
+    speakerLabel: 'Candidate',
+    activeSkill: 'Communication',
+  },
+];
+
+function LiveInterviewCard() {
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [typedCharCount, setTypedCharCount] = useState(0);
+  const [phase, setPhase] = useState<'thinking' | 'typing' | 'done'>('thinking');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const currentMsg = INTERVIEW_CONVERSATION[currentStepIndex];
+
+  // Natural conversational rhythm & fluid typing
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (phase === 'thinking') {
+      // Natural 400ms pause before starting to speak/type
+      timer = setTimeout(() => {
+        setPhase('typing');
+      }, 450);
+    } else if (phase === 'typing') {
+      if (typedCharCount < currentMsg.text.length) {
+        // Humanized variable cadence: punctuation pauses slightly longer
+        const char = currentMsg.text[typedCharCount];
+        const delay = char === ',' || char === '.' ? 65 : 24;
+
+        timer = setTimeout(() => {
+          setTypedCharCount((prev) => prev + 1);
+        }, delay);
+      } else {
+        // Once typing finishes, pause smoothly so reader can comprehend
+        timer = setTimeout(() => {
+          setPhase('done');
+        }, 1400);
+      }
+    } else if (phase === 'done') {
+      if (currentStepIndex < INTERVIEW_CONVERSATION.length - 1) {
+        // Natural transition to next speaker
+        timer = setTimeout(() => {
+          setCurrentStepIndex((prev) => prev + 1);
+          setTypedCharCount(0);
+          setPhase('thinking');
+        }, 500);
+      } else {
+        // Smooth loop restart after reading the whole exchange
+        timer = setTimeout(() => {
+          setCurrentStepIndex(0);
+          setTypedCharCount(0);
+          setPhase('thinking');
+        }, 4000);
+      }
+    }
+
+    return () => clearTimeout(timer);
+  }, [phase, typedCharCount, currentStepIndex, currentMsg.text]);
+
+  // Smooth auto-scroll
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTo({
+        top: chatScrollRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [typedCharCount, currentStepIndex, phase]);
+
+  const isSpeaking = phase === 'typing' || phase === 'thinking';
+  const isAiSpeaking = currentMsg.sender === 'ai' && isSpeaking;
+  const isCandidateSpeaking = currentMsg.sender === 'candidate' && isSpeaking;
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-xl border border-[#293B57] bg-[#050B18]/95 p-4 shadow-xl">
+      <div className="mb-3 flex items-center justify-between border-b border-[#293B57] pb-2">
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE] animate-pulse" />
+          <span className="text-xs font-semibold text-white">AI Interview</span>
+          <span className="text-[10px] text-[#A7B7CD] transition-all duration-300">
+            · {isSpeaking ? (currentMsg.sender === 'ai' ? 'AI speaking...' : 'Candidate speaking...') : `${currentMsg.speakerLabel}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[#22D3EE]" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#22D3EE]">Live</span>
+        </div>
+      </div>
+
+      {/* Chat & Skills Split */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:gap-2.5">
+        {/* Dialogue area with smooth height & auto-scroll */}
+        <div
+          ref={chatScrollRef}
+          className="space-y-2.5 sm:col-span-8 max-h-[195px] min-h-[195px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-[#293B57]"
+        >
+          {/* Render past completed messages */}
+          {INTERVIEW_CONVERSATION.slice(0, currentStepIndex).map((msg, idx) => {
+            const isAi = msg.sender === 'ai';
+            return (
+              <div
+                key={idx}
+                className={`flex items-start gap-2 ${isAi ? 'justify-start' : 'justify-end'}`}
+              >
+                {isAi && (
+                  <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-[#0F203B]/80 text-[#22D3EE] ring-1 ring-cyan-500/20">
+                    <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+                  </div>
+                )}
+
+                <div
+                  className={`rounded-lg p-2.5 text-[11px] max-w-[85%] shadow-sm ${
+                    isAi
+                      ? 'border border-[#293B57] bg-[#081426]/90 text-[#F8FAFC]'
+                      : 'border border-blue-500/25 bg-blue-950/40 text-[#E0E7FF]'
+                  }`}
+                >
+                  <p className="leading-relaxed">{msg.text}</p>
+                  <span className="mt-1 block text-right font-mono text-[9px] text-[#64748B]">
+                    {msg.time}
+                  </span>
+                </div>
+
+                {!isAi && (
+                  <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-blue-900/60 text-[#93C5FD] ring-1 ring-blue-500/20">
+                    <span className="material-symbols-outlined text-[14px]">person</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Currently Active / Typing Message */}
+          {(() => {
+            const isAi = currentMsg.sender === 'ai';
+            const displayedText = currentMsg.text.slice(0, typedCharCount);
+            return (
+              <div
+                className={`flex items-start gap-2 transition-all duration-300 ${
+                  isAi ? 'justify-start' : 'justify-end'
+                }`}
+              >
+                {isAi && (
+                  <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-[#0F203B]/80 text-[#22D3EE] ring-1 ring-cyan-500/20">
+                    <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+                  </div>
+                )}
+
+                <div
+                  className={`rounded-lg p-2.5 text-[11px] max-w-[85%] shadow-sm transition-all duration-200 ${
+                    isAi
+                      ? 'border border-[#293B57] bg-[#081426]/90 text-[#F8FAFC]'
+                      : 'border border-blue-500/25 bg-blue-950/40 text-[#E0E7FF]'
+                  }`}
+                >
+                  {phase === 'thinking' && typedCharCount === 0 ? (
+                    <div className="flex items-center gap-1 py-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE] animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE] animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE] animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  ) : (
+                    <p className="leading-relaxed">
+                      {displayedText}
+                      {phase === 'typing' && (
+                        <span className="ml-0.5 inline-block h-3 w-1 align-middle bg-[#22D3EE] rounded-sm animate-pulse" />
+                      )}
+                    </p>
+                  )}
+                  <span className="mt-1 block text-right font-mono text-[9px] text-[#64748B]">
+                    {currentMsg.time}
+                  </span>
+                </div>
+
+                {!isAi && (
+                  <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-blue-900/60 text-[#93C5FD] ring-1 ring-blue-500/20">
+                    <span className="material-symbols-outlined text-[14px]">person</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Skills Assessed Box */}
+        <div className="flex flex-col justify-between rounded-lg border border-[#293B57] bg-[#081426]/70 p-2.5 sm:col-span-4 min-h-[195px]">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#38BDF8]">Skills Assessed</span>
+            <div className="mt-2 space-y-2">
+              {[
+                { name: 'Problem Solving', icon: 'psychology' },
+                { name: 'Data Structures', icon: 'account_tree' },
+                { name: 'Algorithms', icon: 'terminal' },
+                { name: 'Communication', icon: 'record_voice_over' },
+              ].map((s) => {
+                const isActive = currentMsg.activeSkill === s.name;
+                return (
+                  <div
+                    key={s.name}
+                    className={`flex items-center gap-1.5 text-[10px] rounded px-1.5 py-1 transition-all duration-500 ease-out ${
+                      isActive
+                        ? 'bg-cyan-500/15 text-[#22D3EE] font-medium border border-cyan-500/30 translate-x-0.5'
+                        : 'text-[#A7B7CD]'
+                    }`}
+                  >
+                    <span className={`material-symbols-outlined text-[12px] transition-colors duration-300 ${isActive ? 'text-[#22D3EE]' : 'text-[#38BDF8]'}`}>
+                      {s.icon}
+                    </span>
+                    <span className="truncate">{s.name}</span>
+                    {isActive && <span className="ml-auto text-[9px] font-mono text-[#22D3EE]">active</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="mt-2 border-t border-[#293B57]/60 pt-1.5 text-center">
+            <span className="text-[9px] font-mono text-[#64748B]">
+              Step {currentStepIndex + 1} of {INTERVIEW_CONVERSATION.length}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Voice Waveform Bar */}
+      <div className="mt-3 flex items-center gap-2.5 rounded-lg border border-[#293B57] bg-[#081426]/70 px-2.5 py-1.5">
+        <div className={`flex h-5 w-5 items-center justify-center rounded-full text-white transition-all duration-300 ${
+          isAiSpeaking ? 'bg-[#22D3EE] text-[#050B18] shadow-[0_0_10px_rgba(34,211,238,0.5)]' : 'bg-[#1685FF]'
+        }`}>
+          <span className="material-symbols-outlined text-[12px]">
+            {isSpeaking ? 'graphic_eq' : 'play_arrow'}
+          </span>
+        </div>
+        <div className="flex flex-1 items-center justify-center gap-0.5">
+          {[4, 8, 14, 6, 18, 22, 10, 16, 24, 12, 20, 8, 14, 22, 16, 9, 13, 20, 7, 12, 18, 5].map((h, i) => (
+            <span
+              key={i}
+              className={`w-1 rounded-full transition-all duration-300 ease-out ${
+                isAiSpeaking
+                  ? 'bg-gradient-to-t from-[#1685FF] to-[#22D3EE] animate-pulse'
+                  : isCandidateSpeaking
+                  ? 'bg-gradient-to-t from-blue-600 to-indigo-400'
+                  : 'bg-[#293B57]'
+              }`}
+              style={{
+                height: isSpeaking ? `${h * 0.75}px` : '4px',
+                animationDelay: `${i * 35}ms`,
+              }}
+            />
+          ))}
+        </div>
+        <span className="font-mono text-[9px] text-[#A7B7CD]">{currentMsg.time}</span>
+      </div>
+    </div>
+  );
+}
+
+
+const CANDIDATE_PROFILES = [
+  {
+    id: 'alex',
+    name: 'Alex Chen',
+    role: 'Senior Distributed Systems Engineer',
+    avatar: 'AC',
+    avatarBg: 'from-cyan-500 to-blue-600',
+    verdict: 'Strong Hire',
+    verdictColor: 'text-[#34D399] bg-[#34D399]/15 border-[#34D399]/30',
+    overallScore: 94,
+    integrity: '100% Verified Clean',
+    integrityColor: 'text-[#34D399]',
+    interviewTime: '42m · 24 QA turns',
+    snippetAudioTitle: 'Architecture Defense (System Scalability)',
+    snippetQuestion: 'How would you prevent cascading failures when upstream cache misses hit Postgres?',
+    snippetAnswer: 'I implemented a circuit breaker with exponential backoff and a single-flight mutex pattern so identical keys don\'t stampede the database.',
+    aiCritique: 'Excellent fault-tolerance intuition. Addressed thundering herd problem proactively.',
+    scores: [
+      { skill: 'System Design', score: 96, label: 'Distributed Locking & Sharding' },
+      { skill: 'Code Correctness', score: 92, label: '38/40 Edge Cases Passed' },
+      { skill: 'Time Complexity', score: 95, label: 'O(log N) optimal lookup' },
+      { skill: 'Verbal Depth', score: 94, label: 'Concise architectural reasoning' },
+    ],
+    flags: [],
+  },
+  {
+    id: 'priya',
+    name: 'Priya Sharma',
+    role: 'Fullstack / Frontend Lead',
+    avatar: 'PS',
+    avatarBg: 'from-purple-500 to-indigo-600',
+    verdict: 'Lean Hire',
+    verdictColor: 'text-amber-300 bg-amber-500/15 border-amber-500/30',
+    overallScore: 78,
+    integrity: '100% Verified Clean',
+    integrityColor: 'text-[#34D399]',
+    interviewTime: '36m · 18 QA turns',
+    snippetAudioTitle: 'State Management & Re-render Optimization',
+    snippetQuestion: 'Why did you choose Jotai over Zustand for this complex canvas editor?',
+    snippetAnswer: 'Atomic state primitives prevent the entire canvas tree from re-rendering when dragging individual nodes across coordinates.',
+    aiCritique: 'Strong UI architecture. Slightly slower execution time on private concurrent test cases.',
+    scores: [
+      { skill: 'System Design', score: 82, label: 'Micro-frontend architecture' },
+      { skill: 'Code Correctness', score: 76, label: '31/40 Test Cases Passed' },
+      { skill: 'Time Complexity', score: 74, label: 'O(N^2) in tree traversal' },
+      { skill: 'Verbal Depth', score: 88, label: 'Clear communication style' },
+    ],
+    flags: [],
+  },
+  {
+    id: 'marcus',
+    name: 'Marcus Vance',
+    role: 'Backend Engineer (Flagged)',
+    avatar: 'MV',
+    avatarBg: 'from-rose-500 to-orange-600',
+    verdict: 'Disqualified',
+    verdictColor: 'text-rose-400 bg-rose-500/15 border-rose-500/30',
+    overallScore: 41,
+    integrity: 'Integrity Violation (Flagged)',
+    integrityColor: 'text-rose-400',
+    interviewTime: '18m · Terminated Early',
+    snippetAudioTitle: 'Proctoring Forensics Incident at 12:44',
+    snippetQuestion: 'Code paste burst detected: 42 lines pasted in 120 milliseconds.',
+    snippetAnswer: 'Candidate claimed dual-monitor hotkey glitch; secondary face simultaneously detected in camera background.',
+    aiCritique: 'Zero-proxy verification caught unauthorized code injection and multi-speaker audio prompts.',
+    scores: [
+      { skill: 'System Design', score: 45, label: 'Superficial memorized syntax' },
+      { skill: 'Code Correctness', score: 38, label: 'Failed private sandboxes' },
+      { skill: 'Time Complexity', score: 50, label: 'Sub-optimal brute force' },
+      { skill: 'Integrity Score', score: 18, label: '2 Critical Proctoring Alerts' },
+    ],
+    flags: ['Multi-face anomaly detected at 08:12', 'Block paste detected without keystroke trail'],
+  },
+];
+
 export function LandingPage() {
-  const [activeAdvTab, setActiveAdvTab] = useState(0);
+  const [selectedCandidateId, setSelectedCandidateId] = useState("alex");
+  const [isPlayingSnippet, setIsPlayingSnippet] = useState(false);
   return (
     <div className="cvx-landing">
       {/* Top Navbar — Spacious desktop bar */}
@@ -227,93 +585,8 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Mock Chat & Waveform Widget */}
-            <div className="mt-5 overflow-hidden rounded-xl border border-[#293B57] bg-[#050B18]/95 p-4 shadow-xl">
-              <div className="mb-3 flex items-center justify-between border-b border-[#293B57] pb-2">
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-                  <span className="text-xs font-semibold text-white">AI Interview</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[#22D3EE]" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#22D3EE]">Live</span>
-                </div>
-              </div>
-
-              {/* Chat & Skills Split */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:gap-2.5">
-                {/* Dialogue area */}
-                <div className="space-y-2 sm:col-span-8">
-                  {/* AI Bubble 1 */}
-                  <div className="flex items-start gap-2">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-[#0F203B]/80 text-[#22D3EE]">
-                      <span className="material-symbols-outlined text-[14px]">smart_toy</span>
-                    </div>
-                    <div className="rounded-lg border border-[#293B57] bg-[#081426]/70 p-2 text-[11px] text-[#F8FAFC]">
-                      <p>How would you optimize a function that processes a large collection of records?</p>
-                      <span className="mt-0.5 block text-right font-mono text-[9px] text-[#64748B]">00:42</span>
-                    </div>
-                  </div>
-
-                  {/* Candidate Bubble */}
-                  <div className="flex items-start justify-end gap-2">
-                    <div className="rounded-lg border border-blue-500/20 bg-blue-950/30 p-2 text-[11px] text-[#E0E7FF]">
-                      <p>I would first analyze its time complexity and look for unnecessary iterations...</p>
-                      <span className="mt-0.5 block text-right font-mono text-[9px] text-[#64748B]">00:56</span>
-                    </div>
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-blue-900/60 text-[#93C5FD]">
-                      <span className="material-symbols-outlined text-[14px]">person</span>
-                    </div>
-                  </div>
-
-                  {/* AI Bubble 2 */}
-                  <div className="flex items-start gap-2">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-[#0F203B]/80 text-[#22D3EE]">
-                      <span className="material-symbols-outlined text-[14px]">smart_toy</span>
-                    </div>
-                    <div className="rounded-lg border border-[#293B57] bg-[#081426]/70 p-2 text-[11px] text-[#F8FAFC]">
-                      <p>What data structures could help reduce the processing time?</p>
-                      <span className="mt-0.5 block text-right font-mono text-[9px] text-[#64748B]">01:15</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Skills Assessed Box */}
-                <div className="flex flex-col justify-between rounded-lg border border-[#293B57] bg-[#081426]/70 p-2.5 sm:col-span-4">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#38BDF8]">Skills Assessed</span>
-                  <div className="mt-1.5 space-y-1.5">
-                    {[
-                      { name: 'Problem Solving', icon: 'psychology' },
-                      { name: 'Data Structures', icon: 'account_tree' },
-                      { name: 'Algorithms', icon: 'terminal' },
-                      { name: 'Communication', icon: 'record_voice_over' },
-                    ].map((s) => (
-                      <div key={s.name} className="flex items-center gap-1.5 text-[10px] text-[#A7B7CD]">
-                        <span className="material-symbols-outlined text-[11px] text-[#38BDF8]">{s.icon}</span>
-                        <span className="truncate">{s.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Voice Waveform Bar */}
-              <div className="mt-3 flex items-center gap-2.5 rounded-lg border border-[#293B57] bg-[#081426]/70 px-2.5 py-1.5">
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1685FF] text-white">
-                  <span className="material-symbols-outlined text-[12px]">play_arrow</span>
-                </div>
-                <div className="flex flex-1 items-center justify-center gap-0.5">
-                  {[4, 8, 14, 6, 18, 22, 10, 16, 24, 12, 20, 8, 14, 22, 16, 9, 13, 20, 7, 12, 18, 5].map((h, i) => (
-                    <span
-                      key={i}
-                      className="w-1 rounded-full bg-gradient-to-t from-[#1685FF] to-[#22D3EE]"
-                      style={{ height: (h * 0.75) + 'px' }}
-                    />
-                  ))}
-                </div>
-                <span className="font-mono text-[9px] text-[#A7B7CD]">01:45</span>
-              </div>
-            </div>
+            {/* Live Interactive Chat & Waveform Widget */}
+            <LiveInterviewCard />
           </div>
 
           {/* Right Column (Cards 02 & 03, Span 7 on LG - Tight gap) */}
@@ -698,234 +971,257 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* The CodeVox Advantage — Interactive Feature Showcase */}
+      {/* The CodeVox Advantage — Interactive Hiring Intelligence Console */}
       <section id="advantages" className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-24">
         <div className="mb-10 max-w-3xl lg:mb-12">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#293B57] bg-[#081426]/70 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#22D3EE] shadow-[0_0_15px_rgba(34,211,238,0.15)]">
-            <span>The CodeVox Advantage</span>
+            <span>Executive Hiring Console</span>
           </div>
           <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            The Smarter Way to Evaluate Developers
+            Live AI Dossier &amp; Decision Desk
           </h2>
           <p className="mt-3 text-base leading-relaxed text-[#A7B7CD] lg:text-lg">
-            Move beyond keyword-stuffed resumes and leaked coding puzzles. Get deep, verifiable signal on how engineers actually build and think.
+            See how CodeVox evaluates different engineers in real time. Switch candidates to inspect deep reasoning scores, audio highlights, and anti-proxy proctoring forensics.
           </p>
         </div>
 
-        {/* Interactive Feature Showcase with Tabbed Navigation & Comparison Breakdown */}
-        <div className="overflow-hidden rounded-3xl border border-[#293B57] bg-[#0B1930]/90 shadow-2xl backdrop-blur-xl">
-          
-          {/* Top Pill Tabs */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-[#293B57] bg-[#081426]/90 p-4 sm:p-5">
-            {ADVANTAGES.map((adv, idx) => {
-              const active = activeAdvTab === idx;
-              return (
-                <button
-                  key={adv.badge}
-                  onClick={() => setActiveAdvTab(idx)}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition duration-200 sm:text-sm ${
-                    active
-                      ? 'border border-[#22D3EE]/50 bg-[#1685FF] text-white shadow-[0_0_20px_rgba(34,211,238,0.35)]'
-                      : 'border border-transparent bg-[#0F203B]/60 text-[#A7B7CD] hover:border-[#293B57] hover:text-[#F8FAFC]'
-                  }`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-[#22D3EE]' : 'bg-[#293B57]'}`} />
-                  {adv.badge}
-                </button>
-              );
-            })}
-          </div>
+        {(() => {
+          const currentCandidate = CANDIDATE_PROFILES.find((c) => c.id === selectedCandidateId) || CANDIDATE_PROFILES[0];
 
-          {/* Active Feature Showcase Body */}
-          <div className="grid grid-cols-1 gap-8 p-6 lg:grid-cols-12 lg:gap-10 lg:p-10">
-            
-            {/* Left: Deep-dive breakdown of selected advantage */}
-            <div className="flex flex-col justify-between lg:col-span-6">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className="rounded-full border border-[#293B57] bg-[#0F203B] px-3.5 py-1 text-xs font-semibold text-[#22D3EE]">
-                    {ADVANTAGES[activeAdvTab].badge}
+          return (
+            <div className="overflow-hidden rounded-3xl border border-[#293B57] bg-[#0B1930]/90 shadow-2xl backdrop-blur-xl">
+              {/* Candidate Switcher Header */}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#293B57] bg-[#081426]/90 p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#64748B] mr-1 hidden sm:inline">
+                    Select Candidate:
                   </span>
-                  <span className="font-mono text-xs text-[#64748B]">Pillar 0{activeAdvTab + 1} of 04</span>
+                  {CANDIDATE_PROFILES.map((cand) => {
+                    const active = selectedCandidateId === cand.id;
+                    return (
+                      <button
+                        key={cand.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCandidateId(cand.id);
+                          setIsPlayingSnippet(false);
+                        }}
+                        className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 sm:text-sm ${
+                          active
+                            ? 'border border-[#22D3EE]/50 bg-[#1685FF] text-white shadow-[0_0_20px_rgba(34,211,238,0.35)] scale-[1.02]'
+                            : 'border border-[#293B57] bg-[#0F203B]/60 text-[#A7B7CD] hover:border-[#22D3EE]/30 hover:text-white'
+                        }`}
+                      >
+                        <div className={`flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br ${cand.avatarBg} text-[10px] font-black text-white`}>
+                          {cand.avatar}
+                        </div>
+                        <span>{cand.name}</span>
+                        <span className={`rounded-md border px-1.5 py-0.5 text-[10px] ${cand.verdictColor}`}>
+                          {cand.verdict}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <h3 className="mt-4 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                  {ADVANTAGES[activeAdvTab].title}
-                </h3>
-                
-                <p className="mt-3.5 text-sm leading-relaxed text-[#A7B7CD] sm:text-base">
-                  {ADVANTAGES[activeAdvTab].body}
-                </p>
-
-                {/* Structured capability badges */}
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-[#293B57] bg-[#081426]/70 p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Legacy Hiring</p>
-                    <p className="mt-1 text-xs font-medium text-rose-400">
-                      {ADVANTAGES[activeAdvTab].legacy}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-[#22D3EE]/30 bg-[#22D3EE]/5 p-3.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#22D3EE]">CodeVox Signal</p>
-                    <p className="mt-1 text-xs font-medium text-[#34D399]">
-                      {ADVANTAGES[activeAdvTab].signal}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2 text-xs font-mono text-[#A7B7CD]">
+                  <span className="h-2 w-2 rounded-full bg-[#22D3EE] animate-pulse" />
+                  <span>Real-time Dossier</span>
                 </div>
               </div>
 
-              {/* Key Metric Highlight */}
-              <div className="mt-8 flex items-center justify-between rounded-2xl border border-[#293B57] bg-[#081426] p-5">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#A7B7CD]">Verified Metric</p>
-                  <p className="text-xs text-[#64748B]">{ADVANTAGES[activeAdvTab].metricLabel}</p>
+              {/* Dossier Content Grid */}
+              <div className="grid grid-cols-1 gap-8 p-6 lg:grid-cols-12 lg:gap-10 lg:p-10">
+                {/* Left: Candidate Summary & Skill Breakdown */}
+                <div className="flex flex-col justify-between lg:col-span-6">
+                  <div>
+                    {/* Header info */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2.5">
+                          <h3 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                            {currentCandidate.name}
+                          </h3>
+                          <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${currentCandidate.verdictColor}`}>
+                            {currentCandidate.verdict}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm font-medium text-[#22D3EE]">
+                          {currentCandidate.role}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Composite Score</span>
+                        <p className={`font-mono text-3xl font-black ${currentCandidate.overallScore >= 90 ? 'text-[#34D399]' : currentCandidate.overallScore >= 70 ? 'text-[#22D3EE]' : 'text-rose-400'}`}>
+                          {currentCandidate.overallScore}%
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quick Stats Grid */}
+                    <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border border-[#293B57] bg-[#081426]/80 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Session Duration</p>
+                        <p className="mt-1 font-mono text-xs font-bold text-white">{currentCandidate.interviewTime}</p>
+                      </div>
+                      <div className="rounded-xl border border-[#293B57] bg-[#081426]/80 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Integrity Signal</p>
+                        <p className={`mt-1 font-mono text-xs font-bold ${currentCandidate.integrityColor}`}>{currentCandidate.integrity}</p>
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 rounded-xl border border-[#293B57] bg-[#081426]/80 p-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Recommendation</p>
+                        <p className="mt-1 font-mono text-xs font-bold text-white">
+                          {currentCandidate.overallScore >= 90 ? 'Fast-track to Offer' : currentCandidate.overallScore >= 70 ? 'Team Lead Review' : 'Do Not Advance'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Skill Meters */}
+                    <div className="mt-6 space-y-3.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#A7B7CD]">Objective Competency Matrix</span>
+                      {currentCandidate.scores.map((s) => (
+                        <div key={s.skill} className="rounded-xl border border-[#293B57] bg-[#081426]/60 p-3">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-white">{s.skill}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-[#A7B7CD]">{s.label}</span>
+                              <span className="font-mono font-bold text-[#22D3EE]">{s.score}%</span>
+                            </div>
+                          </div>
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#050B18]">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ease-out ${
+                                s.score >= 90 ? 'bg-gradient-to-r from-blue-500 to-[#34D399]' : s.score >= 70 ? 'bg-gradient-to-r from-blue-600 to-[#22D3EE]' : 'bg-rose-500'
+                              }`}
+                              style={{ width: `${s.score}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Integrity Flags if any */}
+                    {currentCandidate.flags.length > 0 && (
+                      <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-950/20 p-3.5 text-xs text-rose-300">
+                        <div className="flex items-center gap-2 font-bold text-rose-400">
+                          <span className="material-symbols-outlined text-[16px]">warning</span>
+                          Proctoring Security Flags Triggered ({currentCandidate.flags.length})
+                        </div>
+                        <ul className="mt-2 list-inside list-disc space-y-1 text-[11px] text-rose-200/90">
+                          {currentCandidate.flags.map((f, i) => (
+                            <li key={i}>{f}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="font-mono text-3xl font-black text-[#22D3EE] drop-shadow-[0_0_15px_rgba(34,211,238,0.4)] sm:text-4xl">
-                  {ADVANTAGES[activeAdvTab].metric}
-                </p>
+
+                {/* Right: Audio Evidence Snippet & AI Critique */}
+                <div className="flex flex-col justify-between overflow-hidden rounded-2xl border border-[#293B57] bg-[#050B18] p-5 shadow-2xl lg:col-span-6">
+                  <div>
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-[#293B57] pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px] text-[#22D3EE]">graphic_eq</span>
+                        <span className="text-xs font-bold text-white">Audio Evidence &amp; AI Analysis</span>
+                      </div>
+                      <span className="rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-mono font-bold text-[#22D3EE]">
+                        Snippet Timestamp: 14:18
+                      </span>
+                    </div>
+
+                    {/* Interactive Playable Snippet Card */}
+                    <div className="mt-4 rounded-xl border border-[#293B57] bg-[#081426] p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-white">{currentCandidate.snippetAudioTitle}</p>
+                          <p className="text-[11px] text-[#A7B7CD] mt-0.5">Click to simulate live verbal playback</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsPlayingSnippet((prev) => !prev)}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                            isPlayingSnippet
+                              ? 'bg-[#22D3EE] text-[#050B18] shadow-[0_0_12px_rgba(34,211,238,0.5)]'
+                              : 'bg-[#1685FF] text-white hover:bg-cyan-500 hover:text-[#050B18]'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            {isPlayingSnippet ? 'pause' : 'play_arrow'}
+                          </span>
+                          <span>{isPlayingSnippet ? 'Playing' : 'Listen'}</span>
+                        </button>
+                      </div>
+
+                      {/* Animated Sound Waveform while playing */}
+                      <div className="mt-3 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-[#050B18]/60 border border-[#293B57]/50">
+                        {Array.from({ length: 24 }).map((_, i) => (
+                          <span
+                            key={i}
+                            className={`w-1 rounded-full transition-all duration-200 ${
+                              isPlayingSnippet
+                                ? 'bg-gradient-to-t from-[#1685FF] to-[#22D3EE] animate-pulse'
+                                : 'bg-[#293B57]'
+                            }`}
+                            style={{
+                              height: isPlayingSnippet ? `${Math.max(6, (i % 6) * 4 + 4)}px` : '4px',
+                              animationDelay: `${i * 45}ms`,
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Transcript Box */}
+                      <div className="mt-4 space-y-2.5 font-mono text-[11px] leading-relaxed">
+                        <div className="rounded-lg border border-[#293B57] bg-[#050B18] p-3 text-[#A7B7CD]">
+                          <span className="text-[#22D3EE] font-bold">[AI]:</span> &ldquo;{currentCandidate.snippetQuestion}&rdquo;
+                        </div>
+                        <div className="rounded-lg border border-blue-500/20 bg-blue-950/20 p-3 text-[#F8FAFC]">
+                          <span className="text-cyan-400 font-bold">[{currentCandidate.name.split(' ')[0]}]:</span> &ldquo;{currentCandidate.snippetAnswer}&rdquo;
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI Assessment Critique Verdict */}
+                    <div className="mt-4 rounded-xl border border-[#22D3EE]/30 bg-[#22D3EE]/5 p-3.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#22D3EE]">
+                        <span className="material-symbols-outlined text-[16px]">psychology</span>
+                        CodeVox AI Technical Synthesis
+                      </div>
+                      <p className="mt-1.5 text-xs leading-relaxed text-[#A7B7CD]">
+                        {currentCandidate.aiCritique}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* On-Page Recruiter Action Bar */}
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#293B57] pt-4">
+                    <span className="text-[11px] text-[#64748B]">
+                      Simulated Hiring Workflow · Decision Desk
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => alert(`Action simulated: Decision log for ${currentCandidate.name} recorded.`)}
+                        className="rounded-lg border border-[#293B57] bg-[#081426] px-3 py-1.5 text-xs font-bold text-white hover:border-[#22D3EE]"
+                      >
+                        Log Note
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => alert(`Offer flow simulated for ${currentCandidate.name}.`)}
+                        className="rounded-lg bg-[#1685FF] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-cyan-500 hover:text-[#050B18] transition-colors"
+                      >
+                        {currentCandidate.overallScore >= 90 ? 'Approve & Hire' : currentCandidate.overallScore >= 70 ? 'Advance Round' : 'Reject Candidate'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Right: Dynamic Interactive Simulation Widget */}
-            <div className="overflow-hidden rounded-2xl border border-[#293B57] bg-[#050B18] p-5 shadow-2xl lg:col-span-6">
-              
-              {/* Tab 0: Adaptive Voice Screen */}
-              {activeAdvTab === 0 && (
-                <div>
-                  <div className="flex items-center justify-between border-b border-[#293B57] pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-[#22D3EE]">graphic_eq</span>
-                      <span className="text-xs font-bold text-white">Active Conversation · High-Signal Dialogue</span>
-                    </div>
-                    <span className="rounded-full bg-[#34D399]/15 px-2.5 py-0.5 text-[10px] font-extrabold text-[#34D399]">Live Audio</span>
-                  </div>
-                  
-                  <div className="mt-4 space-y-3 font-mono text-xs">
-                    <div className="rounded-xl border border-[#293B57] bg-[#081426] p-3 text-[#A7B7CD]">
-                      <span className="text-[#22D3EE]">[AI Interviewer]:</span> &ldquo;Your solution works for normal inputs, but how does memory consumption scale when payload size jumps to 1GB?&rdquo;
-                    </div>
-                    <div className="rounded-xl border border-sky-500/20 bg-sky-950/20 p-3 text-[#F8FAFC]">
-                      <span className="text-sky-400">[Candidate]:</span> &ldquo;I would switch from in-memory array buffering to streaming chunks with backpressure handling.&rdquo;
-                    </div>
-                    <div className="rounded-xl border border-[#34D399]/30 bg-[#34D399]/10 p-3 text-[#34D399]">
-                      <span className="font-bold">✓ Critical Thinking Verified:</span> Senior-level systems comprehension · Memory optimization depth.
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 1: Production Sandboxes */}
-              {activeAdvTab === 1 && (
-                <div>
-                  <div className="flex items-center justify-between border-b border-[#293B57] pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-[#22D3EE]">terminal</span>
-                      <span className="text-xs font-bold text-white">Docker Sandbox · Python / Node / PHP / SQL</span>
-                    </div>
-                    <span className="rounded-full bg-sky-500/15 px-2.5 py-0.5 font-mono text-[10px] font-bold text-sky-400">&lt; 40ms Run</span>
-                  </div>
-
-                  <div className="mt-4 space-y-2.5 font-mono text-[11px]">
-                    <div className="rounded-lg bg-[#081426] p-3 text-[#A7B7CD]">
-                      <p className="text-sky-400">$ sandbox run --memory=256MB --timeout=3s</p>
-                      <p className="mt-1 text-[#F8FAFC]">Validating 12 public examples... [Passed]</p>
-                      <p className="text-[#34D399]">Executing 28 hidden stress & concurrency test cases... [Passed]</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
-                      <div className="flex items-center justify-between rounded-lg border border-[#293B57] bg-[#081426] p-2">
-                        <span className="text-[#A7B7CD]">Memory Leak Check</span>
-                        <span className="text-[#34D399]">Clean (0 bytes leak)</span>
-                      </div>
-                      <div className="flex items-center justify-between rounded-lg border border-[#293B57] bg-[#081426] p-2">
-                        <span className="text-[#A7B7CD]">Time Complexity</span>
-                        <span className="text-[#34D399]">O(N log N) Verified</span>
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-[#34D399]/30 bg-[#34D399]/10 p-2.5 text-center text-xs font-bold text-[#34D399]">
-                      ✓ 40 / 40 Test Cases Passed · Zero Time-Limit Exceeded
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 2: Zero-Proxy Integrity */}
-              {activeAdvTab === 2 && (
-                <div>
-                  <div className="flex items-center justify-between border-b border-[#293B57] pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-[#22D3EE]">shield</span>
-                      <span className="text-xs font-bold text-white">Continuous Session Proctoring</span>
-                    </div>
-                    <span className="rounded-full bg-[#34D399]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#34D399]">100% Trust</span>
-                  </div>
-
-                  <div className="mt-4 space-y-2 text-xs">
-                    {[
-                      { label: 'Candidate Face Identity', status: 'Verified (Match: 99.4%)' },
-                      { label: 'Screen & Tab Lock', status: 'Active (0 Tab Switches)' },
-                      { label: 'Audio Spectrum Check', status: 'Single Voice (No Prompts)' },
-                      { label: 'Code Typing Cadence', status: 'Natural (No Block Pastes)' },
-                    ].map((row) => (
-                      <div key={row.label} className="flex items-center justify-between rounded-xl border border-[#293B57] bg-[#081426] p-2.5">
-                        <span className="text-[#A7B7CD]">{row.label}</span>
-                        <span className="font-mono text-[11px] font-bold text-[#34D399]">{row.status}</span>
-                      </div>
-                    ))}
-                    <div className="rounded-lg border border-[#34D399]/30 bg-[#34D399]/10 p-2 text-center text-xs font-bold text-[#34D399]">
-                      ✓ Clean Session · Anti-Cheat Audited
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 3: Instant Dossier */}
-              {activeAdvTab === 3 && (
-                <div>
-                  <div className="flex items-center justify-between border-b border-[#293B57] pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-[#22D3EE]">fact_check</span>
-                      <span className="text-xs font-bold text-white">Executive Candidate Dossier · Alex Johnson</span>
-                    </div>
-                    <span className="rounded-full bg-[#34D399]/15 px-2.5 py-0.5 text-[10px] font-extrabold text-[#34D399]">Strong Hire</span>
-                  </div>
-
-                  <div className="mt-4 space-y-2.5 text-xs">
-                    <div className="rounded-xl border border-[#293B57] bg-[#081426] p-3">
-                      <div className="flex justify-between font-bold text-white">
-                        <span>Overall Technical Match</span>
-                        <span className="font-mono text-[#22D3EE]">94% — Final Round Recommended</span>
-                      </div>
-                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#0B1930]">
-                        <div className="h-full rounded-full bg-gradient-to-r from-[#1685FF] to-[#22D3EE]" style={{ width: '94%' }} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border border-[#293B57] bg-[#081426] p-2">
-                        <p className="text-[10px] text-[#64748B]">Algorithms & Execution</p>
-                        <p className="font-mono text-sm font-bold text-white">96%</p>
-                      </div>
-                      <div className="rounded-lg border border-[#293B57] bg-[#081426] p-2">
-                        <p className="text-[10px] text-[#64748B]">System Architecture</p>
-                        <p className="font-mono text-sm font-bold text-white">92%</p>
-                      </div>
-                      <div className="rounded-lg border border-[#293B57] bg-[#081426] p-2">
-                        <p className="text-[10px] text-[#64748B]">Communication & Clarity</p>
-                        <p className="font-mono text-sm font-bold text-white">94%</p>
-                      </div>
-                      <div className="rounded-lg border border-[#293B57] bg-[#081426] p-2">
-                        <p className="text-[10px] text-[#64748B]">Integrity & Authenticity</p>
-                        <p className="font-mono text-sm font-bold text-[#34D399]">100%</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-        </div>
+          );
+        })()}
       </section>
 
       {/* Final Call to Action — Spacious hero banner */}

@@ -77,6 +77,17 @@ type Props = {
   onSavedStagesChange?: (savedStages: Set<string>) => void;
 };
 
+
+export function getFriendlyStageName(stage?: JobProfileStage | null): string {
+  if (!stage) return 'Round';
+  if (stage.stage_type === 'coding') return 'Coding Round';
+  if (stage.stage_type === 'ai_verbal' || stage.stage_type === 'screening') return 'Interview Round';
+  if (stage.stage_type === 'ai_screening') return 'AI Screening';
+  if (stage.stage_type === 'hr_verbal') return 'HR Verbal Interview';
+  if (stage.stage_type === 'project_interview') return 'Build & Defend';
+  return stage.name || 'Round';
+}
+
 function stageIcon(stage: JobProfileStage): string {
   if (stage.stage_type === 'project_interview') return 'rocket_launch';
   if (stage.stage_type === 'coding') return 'code';
@@ -131,6 +142,8 @@ export function RoundConfigurationView(props: Props) {
   const [dragQIdx, setDragQIdx] = useState<number | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const [aiWeights, setAiWeights] = useState(true);
+  const [newTopicName, setNewTopicName] = useState('');
+  const [newTopicCategory, setNewTopicCategory] = useState<'hard' | 'soft'>('hard');
 
   const applyAiCompetencies = (
     suggestions: Array<{ id?: string; name: string; category?: string; weight_pct?: number; target_score?: number }>,
@@ -287,6 +300,62 @@ export function RoundConfigurationView(props: Props) {
     props.onQuestionsChange(questions.filter((q) => q.id !== id));
   };
 
+  const handleAddTopic = () => {
+    const trimmed = newTopicName.trim();
+    if (!trimmed || !activeStageIdResolved) return;
+    if (competencies.some((c) => c.stage_id === activeStageIdResolved && c.name.toLowerCase() === trimmed.toLowerCase())) {
+      setNewTopicName('');
+      return;
+    }
+    const currentStageCompetencies = competencies.filter((c) => c.stage_id === activeStageIdResolved);
+    const newWeight = Math.max(0, 100 - currentStageCompetencies.reduce((sum, c) => sum + (c.weight_pct ?? 0), 0));
+
+    const newComp: JobProfileCompetency = {
+      id: `custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      stage_id: activeStageIdResolved,
+      name: trimmed,
+      category: newTopicCategory,
+      target_score: 8,
+      weight_pct: newWeight > 0 ? newWeight : 10,
+      sort_order: competencies.length,
+    };
+    props.onCompetenciesChange([...competencies, newComp]);
+    setNewTopicName('');
+  };
+
+  const handleUpdateTopicWeight = (compId: string, weight: number) => {
+    props.onCompetenciesChange(
+      competencies.map((c) => (c.id === compId ? { ...c, weight_pct: weight } : c))
+    );
+  };
+
+  const handleUpdateTopicScore = (compId: string, score: number) => {
+    props.onCompetenciesChange(
+      competencies.map((c) => (c.id === compId ? { ...c, target_score: score } : c))
+    );
+  };
+
+  const handleDeleteTopic = (compId: string) => {
+    props.onCompetenciesChange(competencies.filter((c) => c.id !== compId));
+  };
+
+  const handleAutoBalanceWeights = () => {
+    if (!activeStageIdResolved || stageCompetencies.length === 0) return;
+    const count = stageCompetencies.length;
+    const base = Math.floor(100 / count);
+    const remainder = 100 - base * count;
+
+    const next = competencies.map((c) => {
+      if (c.stage_id !== activeStageIdResolved) return c;
+      const idx = stageCompetencies.findIndex((sc) => sc.id === c.id);
+      return {
+        ...c,
+        weight_pct: idx === 0 ? base + remainder : base,
+      };
+    });
+    props.onCompetenciesChange(next);
+  };
+
   const reorderStageQuestions = (from: number, to: number) => {
     if (!activeStageIdResolved || from === to) return;
     const stageQs = questionsForStage(questions, activeStageIdResolved);
@@ -408,7 +477,7 @@ export function RoundConfigurationView(props: Props) {
                     style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
                   />
                   <h4 className={`font-title-sm text-sm ${active ? 'text-[var(--assessment-primary)]' : ''}`}>
-                    {stage.name}
+                    {getFriendlyStageName(stage)}
                   </h4>
                 </div>
                 <div className="flex items-center justify-between">
@@ -466,7 +535,7 @@ export function RoundConfigurationView(props: Props) {
                   ) : (
                     <AssessmentMaterialIcon name={activeStage ? stageIcon(activeStage) : 'assignment'} />
                   )}
-                  {activeStage?.name ?? 'Round'} Configuration
+                  {getFriendlyStageName(activeStage)} Configuration
                 </h3>
                 <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
                   Define how questions are sourced and evaluated.
@@ -745,6 +814,238 @@ export function RoundConfigurationView(props: Props) {
                       )}
                     </div>
 
+                    {/* Rubrics & Topic Competencies Section for Technical Verbal */}
+                    {isAiVerbal && (
+                      <div className="space-y-4 pt-6 border-t border-[var(--assessment-outline-variant)]">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-title-sm text-sm font-bold text-[var(--assessment-on-surface)] uppercase tracking-wide">
+                                Technical Evaluation Rubrics &amp; Topics
+                              </h4>
+                              <span className="rounded bg-[var(--assessment-primary)]/10 text-[var(--assessment-primary)] border border-[var(--assessment-primary)]/20 px-2 py-0.5 text-[10px] font-bold uppercase">
+                                Active Voice Engine
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
+                              Define competencies/topics. The AI voice interviewer asks questions and probes candidate responses against each topic listed here.
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => aiRubricMutation.mutate()}
+                              disabled={aiRubricMutation.isPending}
+                              className="flex items-center gap-1.5 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-3 py-1.5 text-xs font-semibold text-[var(--assessment-on-surface)] transition hover:border-[var(--assessment-primary)] hover:text-[var(--assessment-primary)] disabled:opacity-50"
+                            >
+                              <Sparkles className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                              {aiRubricMutation.isPending ? 'Generating...' : 'AI Suggest Topics'}
+                            </button>
+
+                            {stageCompetencies.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={handleAutoBalanceWeights}
+                                className="flex items-center gap-1.5 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-3 py-1.5 text-xs font-semibold text-[var(--assessment-on-surface)] transition hover:border-[var(--assessment-primary)] hover:text-[var(--assessment-primary)]"
+                                title="Balance weights equally to 100%"
+                              >
+                                <Scale className="h-3.5 w-3.5 text-[var(--assessment-on-surface-variant)]" />
+                                Balance to 100%
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Add Topic Input Bar */}
+                        <div className="flex flex-col sm:flex-row gap-2 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] p-3">
+                          <input
+                            type="text"
+                            placeholder="Add evaluation topic (e.g. Distributed Systems, SQL Indexing, React Architecture)..."
+                            value={newTopicName}
+                            onChange={(e) => setNewTopicName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddTopic();
+                              }
+                            }}
+                            className="flex-1 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-3 py-2 text-sm text-[var(--assessment-on-surface)] placeholder:text-[var(--assessment-on-surface-variant)]/60 focus:border-[var(--assessment-primary)] focus:outline-none"
+                          />
+                          <select
+                            value={newTopicCategory}
+                            onChange={(e) => setNewTopicCategory(e.target.value as 'hard' | 'soft')}
+                            className="rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-3 py-2 text-xs font-medium text-[var(--assessment-on-surface)] focus:border-[var(--assessment-primary)] focus:outline-none"
+                          >
+                            <option value="hard">Technical (Hard skill)</option>
+                            <option value="soft">Architectural / Soft skill</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={handleAddTopic}
+                            disabled={!newTopicName.trim()}
+                            className="flex items-center justify-center gap-1.5 rounded-lg bg-[var(--assessment-primary)] px-4 py-2 text-xs font-bold text-white transition hover:bg-[var(--assessment-primary)]/90 disabled:opacity-40"
+                          >
+                            <AssessmentMaterialIcon name="add" size={16} />
+                            Add Topic
+                          </button>
+                        </div>
+
+                        {/* Topics List Table */}
+                        {stageCompetencies.length === 0 ? (
+                          <div className="rounded-xl border-2 border-dashed border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)]/20 p-8 text-center">
+                            <AssessmentMaterialIcon name="tune" size={32} className="mx-auto text-[var(--assessment-on-surface-variant)]/50" />
+                            <p className="mt-2 text-sm font-semibold text-[var(--assessment-on-surface)]">
+                              No rubric topics defined yet for this round
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--assessment-on-surface-variant)]">
+                              Type a topic name above or click &ldquo;AI Suggest Topics&rdquo; to automatically build the question evaluation rubrics.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)]">
+                            <table className="w-full text-left text-sm">
+                              <thead>
+                                <tr className="border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)]/40 text-[10px] font-bold uppercase tracking-wider text-[var(--assessment-on-surface-variant)]">
+                                  <th className="px-4 py-3">Topic / Competency</th>
+                                  <th className="px-4 py-3">Target Score (1-10)</th>
+                                  <th className="px-4 py-3 text-right">Evaluation Weight (%)</th>
+                                  <th className="px-4 py-3 text-right">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[var(--assessment-outline-variant)]">
+                                {stageCompetencies.map((comp) => (
+                                  <tr
+                                    key={comp.id}
+                                    className="transition-colors hover:bg-[var(--assessment-surface-container-low)]/50"
+                                  >
+                                    <td className="px-4 py-3">
+                                      <div className="font-semibold text-sm text-[var(--assessment-on-surface)]">
+                                        {comp.name}
+                                      </div>
+                                      <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--assessment-on-surface-variant)]">
+                                        {comp.category === 'soft' ? 'Architectural / Soft' : 'Technical Skill'}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          max={10}
+                                          step={0.5}
+                                          value={comp.target_score ?? 8}
+                                          onChange={(e) => {
+                                            const val = Math.min(10, Math.max(1, Number(e.target.value) || 1));
+                                            handleUpdateTopicScore(comp.id, val);
+                                          }}
+                                          className="w-16 rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-2 py-1 text-center font-mono text-sm text-[var(--assessment-on-surface)] focus:border-[var(--assessment-primary)] focus:outline-none"
+                                        />
+                                        <span className="text-xs text-[var(--assessment-on-surface-variant)]">/ 10</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <div className="flex items-center justify-end gap-1.5 font-mono text-sm">
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          step={1}
+                                          value={comp.weight_pct ?? 0}
+                                          onChange={(e) => {
+                                            const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                            handleUpdateTopicWeight(comp.id, val);
+                                          }}
+                                          className="w-16 rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-2 py-1 text-right font-mono text-sm text-[var(--assessment-on-surface)] focus:border-[var(--assessment-primary)] focus:outline-none"
+                                        />
+                                        <span className="text-xs text-[var(--assessment-on-surface-variant)]">%</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteTopic(comp.id)}
+                                        className="rounded p-1.5 text-[var(--assessment-on-surface-variant)] transition hover:bg-[var(--assessment-error-container)]/20 hover:text-rose-500"
+                                        title="Remove topic"
+                                      >
+                                        <AssessmentMaterialIcon name="delete" size={18} />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+
+                            {/* Weight Total Footer */}
+                            <div className="flex items-center justify-between border-t border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)]/30 px-4 py-3">
+                              <span className="text-xs font-semibold text-[var(--assessment-on-surface-variant)]">
+                                Total Weight Allocation
+                              </span>
+                              {(() => {
+                                const total = Math.round(stageCompetencies.reduce((sum, c) => sum + (c.weight_pct ?? 0), 0));
+                                const isValid = total === 100;
+                                return (
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="h-2 w-28 overflow-hidden rounded-full bg-[var(--assessment-outline-variant)]/30">
+                                        <div
+                                          className={`h-full transition-all ${
+                                            isValid
+                                              ? 'bg-emerald-500'
+                                              : total > 100
+                                                ? 'bg-rose-500'
+                                                : 'bg-amber-500'
+                                          }`}
+                                          style={{ width: `${Math.min(100, total)}%` }}
+                                        />
+                                      </div>
+                                      <span
+                                        className={`font-mono text-xs font-bold ${
+                                          isValid
+                                            ? 'text-emerald-400'
+                                            : total > 100
+                                              ? 'text-rose-400'
+                                              : 'text-amber-400'
+                                        }`}
+                                      >
+                                        {total}% / 100%
+                                      </span>
+                                    </div>
+                                    {!isValid && (
+                                      <button
+                                        type="button"
+                                        onClick={handleAutoBalanceWeights}
+                                        className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold text-amber-300 hover:bg-amber-500/20"
+                                      >
+                                        Auto-balance
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Verbal Interview Question Budget based on rubrics */}
+                        <VerbalInterviewBudgetFields
+                          rubricCount={stageCompetencies.length}
+                          weights={stageCompetencies.map((c) => c.weight_pct ?? 0)}
+                          names={stageCompetencies.map((c) => c.name)}
+                          roundConfig={activeStage?.round_config ?? null}
+                          onChange={(nextConfig) => {
+                            if (!activeStage) return;
+                            const next = stages.map((s) =>
+                              s.stage_key === activeStage.stage_key
+                                ? { ...s, round_config: nextConfig }
+                                : s,
+                            );
+                            props.onStagesChange(next);
+                          }}
+                        />
+                      </div>
+                    )}
+
                   </>
                 )}
 
@@ -858,7 +1159,7 @@ export function RoundConfigurationView(props: Props) {
                     key={stage.id}
                     className={`flex items-center justify-between text-sm ${active ? 'font-bold text-[var(--assessment-primary)]' : ''}`}
                   >
-                    <span>{stage.name}</span>
+                    <span>{getFriendlyStageName(stage)}</span>
                     <span className="font-mono text-xs">{pct}%</span>
                   </div>
                 );
@@ -873,7 +1174,7 @@ export function RoundConfigurationView(props: Props) {
         mode="drawer"
         profileId={props.profileId}
         stageId={activeStageIdResolved}
-        roundName={activeStage?.name}
+        roundName={getFriendlyStageName(activeStage)}
         roundStageType={activeStage?.stage_type}
         competencies={competencies.map((c) => c.name)}
         existingQuestionBankIds={existingQuestionBankIds}

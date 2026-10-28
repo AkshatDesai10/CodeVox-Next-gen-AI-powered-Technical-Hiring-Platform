@@ -241,33 +241,6 @@ export function LeadInboxPage() {
               )}
               <button
                 type="button"
-                disabled={inviteStandoutMutation.isPending}
-                onClick={() => {
-                  if (
-                    confirm(
-                      'Invite all leads with resume match ≥80% who are not already invited?',
-                    )
-                  ) {
-                    inviteStandoutMutation.mutate();
-                  }
-                }}
-                className="flex items-center gap-2 self-center rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-4 py-2.5 text-sm font-semibold text-[var(--assessment-on-surface)] shadow-sm hover:border-[var(--assessment-primary)] disabled:opacity-60"
-              >
-                <span className="material-symbols-outlined text-[20px]">star</span>
-                {inviteStandoutMutation.isPending
-                  ? 'Inviting…'
-                  : 'Invite all Standout (≥80%)'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setBulkUploadOpen(true)}
-                className="flex items-center gap-2 self-center rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-4 py-2.5 text-sm font-semibold text-[var(--assessment-on-surface)] shadow-sm hover:border-[var(--assessment-primary)]"
-              >
-                <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                Bulk Upload
-              </button>
-              <button
-                type="button"
                 onClick={() => setAddCandidateOpen(true)}
                 className="ml-auto flex items-center gap-2 self-center rounded-lg bg-[var(--assessment-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
               >

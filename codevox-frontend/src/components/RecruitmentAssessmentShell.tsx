@@ -96,6 +96,7 @@ export function RecruitmentAssessmentShell({ children }: { children: React.React
           </span>
           <button
             type="button"
+            suppressHydrationWarning
             className="cvx-btn-ghost px-3 py-1.5 text-xs"
             onClick={() => signOut({ callbackUrl: '/signin' })}
           >

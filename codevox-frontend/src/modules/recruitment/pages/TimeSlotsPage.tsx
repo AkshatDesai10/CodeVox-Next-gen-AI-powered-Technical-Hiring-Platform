@@ -111,14 +111,14 @@ export function TimeSlotsPage() {
           </p>
         </div>
 
-        <section className="rounded-xl border border-[var(--assessment-outline-variant)] bg-white p-4">
+        <section className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4">
           <h2 className="mb-3 text-sm font-semibold text-[var(--assessment-on-surface)]">
             {editingId ? 'Edit slot' : 'Add slot'}
           </h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4">
             <Field label="Label (optional)">
               <input
-                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
+                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
                 value={form.label}
                 onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
                 placeholder="Morning batch"
@@ -127,7 +127,7 @@ export function TimeSlotsPage() {
             <Field label="Start">
               <input
                 type="time"
-                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
+                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
                 value={form.start_time}
                 onChange={(e) => {
                   const start = e.target.value;
@@ -142,7 +142,7 @@ export function TimeSlotsPage() {
             <Field label="End">
               <input
                 type="time"
-                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
+                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
                 value={form.end_time}
                 onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
                 required
@@ -150,7 +150,7 @@ export function TimeSlotsPage() {
             </Field>
             <Field label="Timezone">
               <input
-                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
+                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
                 value={form.timezone}
                 onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
               />
@@ -159,14 +159,14 @@ export function TimeSlotsPage() {
               <input
                 type="number"
                 min={1}
-                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
+                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
                 value={form.capacity}
                 onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
               />
             </Field>
             <Field label="Status">
               <select
-                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
+                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
                 value={form.status}
                 onChange={(e) =>
                   setForm((f) => ({
@@ -181,7 +181,7 @@ export function TimeSlotsPage() {
             </Field>
             <Field label="Notes">
               <input
-                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
+                className="w-full rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--assessment-primary)]/30"
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 placeholder="Optional"
@@ -204,7 +204,7 @@ export function TimeSlotsPage() {
                   setEditingId(null);
                   setForm(emptyForm());
                 }}
-                className="rounded-lg border border-[var(--assessment-outline-variant)] px-4 py-2 text-sm font-semibold"
+                className="rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] text-[var(--assessment-on-surface)] px-4 py-2 text-sm font-semibold hover:border-[var(--assessment-primary)]"
               >
                 Cancel
               </button>
@@ -212,7 +212,7 @@ export function TimeSlotsPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-white">
+        <section className="overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]">
           {listQuery.isLoading ? (
             <p className="p-4 text-sm">Loading slots...</p>
           ) : sorted.length === 0 ? (
@@ -247,8 +247,8 @@ export function TimeSlotsPage() {
                       <span
                         className={`rounded px-2 py-0.5 text-xs font-semibold ${
                           slot.status === 'open'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-slate-100 text-slate-700'
+                            ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30'
+                            : 'bg-slate-800/40 text-slate-400 border border-slate-700/50'
                         }`}
                       >
                         {slot.status}
@@ -264,7 +264,7 @@ export function TimeSlotsPage() {
                       </button>
                       <button
                         type="button"
-                        className="text-xs font-semibold text-red-600 hover:underline"
+                        className="text-xs font-semibold text-rose-400 hover:text-rose-300 hover:underline"
                         disabled={deleteMutation.isPending}
                         onClick={() => {
                           if (confirm('Delete this time slot?')) deleteMutation.mutate(slot.id);
