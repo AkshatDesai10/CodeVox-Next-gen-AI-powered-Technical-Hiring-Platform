@@ -49,6 +49,9 @@ function sessionMatchesPortalStage(
   }
   if (stageType === JobStageType.AI_SCREENING) return stored === JobStageType.AI_SCREENING;
   if (stageType === JobStageType.HR_VERBAL) return stored === JobStageType.HR_VERBAL;
+  if (stageType === JobStageType.CODING) {
+    return stored === JobStageType.CODING || stored === 'coding_assessment';
+  }
   return stored === stageType;
 }
 
@@ -371,6 +374,21 @@ export class CandidatePortalService {
             String(application.id),
             String(stage.id),
           );
+        } else if (stage.stageType === JobStageType.CODING) {
+          const interview = await this.interviewRepo.findForApplicationAndStage(
+            token,
+            String(stage.id),
+            stage.stageType,
+          );
+          if (interview) {
+            const phase = String(interview.currentPhase ?? '');
+            if (phase === 'completed') {
+              status = 'COMPLETED';
+            } else if (phase === 'sandbox_code' || interview.livekitRoomName) {
+              // LiveKit room open ? show as live in ops / portal.
+              status = 'IN_PROGRESS';
+            }
+          }
         } else if (isVerbal) {
           // Look up session specifically for this stage (matches stageId or stageType)
           const interview = await this.interviewRepo.findForApplicationAndStage(

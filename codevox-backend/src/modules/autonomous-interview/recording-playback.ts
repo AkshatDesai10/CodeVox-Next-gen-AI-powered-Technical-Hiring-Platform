@@ -186,6 +186,9 @@ export function detectRecordingPhase(
   if (hay.includes('ai_screening') || hay.includes('screening')) {
     return 'screening';
   }
+  if (hay.includes('coding') || hay.includes('sandbox_code')) {
+    return 'other';
+  }
   if (
     hay.includes('bnd_assessment') ||
     hay.includes('bnd-assessment') ||

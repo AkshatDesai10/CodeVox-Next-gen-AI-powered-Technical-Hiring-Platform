@@ -13,6 +13,7 @@ export enum AutonomousInterviewRoundType {
   HR_VERBAL = 'hr_verbal',
   BND_ASSESSMENT = 'bnd_assessment',
   BND_INTERVIEW = 'bnd_interview',
+  CODING = 'coding',
 }
 
 export enum AutonomousInterviewRoundStatus {

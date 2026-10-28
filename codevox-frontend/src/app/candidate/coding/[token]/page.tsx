@@ -3,8 +3,8 @@
 import { use, useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { getCodingProblem, runCodingCode, submitCodingCode } from '@/lib/candidate-api';
-import { Play, Send, Clock, ShieldCheck, Settings, Maximize, User, Code2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { getCodingProblem, runCodingCode, submitCodingCode, stopCodingLiveKit } from '@/lib/candidate-api';
+import { Play, Send, Clock, Settings, Maximize, User, Code2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -13,6 +13,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { InterviewRecBadge } from '@/modules/autonomous-interview/components/InterviewRecBadge';
+import { CodingProctorSession } from '@/modules/assessments/components/CodingProctorSession';
 import '@/modules/autonomous-interview/styles/conversation-session.css';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
@@ -81,7 +82,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionStartRef = useRef(Date.now());
   const [recElapsed, setRecElapsed] = useState('00:00');
-  const [proctorActive] = useState(true);
+  const handleSubmitRef = useRef<(force?: boolean) => Promise<void>>(async () => undefined);
 
   // LocalStorage key for persisting code
   const LS_KEY = `coding_draft_${token}`;
@@ -311,7 +312,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
     }
   };
 
-  const handleSubmit = async (force: boolean = false) => {
+  const handleSubmit = useCallback(async (force: boolean = false) => {
     if (!force && !confirm('Submit your final solution? You cannot modify code after submission.')) {
       return;
     }
@@ -326,6 +327,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
         };
       });
 
+      void stopCodingLiveKit(token);
       const res = await submitCodingCode(token, submissions);
       if (!res.success) {
         setError(res.message ?? 'Submit failed');
@@ -343,13 +345,15 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [problems, langs, codes, token, LS_KEY]);
+
+  handleSubmitRef.current = handleSubmit;
 
   useEffect(() => {
     if (secondsLeft === 0 && !submitting && !submitResult) {
-      handleSubmit(true);
+      void handleSubmit(true);
     }
-  }, [secondsLeft]);
+  }, [secondsLeft, submitting, submitResult, handleSubmit]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -461,7 +465,15 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
   }
 
   return (
-    <div className="assessments-root flex h-screen flex-col bg-[var(--assessment-surface)] text-[var(--assessment-on-surface)] font-sans overflow-hidden select-none">
+    <CodingProctorSession
+      portalToken={token}
+      disabled={Boolean(submitResult)}
+      onForceSubmit={() => {
+        void handleSubmitRef.current(true);
+      }}
+    >
+      {({ ready, recording, proctorAlert, dismissProctorAlert, mediaStrikeCount, focusStrikeCount }) => (
+    <div className={`assessments-root flex h-screen flex-col bg-[var(--assessment-surface)] text-[var(--assessment-on-surface)] font-sans overflow-hidden select-none ${ready ? '' : 'pointer-events-none opacity-40'}`}>
       {/* Timer Warning Banner */}
       {timerWarning && secondsLeft !== null && secondsLeft > 0 && (
         <div className="flex-shrink-0 flex items-center justify-between bg-red-600 px-5 py-2 text-white text-xs font-bold">
@@ -475,18 +487,16 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
         </div>
       )}
 
-      {/* Proctoring Status Pill */}
-      {proctorActive ? (
-        <div className="flex-shrink-0 border-b border-[#293B57] bg-[#0B1930] px-5 py-1 text-[11px] font-semibold text-[#BAE6FD] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[#34D399] animate-pulse" />
-            <span>
-              Proctoring Active: Screen switching & copy-paste behavior are continuously audited.
-            </span>
-          </div>
-          <span className="text-[10px] uppercase tracking-wider text-[#94A3B8]">
-            Code Integrity Mode
-          </span>
+      {proctorAlert ? (
+        <div className="flex-shrink-0 flex items-center justify-between bg-amber-600/90 px-5 py-2 text-white text-xs font-bold">
+          <span>{proctorAlert}</span>
+          <button
+            type="button"
+            onClick={dismissProctorAlert}
+            className="ml-4 text-white opacity-80 hover:opacity-100 font-bold"
+          >
+            ✕
+          </button>
         </div>
       ) : null}
 
@@ -494,7 +504,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
       <header className="flex h-[60px] flex-shrink-0 items-center justify-between border-b border-[#293B57] bg-[#0B1930] px-5">
         {/* Left: Branding & Breadcrumbs */}
         <div className="flex items-center gap-4">
-          <InterviewRecBadge elapsed={recElapsed} active={proctorActive} compact />
+          <InterviewRecBadge elapsed={recElapsed} active={recording} compact />
           <div className="flex items-center gap-2 text-sm font-extrabold text-white">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1685FF]/20 border border-[#1685FF]/40 text-[#BAE6FD]">
               <Code2 className="h-4 w-4" />
@@ -570,13 +580,16 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
-            <ShieldCheck className="h-4 w-4" /> Proctoring
-          </div>
+          {(mediaStrikeCount > 0 || focusStrikeCount > 0) && (
+            <div className="hidden lg:flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-bold text-amber-300">
+              {focusStrikeCount > 0 ? <span>Focus {focusStrikeCount}</span> : null}
+              {mediaStrikeCount > 0 ? <span>Media {mediaStrikeCount}</span> : null}
+            </div>
+          )}
 
           <button
             onClick={handleRun}
-            disabled={running || submitting}
+            disabled={!ready || running || submitting}
             className="flex items-center gap-2 rounded-xl border border-[#293B57] bg-[#050B18] px-4 py-2 text-xs font-extrabold text-white transition-all hover:border-[#34D399] hover:text-[#34D399] disabled:opacity-40"
           >
             {running ? (
@@ -588,8 +601,8 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
           </button>
 
           <button
-            onClick={() => handleSubmit(false)}
-            disabled={running || submitting}
+            onClick={() => void handleSubmit(false)}
+            disabled={!ready || running || submitting}
             className="flex items-center gap-2 rounded-xl bg-[#1685FF] px-4 py-2 text-xs font-black text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-[#0EA5E9] disabled:opacity-40"
           >
             <Send className="h-3.5 w-3.5" /> Submit Assessment
@@ -939,5 +952,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
         </PanelGroup>
       </div>
     </div>
+      )}
+    </CodingProctorSession>
   );
 }
