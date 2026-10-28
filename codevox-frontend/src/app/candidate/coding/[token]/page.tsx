@@ -162,13 +162,13 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
         setLangs(initialLangs);
         setAllResults(initialResults);
 
-        // Calculate timer from total problem durations
-        const totalMinutes = loadedProblems.reduce(
-          (acc: number, curr: Problem) => acc + (curr.time_limit_minutes ?? 25),
-          0,
-        );
-        const totalSeconds = totalMinutes * 60;
-        setSecondsLeft(totalSeconds);
+        // 5 min per question → total = N × 5 (API also returns time_limit_minutes).
+        const minutesPerQuestion = 5;
+        const totalMinutes =
+          typeof d.time_limit_minutes === 'number' && d.time_limit_minutes > 0
+            ? d.time_limit_minutes
+            : loadedProblems.length * minutesPerQuestion;
+        setSecondsLeft(totalMinutes * 60);
 
         sessionStartRef.current = Date.now();
         timerRef.current = setInterval(() => {
@@ -641,7 +641,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                 })()}
 
                 <span className="rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1 text-[11px] font-semibold text-[#C4B5FD]">
-                  Time: {activeProblem?.time_limit_minutes ?? 25} mins
+                  Time: {activeProblem?.time_limit_minutes ?? 5} mins
                 </span>
                 <span className="rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1 text-[11px] font-semibold text-[#C4B5FD]">
                   Points: {activeProblem?.marks ?? 10} pts

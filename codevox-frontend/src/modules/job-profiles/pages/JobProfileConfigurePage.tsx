@@ -101,7 +101,7 @@ const STEPS = [
 const STAGE_TYPE_OPTIONS: { value: JobStageType; label: string; duration: string }[] = [
   { value: 'ai_screening', label: 'AI Screening', duration: '5 mins' },
   { value: 'screening', label: 'AI Technical Screening', duration: '30 mins (Strict)' },
-  { value: 'coding', label: 'Coding Round', duration: '60 mins (Strict)' },
+  { value: 'coding', label: 'Coding Round', duration: '5 mins × questions (Strict)' },
   { value: 'ai_verbal', label: 'Interview Round', duration: '45 mins (Strict)' },
   { value: 'hr_verbal', label: 'HR Verbal Interview', duration: '30 mins' },
   { value: 'project_interview', label: 'Build & Defend', duration: 'Build window + 20 mins' },
@@ -116,7 +116,8 @@ const getStageDurationMinutes = (stageType: string): number => {
     case 'screening':
       return 30;
     case 'coding':
-      return 60;
+      // Display estimate for timeline UI; runtime uses 5 mins × question count.
+      return 15;
     case 'ai_verbal':
       return 45;
     case 'hr_verbal':
@@ -137,7 +138,7 @@ const getStageDurationLabel = (stageType: string): string => {
     case 'screening':
       return '30 mins (Strict)';
     case 'coding':
-      return '60 mins (Strict)';
+      return '5 mins × questions (Strict)';
     case 'ai_verbal':
       return '45 mins (Strict)';
     case 'hr_verbal':

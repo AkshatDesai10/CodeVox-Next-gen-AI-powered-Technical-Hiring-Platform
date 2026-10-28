@@ -185,7 +185,8 @@ export class CodingRoundService {
          evaluation_config,
          difficulty: pb.difficulty ?? 'medium',
          marks: pb.marks ?? 10,
-         time_limit_minutes: pb.time_limit_minutes ?? 2,
+         // Assessment clock is fixed at 5 min/question (judge timeout stays in problem env).
+         time_limit_minutes: 5,
          description_md: pb.statement_md,
          constraints: '',
          examples: [],
@@ -277,7 +278,7 @@ export class CodingRoundService {
       description_md: p.description_md,
       difficulty: p.difficulty ?? 'medium',
       marks: p.marks ?? 10,
-      time_limit_minutes: p.time_limit_minutes ?? 2,
+      time_limit_minutes: 5,
       constraints: p.constraints,
       examples: p.examples,
       workspace_type: p.workspace_type,
@@ -300,11 +301,13 @@ export class CodingRoundService {
     const thresholdRaw = Number(progression?.elimination_threshold);
     const elimination_threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : 50;
     const threshold = mode === 'elimination' ? elimination_threshold : null;
+    const minutesPerQuestion = 5;
+    const totalTimeLimitMinutes = Math.max(minutesPerQuestion, problems.length * minutesPerQuestion);
 
     return {
       problems,
       languages: config.languages?.length ? config.languages : Object.keys(LANGUAGE_DOCKER_IMAGE),
-      time_limit_minutes: config.time_limit_minutes ?? 60,
+      time_limit_minutes: totalTimeLimitMinutes,
       threshold,
       last_submission: last
         ? {

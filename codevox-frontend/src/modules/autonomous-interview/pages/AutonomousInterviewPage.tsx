@@ -11,7 +11,6 @@ import { useInterviewViewport, normalizeViewportPhase } from '@/modules/autonomo
 import { InterviewRoomProvider } from '@/modules/autonomous-interview/context/InterviewRoomContext';
 import { LiveKitVoiceStagePanel } from '@/modules/autonomous-interview/components/LiveKitVoiceStagePanel';
 import { VoiceStagePanel } from '@/modules/autonomous-interview/components/VoiceStagePanel';
-import { SystemReadinessLobby } from '@/modules/job-profiles/components/SystemReadinessLobby';
 import { ensureRuntimeProctorConfig } from '@/modules/autonomous-interview/lib/runtime-proctor-config';
 import { releaseInterviewLeaveGuard } from '@/modules/autonomous-interview/lib/interview-leave-guard';
 
@@ -43,8 +42,6 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
     null,
   );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const readinessKey = `interviewSystemReady:${candidateToken}`;
-  const [systemReady, setSystemReady] = useState(false);
   const [countdown, setCountdown] = useState<number>(5);
   const [referenceDescriptor, setReferenceDescriptor] = useState<number[] | null>(null);
   const [liveKitSessionActive, setLiveKitSessionActive] = useState(false);
@@ -77,14 +74,6 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
   } = useInterviewViewport(candidateToken);
 
   useEffect(() => {
-    try {
-      setSystemReady(sessionStorage.getItem(readinessKey) === '1');
-    } catch {
-      setSystemReady(false);
-    }
-  }, [readinessKey]);
-
-  useEffect(() => {
     void ensureRuntimeProctorConfig();
   }, []);
 
@@ -95,7 +84,6 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
         const row = await getAutonomousSession(candidateToken);
         if (cancelled) return;
         setSession(row);
-        // Hardware preflight is handled by SystemReadinessLobby below.
         if (row.referenceFaceDescriptor?.length === 128) {
           setReferenceDescriptor(row.referenceFaceDescriptor);
         }
@@ -247,33 +235,6 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
     return (
       <div className="assessments-root p-8 text-center text-sm text-gray-500">
         Loading interview...
-      </div>
-    );
-  }
-
-  const reqCamera = session.proctorConfig?.requireCameraForStart ?? true;
-
-  // Meet/Zoom-style hardware + network preflight (replaces scattered device modals).
-  // Full InterviewConsentGate (liveness/voice enroll) remains available but is not
-  // forced here — lobby unlocks the room once cam/mic/network/(face) are ready.
-  if (!systemReady && session.currentPhase !== 'completed') {
-    return (
-      <div className="assessments-root min-h-screen bg-[#090414]">
-        <SystemReadinessLobby
-          candidateName={session.candidateName ?? undefined}
-          faceMode={reqCamera}
-          startLabel="Start Interview"
-          title="Interview system check"
-          subtitle="Confirm camera, mic, and network before the live interview begins."
-          onComplete={async () => {
-            try {
-              sessionStorage.setItem(readinessKey, '1');
-            } catch {
-              /* ignore */
-            }
-            setSystemReady(true);
-          }}
-        />
       </div>
     );
   }
