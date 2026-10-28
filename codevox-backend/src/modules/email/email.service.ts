@@ -54,7 +54,7 @@ export class EmailService {
     const replyTo = process.env.SMTP_REPLY_TO || fromEmail;
     try {
       const info = await this.transporter.sendMail({
-        from: `"iCloudEMS Recruitment" <${fromEmail}>`,
+        from: `"CodeVox" <${fromEmail}>`,
         replyTo,
         to,
         subject,

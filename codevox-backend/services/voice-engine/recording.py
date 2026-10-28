@@ -26,10 +26,10 @@ logger = logging.getLogger("track-recorder")
 # ---------------------------------------------------------------------------
 
 _RECORDING_MODE = os.getenv("RECORDING_MODE", "track").strip().lower()
-# Local layout: local-recordings/icloudemsapps/interview-recordings/{name-id-stage}/{ts}_{kind}.ext
+# Local layout: local-recordings/uploads/interview-recordings/{name-id-stage}/{ts}_{kind}.ext
 _RECORDING_PREFIX = (
-    os.getenv("RECORDING_S3_PREFIX", "icloudemsapps/interview-recordings").strip().strip("/")
-    or "icloudemsapps/interview-recordings"
+    os.getenv("RECORDING_S3_PREFIX", "uploads/interview-recordings").strip().strip("/")
+    or "uploads/interview-recordings"
 )
 
 

@@ -58,7 +58,7 @@ export function buildMagicLinkEmail(
     <tr>
       <td style="background:#f8fafc;padding:20px 40px;text-align:center;">
         <p style="margin:0;color:#94a3b8;font-size:11px;">
-          © ${new Date().getFullYear()} iCloudEMS. All rights reserved.
+          © ${new Date().getFullYear()} CodeVox. All rights reserved.
         </p>
       </td>
     </tr>
@@ -74,7 +74,7 @@ export function buildNoOpeningEmail(
 ): { subject: string; html: string } {
   const firstName = candidateName.split(' ')[0] || 'Candidate';
   return {
-    subject: `Update regarding your application for ${courseName} — iCloudEMS`,
+    subject: `Update regarding your application for ${courseName} — CodeVox`,
     html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -91,7 +91,7 @@ export function buildNoOpeningEmail(
           Hi ${firstName},
         </p>
         <p style="margin:0 0 16px;color:#475569;font-size:15px;line-height:1.6;">
-          Thank you for your interest in joining <strong style="color:#1e293b;">iCloudEMS</strong> and taking the time to apply for the <strong style="color:#1e293b;">${courseName}</strong> position.
+          Thank you for your interest and for taking the time to apply for the <strong style="color:#1e293b;">${courseName}</strong> position.
         </p>
         <p style="margin:0 0 16px;color:#475569;font-size:15px;line-height:1.6;">
           At this moment, we are not actively hiring for this specific role as the current positions have been filled. However, we were impressed by your profile and have added your resume to our active talent pool.
@@ -105,14 +105,14 @@ export function buildNoOpeningEmail(
         <p style="margin:0;color:#1e293b;font-size:15px;line-height:1.6;">
           Warm regards,<br/>
           <strong style="color:#1e293b;">Talent Acquisition Team</strong><br/>
-          <span style="color:#64748b;font-size:14px;">iCloudEMS</span>
+          <span style="color:#64748b;font-size:14px;">CodeVox</span>
         </p>
       </td>
     </tr>
     <tr>
       <td style="background:#f8fafc;padding:20px 40px;text-align:center;">
         <p style="margin:0;color:#94a3b8;font-size:11px;">
-          © ${new Date().getFullYear()} iCloudEMS. All rights reserved.
+          © ${new Date().getFullYear()} CodeVox. All rights reserved.
         </p>
       </td>
     </tr>

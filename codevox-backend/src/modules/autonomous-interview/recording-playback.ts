@@ -14,7 +14,6 @@ const LEGACY_RECORDING_PREFIXES = [
   'interview-recordings',
   'recordings',
   'viva-recordings',
-  'icloudemsapps/interview-recordings',
 ];
 
 export function interviewRecordingPrefix(): string {

@@ -75,10 +75,6 @@ export function underUploads(...parts: Array<string | null | undefined>): string
   while (cleaned[0]?.toLowerCase() === UPLOADS_ROOT.toLowerCase()) {
     cleaned.shift();
   }
-  // Legacy local path from older installs
-  while (cleaned[0]?.toLowerCase() === 'icloudemsapps') {
-    cleaned.shift();
-  }
   return [UPLOADS_ROOT, ...cleaned].join('/');
 }
 
@@ -91,9 +87,6 @@ export function ensureUnderUploads(key: string): string {
   const lower = trimmed.toLowerCase();
   if (lower === UPLOADS_ROOT.toLowerCase() || lower.startsWith(`${UPLOADS_ROOT.toLowerCase()}/`)) {
     return trimmed.replace(/\/+$/g, '');
-  }
-  if (lower === 'icloudemsapps' || lower.startsWith('icloudemsapps/')) {
-    return underUploads(trimmed.replace(/^icloudemsapps\/?/i, ''));
   }
   return underUploads(trimmed);
 }

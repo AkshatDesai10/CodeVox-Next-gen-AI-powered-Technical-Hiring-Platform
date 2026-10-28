@@ -32,8 +32,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger("merge-recordings")
 
 _RECORDING_PREFIX = (
-    os.getenv("RECORDING_S3_PREFIX", "icloudemsapps/interview-recordings").strip().strip("/")
-    or "icloudemsapps/interview-recordings"
+    os.getenv("RECORDING_S3_PREFIX", "uploads/interview-recordings").strip().strip("/")
+    or "uploads/interview-recordings"
 )
 
 # Force local-only storage (S3 upload paths removed).

@@ -55,7 +55,7 @@ services:
       TURN_EVENT_JSONL: ${TURN_EVENT_JSONL:-true}
       RECORDING_MODE: "track"
       RECORDING_STORAGE: "local"
-      RECORDING_S3_PREFIX: "icloudemsapps/interview-recordings"
+      RECORDING_S3_PREFIX: "uploads/interview-recordings"
     depends_on:
       - redis
       - livekit
