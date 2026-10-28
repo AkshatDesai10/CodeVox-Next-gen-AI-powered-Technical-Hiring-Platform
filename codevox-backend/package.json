@@ -2,7 +2,7 @@
   "name": "codevox-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Standalone Recruitment Assessment Nest API (own auth + MySQL)",
+  "description": "CodeVox Nest API (own auth + MySQL)",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",

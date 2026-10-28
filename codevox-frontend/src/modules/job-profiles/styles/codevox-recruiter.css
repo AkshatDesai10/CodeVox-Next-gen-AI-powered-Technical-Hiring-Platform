@@ -1,5 +1,4 @@
 /* CodeVox Recruiter — Dark Violet & Electric Lime Palette */
-.nexus-recruiter-root,
 .codevox-recruiter-root {
   --assessment-primary: var(--color-primary, #1685FF);
   --assessment-primary-container: var(--color-primary-container, rgba(22, 133, 255, 0.2));
@@ -18,19 +17,19 @@
   --assessment-outline-variant: var(--color-border, rgba(163, 163, 204, 0.14));
   --assessment-error: var(--color-error, #f43f5e);
   --assessment-error-container: var(--color-error-container, rgba(244, 63, 94, 0.14));
-  --nexus-secondary: var(--color-secondary, #22D3EE);
-  --nexus-secondary-container: var(--color-primary-dark, #0F203B);
-  --nexus-on-secondary: var(--color-on-primary, #ffffff);
-  --nexus-on-secondary-container: var(--color-on-primary, #ffffff);
-  --nexus-tertiary: var(--color-highlight, #34D399);
-  --nexus-tertiary-container: var(--color-primary, #1685FF);
-  --nexus-tertiary-fixed: var(--color-primary-container, rgba(22, 133, 255, 0.2));
-  --nexus-on-tertiary-fixed: var(--color-on-primary-container, #BAE6FD);
-  --nexus-secondary-fixed: var(--color-primary-fixed, rgba(22, 133, 255, 0.28));
+  --codevox-secondary: var(--color-secondary, #22D3EE);
+  --codevox-secondary-container: var(--color-primary-dark, #0F203B);
+  --codevox-on-secondary: var(--color-on-primary, #ffffff);
+  --codevox-on-secondary-container: var(--color-on-primary, #ffffff);
+  --codevox-tertiary: var(--color-highlight, #34D399);
+  --codevox-tertiary-container: var(--color-primary, #1685FF);
+  --codevox-tertiary-fixed: var(--color-primary-container, rgba(22, 133, 255, 0.2));
+  --codevox-on-tertiary-fixed: var(--color-on-primary-container, #BAE6FD);
+  --codevox-secondary-fixed: var(--color-primary-fixed, rgba(22, 133, 255, 0.28));
   --recruitment-secondary: var(--color-text-muted, #A7B7CD);
   --assessment-on-error-container: var(--color-danger-text, #fb7185);
-  --nexus-outline: var(--color-outline, #293B57);
-  --nexus-surface-container-lowest: var(--color-surface-solid, #030712);
+  --codevox-outline: var(--color-outline, #293B57);
+  --codevox-surface-container-lowest: var(--color-surface-solid, #030712);
 
   font-family: var(--font-family-base);
   color: var(--assessment-on-surface);
@@ -39,12 +38,12 @@
   line-height: 1.5;
 }
 
-.nexus-recruiter-root .material-symbols-outlined {
+.codevox-recruiter-root .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
 }
 
-.nexus-recruiter-root .font-display-lg {
+.codevox-recruiter-root .font-display-lg {
   font-family: var(--font-family-base, 'Poppins', system-ui, sans-serif);
   font-size: 2rem;
   font-weight: 800;
@@ -52,21 +51,21 @@
   line-height: 1.25;
 }
 
-.nexus-recruiter-root .font-headline-md {
+.codevox-recruiter-root .font-headline-md {
   font-family: var(--font-family-base, 'Poppins', system-ui, sans-serif);
   font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.33;
 }
 
-.nexus-recruiter-root .font-headline-sm {
+.codevox-recruiter-root .font-headline-sm {
   font-family: var(--font-family-base, 'Poppins', system-ui, sans-serif);
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.33;
 }
 
-.nexus-recruiter-root .font-headline-lg {
+.codevox-recruiter-root .font-headline-lg {
   font-family: var(--font-family-base, 'Poppins', system-ui, sans-serif);
   font-size: 2rem;
   font-weight: 700;
@@ -74,14 +73,14 @@
   line-height: 1.25;
 }
 
-.nexus-recruiter-root .font-title-sm {
+.codevox-recruiter-root .font-title-sm {
   font-family: var(--font-family-base, 'Poppins', system-ui, sans-serif);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.5;
 }
 
-.nexus-recruiter-root .font-label-caps {
+.codevox-recruiter-root .font-label-caps {
   font-family: var(--font-family-base, 'Poppins', system-ui, sans-serif);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -89,42 +88,42 @@
   text-transform: uppercase;
 }
 
-.nexus-recruiter-root .font-mono-data {
+.codevox-recruiter-root .font-mono-data {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.75rem;
   line-height: 1.33;
 }
 
-.nexus-recruiter-shell {
+.codevox-recruiter-shell {
   width: 100%;
   min-height: 100%;
 }
 
-/* Legacy - custom Nexus sidebar removed; assessment sidebar is used instead */
+/* Legacy - custom CodeVox sidebar removed; assessment sidebar is used instead */
 
-.nexus-page {
+.codevox-page {
   width: 100%;
   max-width: none;
 }
 
-.nexus-card {
+.codevox-card {
   border: 1px solid var(--color-border, var(--assessment-outline-variant));
-  background: var(--nexus-surface-container-lowest);
+  background: var(--codevox-surface-container-lowest);
   border-radius: var(--radius-md, 0.75rem);
   box-shadow: var(--shadow-card, 0 2px 8px rgba(15, 23, 42, 0.05));
 }
 
 /* Comprehensive dark theme form inputs for recruiter & job profile pages */
-.nexus-recruiter-root input:not([type="checkbox"]):not([type="radio"]),
-.nexus-recruiter-root select,
-.nexus-recruiter-root textarea,
 .codevox-recruiter-root input:not([type="checkbox"]):not([type="radio"]),
 .codevox-recruiter-root select,
 .codevox-recruiter-root textarea,
-.nexus-card input:not([type="checkbox"]):not([type="radio"]),
-.nexus-card select,
-.nexus-card textarea,
-.nexus-input,
+.codevox-recruiter-root input:not([type="checkbox"]):not([type="radio"]),
+.codevox-recruiter-root select,
+.codevox-recruiter-root textarea,
+.codevox-card input:not([type="checkbox"]):not([type="radio"]),
+.codevox-card select,
+.codevox-card textarea,
+.codevox-input,
 .codevox-input {
   background-color: #081426 !important;
   color: #FFFFFF !important;
@@ -134,46 +133,46 @@
   transition: all 0.2s ease;
 }
 
-.nexus-recruiter-root input:not([type="checkbox"]):not([type="radio"]):focus,
-.nexus-recruiter-root select:focus,
-.nexus-recruiter-root textarea:focus,
 .codevox-recruiter-root input:not([type="checkbox"]):not([type="radio"]):focus,
 .codevox-recruiter-root select:focus,
 .codevox-recruiter-root textarea:focus,
-.nexus-card input:not([type="checkbox"]):not([type="radio"]):focus,
-.nexus-card select:focus,
-.nexus-card textarea:focus,
-.nexus-input:focus,
+.codevox-recruiter-root input:not([type="checkbox"]):not([type="radio"]):focus,
+.codevox-recruiter-root select:focus,
+.codevox-recruiter-root textarea:focus,
+.codevox-card input:not([type="checkbox"]):not([type="radio"]):focus,
+.codevox-card select:focus,
+.codevox-card textarea:focus,
+.codevox-input:focus,
 .codevox-input:focus {
   border-color: #1685FF !important;
   box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
 }
 
-.nexus-recruiter-root input::placeholder,
-.nexus-recruiter-root textarea::placeholder,
 .codevox-recruiter-root input::placeholder,
 .codevox-recruiter-root textarea::placeholder,
-.nexus-card input::placeholder,
-.nexus-card textarea::placeholder {
+.codevox-recruiter-root input::placeholder,
+.codevox-recruiter-root textarea::placeholder,
+.codevox-card input::placeholder,
+.codevox-card textarea::placeholder {
   color: rgba(196, 181, 253, 0.5) !important;
 }
 
-.nexus-recruiter-root select option,
 .codevox-recruiter-root select option,
-.nexus-card select option {
+.codevox-recruiter-root select option,
+.codevox-card select option {
   background-color: #081426 !important;
   color: #FFFFFF !important;
 }
 
-.nexus-glass-ai {
+.codevox-glass-ai {
   background: rgba(124, 58, 237, 0.12);
   backdrop-filter: blur(8px);
-  border: 1px dashed var(--nexus-secondary);
+  border: 1px dashed var(--codevox-secondary);
   border-radius: var(--radius-md, 0.75rem);
 }
 
-.nexus-ai-sparkle-border {
-  border: 1px dashed var(--nexus-secondary);
+.codevox-ai-sparkle-border {
+  border: 1px dashed var(--codevox-secondary);
   background: linear-gradient(
     to bottom right,
     color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent),
@@ -181,52 +180,52 @@
   );
 }
 
-.nexus-pipeline-bar {
+.codevox-pipeline-bar {
   height: 0.75rem;
   border-radius: 9999px;
 }
 
-.nexus-pipeline-bar-segment {
+.codevox-pipeline-bar-segment {
   transition: opacity 0.15s ease;
 }
 
-.nexus-pipeline-bar-segment:hover {
+.codevox-pipeline-bar-segment:hover {
   opacity: 0.8;
 }
 
 /* Lead inbox - matches lead_management_master_list design */
-.nexus-recruiter-root .lead-inbox-sidebar-scroll::-webkit-scrollbar {
+.codevox-recruiter-root .lead-inbox-sidebar-scroll::-webkit-scrollbar {
   width: 4px;
 }
 
-.nexus-recruiter-root .lead-inbox-sidebar-scroll::-webkit-scrollbar-thumb {
+.codevox-recruiter-root .lead-inbox-sidebar-scroll::-webkit-scrollbar-thumb {
   background: #dfe1e6;
   border-radius: 10px;
 }
 
-.nexus-recruiter-root .custom-scrollbar::-webkit-scrollbar {
+.codevox-recruiter-root .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.nexus-recruiter-root .custom-scrollbar::-webkit-scrollbar-track {
+.codevox-recruiter-root .custom-scrollbar::-webkit-scrollbar-track {
   background: var(--assessment-surface-container-low);
 }
 
-.nexus-recruiter-root .custom-scrollbar::-webkit-scrollbar-thumb {
+.codevox-recruiter-root .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--color-outline-variant, #e5e7eb);
   border-radius: 10px;
 }
 
-.nexus-recruiter-root .pipeline-chevron {
+.codevox-recruiter-root .pipeline-chevron {
   clip-path: polygon(90% 0%, 100% 50%, 90% 100%, 0% 100%, 10% 50%, 0% 0%);
 }
 
-.nexus-recruiter-root .pipeline-chevron-first {
+.codevox-recruiter-root .pipeline-chevron-first {
   clip-path: polygon(90% 0%, 100% 50%, 90% 100%, 0% 100%, 0% 50%, 0% 0%);
 }
 
-.nexus-recruiter-root .lead-score-ring {
+.codevox-recruiter-root .lead-score-ring {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 9999px;
@@ -240,47 +239,47 @@
   color: var(--assessment-on-surface);
 }
 
-.nexus-recruiter-root .lead-score-ring--high {
-  border-color: var(--nexus-tertiary-fixed);
+.codevox-recruiter-root .lead-score-ring--high {
+  border-color: var(--codevox-tertiary-fixed);
 }
 
-.nexus-recruiter-root .lead-score-ring--mid {
-  border-color: var(--nexus-secondary-fixed);
+.codevox-recruiter-root .lead-score-ring--mid {
+  border-color: var(--codevox-secondary-fixed);
 }
 
-.nexus-recruiter-root .lead-score-ring--low {
+.codevox-recruiter-root .lead-score-ring--low {
   border-color: var(--assessment-outline-variant);
 }
 
-.nexus-recruiter-root .lead-inbox-table th {
+.codevox-recruiter-root .lead-inbox-table th {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.nexus-recruiter-root .lead-detail-bento {
+.codevox-recruiter-root .lead-detail-bento {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 16px;
 }
 
-.nexus-recruiter-root .lead-detail-panel {
+.codevox-recruiter-root .lead-detail-panel {
   min-height: 420px;
 }
 
 @media (min-width: 1024px) {
-  .nexus-recruiter-root .lead-detail-panel {
+  .codevox-recruiter-root .lead-detail-panel {
     min-height: 600px;
   }
 }
 
-.nexus-recruiter-root .lead-detail-ai-glow {
+.codevox-recruiter-root .lead-detail-ai-glow {
   box-shadow: 0 0 15px -3px rgba(0, 184, 217, 0.2);
   border: 1px solid rgba(0, 184, 217, 0.3);
 }
 
-.nexus-recruiter-root .lead-detail-timeline-line {
+.codevox-recruiter-root .lead-detail-timeline-line {
   position: absolute;
   left: 11px;
   top: 8px;
@@ -289,20 +288,20 @@
   background: var(--assessment-outline-variant);
 }
 
-.nexus-recruiter-root .nexus-tonal-layer {
+.codevox-recruiter-root .codevox-tonal-layer {
   background-color: var(--assessment-surface-container, #081426);
   border: 1px solid var(--assessment-outline-variant, rgba(139, 92, 246, 0.22));
   transition: box-shadow 0.2s ease-in-out;
 }
 
-.nexus-recruiter-root .nexus-ai-insight-border {
+.codevox-recruiter-root .codevox-ai-insight-border {
   position: relative;
   background: var(--assessment-surface-container, #081426);
   border: 1px solid transparent;
   background-clip: padding-box;
 }
 
-.nexus-recruiter-root .nexus-ai-insight-border::before {
+.codevox-recruiter-root .codevox-ai-insight-border::before {
   content: '';
   position: absolute;
   inset: -1px;
@@ -312,40 +311,40 @@
   opacity: 0.4;
 }
 
-.nexus-recruiter-root .interview-ops-table th {
+.codevox-recruiter-root .interview-ops-table th {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.nexus-stepper-active {
+.codevox-stepper-active {
   border-bottom: 2px solid var(--assessment-primary);
   color: var(--assessment-primary);
 }
 
-.nexus-table-dense {
+.codevox-table-dense {
   width: 100%;
 }
 
-.nexus-table-dense th,
-.nexus-table-dense td {
+.codevox-table-dense th,
+.codevox-table-dense td {
   padding: 1.25rem 1.5rem;
 }
 
-.nexus-table-dense thead tr {
+.codevox-table-dense thead tr {
   background: color-mix(in srgb, var(--assessment-surface-container-low) 50%, transparent);
 }
 
-.nexus-table-dense tbody tr {
+.codevox-table-dense tbody tr {
   transition: background-color 0.15s ease;
 }
 
-.nexus-table-dense tbody tr:hover {
+.codevox-table-dense tbody tr:hover {
   background: color-mix(in srgb, var(--assessment-surface-container) 30%, transparent);
 }
 
-.nexus-health-pill {
+.codevox-health-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -354,12 +353,12 @@
   background: color-mix(in srgb, var(--assessment-surface-container-low) 40%, transparent);
 }
 
-.nexus-health-pill.ai {
-  border: 1px dashed var(--nexus-secondary);
+.codevox-health-pill.ai {
+  border: 1px dashed var(--codevox-secondary);
 }
 
 /* Accessible toggle switch */
-.nexus-recruiter-root .nexus-switch {
+.codevox-recruiter-root .codevox-switch {
   position: relative;
   display: inline-flex;
   height: 1.5rem;
@@ -374,21 +373,21 @@
   background: var(--assessment-outline-variant);
 }
 
-.nexus-recruiter-root .nexus-switch[aria-checked='true'] {
-  background: var(--nexus-secondary);
+.codevox-recruiter-root .codevox-switch[aria-checked='true'] {
+  background: var(--codevox-secondary);
 }
 
-.nexus-recruiter-root .nexus-switch:focus-visible {
-  outline: 2px solid var(--nexus-secondary);
+.codevox-recruiter-root .codevox-switch:focus-visible {
+  outline: 2px solid var(--codevox-secondary);
   outline-offset: 2px;
 }
 
-.nexus-recruiter-root .nexus-switch:disabled {
+.codevox-recruiter-root .codevox-switch:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.nexus-recruiter-root .nexus-switch-thumb {
+.codevox-recruiter-root .codevox-switch-thumb {
   pointer-events: none;
   display: block;
   height: 1.125rem;
@@ -400,11 +399,11 @@
   transform: translateX(0.1875rem);
 }
 
-.nexus-recruiter-root .nexus-switch[aria-checked='true'] .nexus-switch-thumb {
+.codevox-recruiter-root .codevox-switch[aria-checked='true'] .codevox-switch-thumb {
   transform: translateX(1.4375rem);
 }
 
-.nexus-recruiter-root .nexus-switch-row {
+.codevox-recruiter-root .codevox-switch-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -415,30 +414,30 @@
   padding: 0.75rem 1rem;
 }
 
-.nexus-bias-flag {
+.codevox-bias-flag {
   border-left-width: 4px;
   border-radius: 0 0.5rem 0.5rem 0;
   padding: 0.5rem;
 }
 
-.nexus-bias-flag.critical {
+.codevox-bias-flag.critical {
   border-color: var(--assessment-error);
   background: color-mix(in srgb, var(--assessment-error-container) 20%, transparent);
 }
 
-.nexus-bias-flag.warning {
-  border-color: var(--nexus-secondary);
-  background: color-mix(in srgb, var(--nexus-secondary-container) 10%, transparent);
+.codevox-bias-flag.warning {
+  border-color: var(--codevox-secondary);
+  background: color-mix(in srgb, var(--codevox-secondary-container) 10%, transparent);
 }
 
-.nexus-fab {
+.codevox-fab {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
   z-index: 50;
 }
 
-.nexus-stage-connector::before {
+.codevox-stage-connector::before {
   content: '';
   position: absolute;
   left: 1.5rem;
@@ -448,22 +447,22 @@
   background: var(--assessment-outline-variant);
 }
 
-.nexus-glass-lite {
+.codevox-glass-lite {
   background: rgba(22, 10, 48, 0.85);
   backdrop-filter: blur(8px);
 }
 
-.nexus-btn-primary {
+.codevox-btn-primary {
   background: var(--assessment-primary);
   color: var(--assessment-on-primary);
 }
 
-.nexus-btn-secondary {
-  background: var(--nexus-secondary);
-  color: var(--nexus-on-secondary);
+.codevox-btn-secondary {
+  background: var(--codevox-secondary);
+  color: var(--codevox-on-secondary);
 }
 
-.nexus-input {
+.codevox-input {
   width: 100%;
   border: 1px solid var(--assessment-outline-variant);
   border-radius: 0.5rem;
@@ -473,13 +472,13 @@
   color: var(--assessment-on-surface, #FFFFFF);
 }
 
-.nexus-input:focus {
+.codevox-input:focus {
   outline: none;
   border-color: var(--assessment-primary);
   box-shadow: 0 0 0 1px var(--assessment-primary);
 }
 
-.nexus-search-input {
+.codevox-search-input {
   width: 100%;
   border: none;
   border-radius: 9999px;
@@ -488,7 +487,7 @@
   font-size: 0.875rem;
 }
 
-.nexus-search-input:focus {
+.codevox-search-input:focus {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--assessment-primary-container) 30%, transparent);
 }

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
-import { NexusStatusBadge } from '@/modules/job-profiles/components/NexusStatusBadge';
+import { CodeVoxStatusBadge } from '@/modules/job-profiles/components/CodeVoxStatusBadge';
 import { ProfileHealthGauge } from '@/modules/job-profiles/components/ProfileHealthGauge';
 import {
   getExtendedJobProfileAnalytics,
@@ -90,7 +90,7 @@ export function JobProfileAnalyticsPage() {
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
             <div className="mb-2 flex items-center gap-3">
-              <NexusStatusBadge status={profile.status} />
+              <CodeVoxStatusBadge status={profile.status} />
               <h2 className="font-display-lg">{profile.title}</h2>
             </div>
             <p className="text-sm text-[var(--assessment-on-surface-variant)]">
@@ -293,10 +293,10 @@ export function JobProfileAnalyticsPage() {
           </div>
 
           {/* AI Strategic Insights */}
-          <div className="nexus-glass-ai col-span-12 rounded-xl p-6 lg:col-span-8 shadow-sm">
+          <div className="codevox-glass-ai col-span-12 rounded-xl p-6 lg:col-span-8 shadow-sm">
             <div className="mb-6 flex items-center gap-2">
-              <AssessmentMaterialIcon name="auto_awesome" size={22} className="text-[var(--nexus-secondary)]" />
-              <h3 className="font-title-sm text-[var(--nexus-on-secondary-container,#1e3a8a)]">
+              <AssessmentMaterialIcon name="auto_awesome" size={22} className="text-[var(--codevox-secondary)]" />
+              <h3 className="font-title-sm text-[var(--codevox-on-secondary-container,#1e3a8a)]">
                 AI strategic insights
               </h3>
             </div>
@@ -313,7 +313,7 @@ export function JobProfileAnalyticsPage() {
                       className={
                         insight.type === 'warning'
                           ? 'text-[var(--assessment-error,#dc2626)]'
-                          : 'text-[var(--nexus-secondary)]'
+                          : 'text-[var(--codevox-secondary)]'
                       }
                     />
                     <p className="text-sm font-semibold">{insight.title}</p>
@@ -329,11 +329,11 @@ export function JobProfileAnalyticsPage() {
               ))}
             </div>
             {analytics.insights[0] ? (
-              <div className="mt-6 flex items-center gap-4 rounded-lg bg-[var(--nexus-secondary)]/10 p-4">
-                <div className="rounded-lg bg-[var(--nexus-secondary)] p-2 text-white">
+              <div className="mt-6 flex items-center gap-4 rounded-lg bg-[var(--codevox-secondary)]/10 p-4">
+                <div className="rounded-lg bg-[var(--codevox-secondary)] p-2 text-white">
                   <AssessmentMaterialIcon name="trending_up" size={20} />
                 </div>
-                <p className="text-sm italic text-[var(--nexus-on-secondary-container,#1e3a8a)]">
+                <p className="text-sm italic text-[var(--codevox-on-secondary-container,#1e3a8a)]">
                   &ldquo;{analytics.insights[0].message}&rdquo;
                 </p>
               </div>
@@ -377,7 +377,7 @@ export function JobProfileAnalyticsPage() {
                       </div>
                     </div>
                     <div
-                      className="nexus-pipeline-bar bg-[var(--assessment-primary)]"
+                      className="codevox-pipeline-bar bg-[var(--assessment-primary)]"
                       style={{
                         width: `${Math.min(100, Math.max(4, pct))}%`,
                         opacity: 1 - idx * 0.15,
@@ -526,7 +526,7 @@ export function JobProfileAnalyticsPage() {
                     <span className="font-mono-data text-[10px]">
                       {compBenchmark?.percentile_25 ?? profile.compensation_band_min ?? '-'}k
                     </span>
-                    <span className="font-label-caps text-[8px] text-[var(--nexus-outline)]">25th</span>
+                    <span className="font-label-caps text-[8px] text-[var(--codevox-outline)]">25th</span>
                   </div>
                   <div className="absolute left-[50%] flex -translate-x-1/2 flex-col items-center">
                     <div className="mb-1 h-8 w-px bg-[var(--assessment-primary)]" />
@@ -540,7 +540,7 @@ export function JobProfileAnalyticsPage() {
                     <span className="font-mono-data text-[10px]">
                       {compBenchmark?.percentile_75 ?? profile.compensation_band_max ?? '-'}k
                     </span>
-                    <span className="font-label-caps text-[8px] text-[var(--nexus-outline)]">75th</span>
+                    <span className="font-label-caps text-[8px] text-[var(--codevox-outline)]">75th</span>
                   </div>
                   {profile.compensation_band_min != null && profile.compensation_band_max != null ? (
                     <div className="absolute left-[28%] h-4 w-[38%] rounded border-x-2 border-[var(--assessment-primary)] bg-[var(--assessment-primary)]/20" />
@@ -575,10 +575,10 @@ export function JobProfileAnalyticsPage() {
         </div>
       </div>
 
-      <div className="nexus-fab">
+      <div className="codevox-fab">
         <Link
           href={`/assessments/job-profiles/${id}/configure`}
-          className="nexus-btn-primary flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110"
+          className="codevox-btn-primary flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110"
         >
           <AssessmentMaterialIcon name="auto_awesome" size={28} />
         </Link>

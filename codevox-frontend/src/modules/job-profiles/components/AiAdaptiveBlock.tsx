@@ -8,10 +8,10 @@ export function AiAdaptiveBlock(props: {
   branchLabel?: string;
 }) {
   return (
-    <div className="nexus-glass-ai p-4">
+    <div className="codevox-glass-ai p-4">
       <div className="mb-2 flex items-center gap-2">
-        <AssessmentMaterialIcon name="auto_awesome" className="text-[var(--nexus-secondary)]" />
-        <span className="font-label-caps text-[var(--nexus-on-secondary-container)]">
+        <AssessmentMaterialIcon name="auto_awesome" className="text-[var(--codevox-secondary)]" />
+        <span className="font-label-caps text-[var(--codevox-on-secondary-container)]">
           {props.title ?? 'AI Adaptive Branch'}
         </span>
       </div>
@@ -20,7 +20,7 @@ export function AiAdaptiveBlock(props: {
           'Follow-up questions generated from candidate responses using JD + rubric context.'}
       </p>
       {props.branchLabel ? (
-        <p className="mt-2 font-mono-data text-xs text-[var(--nexus-secondary)]">
+        <p className="mt-2 font-mono-data text-xs text-[var(--codevox-secondary)]">
           → {props.branchLabel}
         </p>
       ) : null}

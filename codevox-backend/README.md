@@ -1,4 +1,4 @@
-# Recruitment Assessment Backend (standalone)
+# CodeVox Backend
 
 Independent NestJS API for recruitment assessments, job profiles, take-home, and autonomous interviews.
 

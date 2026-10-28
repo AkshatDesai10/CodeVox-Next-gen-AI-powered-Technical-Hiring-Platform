@@ -101,7 +101,7 @@ export function InviteSlotDialog({
         ) : items.length === 0 ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             No open time slots available for this date. Add slots under{' '}
-            <strong>Recruitment → Time Slots</strong>, or pick another day.
+            <strong>Hiring → Time Slots</strong>, or pick another day.
           </div>
         ) : (
           <ul className="max-h-72 space-y-2 overflow-y-auto">

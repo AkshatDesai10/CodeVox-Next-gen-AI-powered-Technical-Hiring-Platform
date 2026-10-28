@@ -104,7 +104,7 @@ async function bootstrap() {
   const port = config.get<number>('PORT') ?? 4000;
   await app.listen(port);
   Logger.log(
-    `Recruitment Assessment backend listening on http://localhost:${port}`,
+    `CodeVox backend listening on http://localhost:${port}`,
     'Bootstrap',
   );
 }

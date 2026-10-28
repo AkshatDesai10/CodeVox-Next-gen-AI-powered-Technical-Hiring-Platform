@@ -154,21 +154,21 @@ export default function CandidateWarmupPage({
   const ss = String(secondsLeft % 60).padStart(2, '0');
 
   return (
-    <div className="min-h-screen bg-[#090414] text-white">
-      <header className="flex items-center justify-between border-b border-[rgba(139,92,246,0.25)] bg-[#160A30] px-4 py-3 sm:px-6">
+    <div className="assessments-root min-h-screen bg-[var(--assessment-surface)] text-[var(--assessment-on-surface)]">
+      <header className="flex items-center justify-between border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-4 py-3 sm:px-6">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#55E63B]">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#34D399]">
             Optional 2-min warmup
           </p>
           <h1 className="text-lg font-bold tracking-tight">Practice sandbox</h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className="rounded-full border border-[#7C3AED]/40 bg-[#7C3AED]/15 px-3 py-1 font-mono text-xs text-[#C4B5FD]">
+          <span className="rounded-full border border-[#1685FF]/40 bg-[#1685FF]/15 px-3 py-1 font-mono text-xs text-[#BAE6FD]">
             {mm}:{ss}
           </span>
           <Link
             href={`/candidate/portal/${encodeURIComponent(token)}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#7C3AED] px-3 py-2 text-xs font-bold text-white hover:bg-[#8B5CF6]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1685FF] px-3 py-2 text-xs font-bold text-white hover:bg-[#38BDF8]"
           >
             Back to portal
             <AssessmentMaterialIcon name="arrow_forward" size={14} />
@@ -177,9 +177,9 @@ export default function CandidateWarmupPage({
       </header>
 
       <main className="mx-auto grid max-w-6xl gap-4 p-4 sm:grid-cols-2 sm:p-6">
-        <section className="space-y-4 rounded-2xl border border-[rgba(139,92,246,0.25)] bg-[#160A30] p-4">
-          <h2 className="text-sm font-bold text-[#C4B5FD]">Camera preview</h2>
-          <div className="overflow-hidden rounded-xl border border-[#7C3AED]/30 bg-black aspect-video">
+        <section className="space-y-4 rounded-2xl border border-[rgba(22,133,255,0.25)] bg-[#0B1930] p-4">
+          <h2 className="text-sm font-bold text-[#BAE6FD]">Camera preview</h2>
+          <div className="overflow-hidden rounded-xl border border-[#1685FF]/30 bg-black aspect-video">
             <video
               ref={videoRef}
               autoPlay
@@ -191,21 +191,21 @@ export default function CandidateWarmupPage({
           {cameraError ? (
             <p className="text-xs text-red-300">{cameraError}</p>
           ) : (
-            <p className="text-xs text-[#C4B5FD]">
+            <p className="text-xs text-[#BAE6FD]">
               {cameraOn ? 'Camera live — this preview is not recorded for evaluation.' : 'Starting camera…'}
             </p>
           )}
           <button
             type="button"
             onClick={() => void startCamera()}
-            className="rounded-lg border border-[#7C3AED]/40 px-3 py-2 text-xs font-semibold text-[#C4B5FD] hover:bg-[#7C3AED]/15"
+            className="rounded-lg border border-[#1685FF]/40 px-3 py-2 text-xs font-semibold text-[#BAE6FD] hover:bg-[#1685FF]/15"
           >
             Restart camera
           </button>
 
-          <div className="border-t border-[rgba(139,92,246,0.2)] pt-4">
-            <h2 className="mb-2 text-sm font-bold text-[#C4B5FD]">Mic check</h2>
-            <p className="mb-3 text-xs text-[#C4B5FD]/80">
+          <div className="border-t border-[rgba(22,133,255,0.2)] pt-4">
+            <h2 className="mb-2 text-sm font-bold text-[#BAE6FD]">Mic check</h2>
+            <p className="mb-3 text-xs text-[#BAE6FD]/80">
               Record ~3 seconds, then play it back. Audio stays on this device only.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -213,7 +213,7 @@ export default function CandidateWarmupPage({
                 type="button"
                 disabled={recording}
                 onClick={() => void startMicCheck()}
-                className="rounded-lg bg-[#55E63B] px-3 py-2 text-xs font-bold text-[#090414] disabled:opacity-50"
+                className="rounded-lg bg-[#34D399] px-3 py-2 text-xs font-bold text-[#050B18] disabled:opacity-50"
               >
                 {recording ? 'Recording…' : 'Record sample'}
               </button>
@@ -234,19 +234,19 @@ export default function CandidateWarmupPage({
           </div>
         </section>
 
-        <section className="flex min-h-[420px] flex-col rounded-2xl border border-[rgba(139,92,246,0.25)] bg-[#160A30] p-4">
+        <section className="flex min-h-[420px] flex-col rounded-2xl border border-[rgba(22,133,255,0.25)] bg-[#0B1930] p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-[#C4B5FD]">Mini IDE (hello-world)</h2>
+            <h2 className="text-sm font-bold text-[#BAE6FD]">Mini IDE (hello-world)</h2>
             <button
               type="button"
               onClick={runHelloWorld}
-              className="inline-flex items-center gap-1 rounded-lg bg-[#7C3AED] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#8B5CF6]"
+              className="inline-flex items-center gap-1 rounded-lg bg-[#1685FF] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#38BDF8]"
             >
               <AssessmentMaterialIcon name="play_arrow" size={14} />
               Run locally
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-[#7C3AED]/30">
+          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-[#1685FF]/30">
             <MonacoEditor
               height="280px"
               language="javascript"
@@ -260,14 +260,14 @@ export default function CandidateWarmupPage({
               }}
             />
           </div>
-          <div className="mt-3 rounded-xl border border-[rgba(139,92,246,0.2)] bg-[#090414] p-3 font-mono text-xs">
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#C4B5FD]">
+          <div className="mt-3 rounded-xl border border-[rgba(22,133,255,0.2)] bg-[#050B18] p-3 font-mono text-xs">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#BAE6FD]">
               Output
             </p>
             {runError ? (
               <pre className="whitespace-pre-wrap text-red-300">{runError}</pre>
             ) : (
-              <pre className="whitespace-pre-wrap text-[#55E63B]">
+              <pre className="whitespace-pre-wrap text-[#34D399]">
                 {runOutput ?? 'Click Run locally — nothing is submitted.'}
               </pre>
             )}

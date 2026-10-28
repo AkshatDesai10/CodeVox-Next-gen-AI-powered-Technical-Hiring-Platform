@@ -267,7 +267,7 @@ function LeadDetailHeader(props: {
         <div>
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <h1 className="font-headline-lg text-[var(--assessment-on-surface)]">{name || 'Lead'}</h1>
-            <span className="rounded-full bg-[var(--nexus-tertiary-fixed)] px-2 py-0.5 text-xs font-semibold text-[var(--nexus-on-tertiary-fixed)]">
+            <span className="rounded-full bg-[var(--codevox-tertiary-fixed)] px-2 py-0.5 text-xs font-semibold text-[var(--codevox-on-tertiary-fixed)]">
               {stage}
             </span>
           </div>
@@ -289,7 +289,7 @@ function LeadDetailHeader(props: {
 
       <div className="flex w-full gap-4 md:w-auto">
         <div className="flex flex-1 items-center gap-4 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4 md:flex-none">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--nexus-tertiary-container)]/10 text-[var(--nexus-tertiary)]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--codevox-tertiary-container)]/10 text-[var(--codevox-tertiary)]">
             <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
               bolt
             </span>
@@ -298,7 +298,7 @@ function LeadDetailHeader(props: {
             <p className="text-xs leading-[18px] text-[var(--assessment-on-surface-variant)]">
               Engagement Score
             </p>
-            <p className="font-headline-sm leading-6 text-[var(--nexus-tertiary)]">
+            <p className="font-headline-sm leading-6 text-[var(--codevox-tertiary)]">
               {engagement.label}
               {score != null ? ` (${Math.round(score)}%)` : ''}
             </p>
@@ -359,7 +359,7 @@ function LeadDetailHeader(props: {
             type="button"
             disabled={props.qualifyLoading}
             onClick={props.onQualify}
-            className="flex items-center gap-1 rounded-full bg-[var(--nexus-tertiary)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-full bg-[var(--codevox-tertiary)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {props.qualifyLoading ? 'Running...' : 'Approve'}
           </button>
@@ -459,7 +459,7 @@ function VerificationPanel(props: {
       <div className="flex items-center justify-between border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-4">
         <div className="flex items-center gap-2">
           <h2 className="font-headline-sm text-[var(--assessment-on-surface)]">Verification Hub</h2>
-          <span className="material-symbols-outlined text-sm text-[var(--nexus-tertiary)]">auto_awesome</span>
+          <span className="material-symbols-outlined text-sm text-[var(--codevox-tertiary)]">auto_awesome</span>
         </div>
         <div
           className={`flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${
@@ -514,19 +514,19 @@ function VerificationPanel(props: {
               </a>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center space-y-4 rounded-xl border border-[var(--nexus-tertiary)]/20 bg-[var(--nexus-tertiary)]/5 p-8 text-center">
-              <div className="rounded-full bg-[var(--nexus-tertiary)]/10 p-3 text-[var(--nexus-tertiary)]">
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-xl border border-[var(--codevox-tertiary)]/20 bg-[var(--codevox-tertiary)]/5 p-8 text-center">
+              <div className="rounded-full bg-[var(--codevox-tertiary)]/10 p-3 text-[var(--codevox-tertiary)]">
                 <span className="material-symbols-outlined text-3xl">auto_fix_high</span>
               </div>
               <div>
-                <p className="font-headline-sm text-[var(--nexus-tertiary)]">CodeVox AI Verdict</p>
+                <p className="font-headline-sm text-[var(--codevox-tertiary)]">CodeVox AI Verdict</p>
                 <p className="max-w-md text-sm text-[var(--assessment-on-surface-variant)]">{verdictText}</p>
               </div>
               <button
                 type="button"
                 disabled={props.qualifyLoading}
                 onClick={props.onQualify}
-                className="mt-2 rounded-full bg-[var(--nexus-tertiary)] px-6 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
+                className="mt-2 rounded-full bg-[var(--codevox-tertiary)] px-6 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
               >
                 {props.qualifyLoading ? 'Running...' : 'Run AI Verification'}
               </button>
@@ -1162,7 +1162,7 @@ function timelineToneForType(type: string): TimelineEntry['tone'] {
 function timelineToneClass(tone: TimelineEntry['tone']) {
   switch (tone) {
     case 'tertiary':
-      return 'bg-[var(--nexus-tertiary)]';
+      return 'bg-[var(--codevox-tertiary)]';
     case 'secondary':
       return 'bg-[var(--recruitment-secondary)]';
     case 'success':

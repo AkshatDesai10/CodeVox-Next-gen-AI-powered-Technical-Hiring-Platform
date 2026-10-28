@@ -62,7 +62,7 @@ export function InterviewOpsPage() {
           </div>
         </header>
 
-        <section className="nexus-tonal-layer overflow-hidden rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] shadow-sm">
+        <section className="codevox-tonal-layer overflow-hidden rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] shadow-sm">
           {todayQuery.isLoading ? (
             <div className="flex flex-col items-center justify-center gap-4 py-20 text-[var(--assessment-on-surface-variant)]">
               <span className="material-symbols-outlined animate-spin text-4xl text-[var(--assessment-primary)]">

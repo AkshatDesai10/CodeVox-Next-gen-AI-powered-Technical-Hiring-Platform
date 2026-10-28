@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { NexusRecruiterRoot } from '@/modules/job-profiles/components/NexusRecruiterRoot';
+import { CodeVoxRecruiterRoot } from '@/modules/job-profiles/components/CodeVoxRecruiterRoot';
 import { applyToJobProfile, getPublicJobProfile } from '@/modules/job-profiles/lib/job-profiles-api';
 
 export function PublicApplyPage() {
@@ -56,7 +56,7 @@ export function PublicApplyPage() {
   const profile = profileQuery.data;
 
   return (
-    <NexusRecruiterRoot>
+    <CodeVoxRecruiterRoot>
       <div className="min-h-screen bg-[var(--assessment-surface,#f5f7fa)] px-4 py-10">
         <div className="mx-auto max-w-2xl space-y-6">
           <header className="text-center">
@@ -76,7 +76,7 @@ export function PublicApplyPage() {
             </p>
           ) : null}
 
-          <div className="nexus-card p-6">
+          <div className="codevox-card p-6">
             <h2 className="font-headline-md mb-4">Your details</h2>
             <form
               className="space-y-4"
@@ -144,7 +144,7 @@ export function PublicApplyPage() {
           </div>
 
           {profile.required_skills.length ? (
-            <div className="nexus-card p-5">
+            <div className="codevox-card p-5">
               <h3 className="font-label-caps mb-2">Required skills</h3>
               <div className="flex flex-wrap gap-2">
                 {profile.required_skills.map((s) => (
@@ -160,6 +160,6 @@ export function PublicApplyPage() {
           ) : null}
         </div>
       </div>
-    </NexusRecruiterRoot>
+    </CodeVoxRecruiterRoot>
   );
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { NexusRecruiterRoot } from '@/modules/job-profiles/components/NexusRecruiterRoot';
+import { CodeVoxRecruiterRoot } from '@/modules/job-profiles/components/CodeVoxRecruiterRoot';
 
 export default function JobProfilesLayout({ children }: { children: ReactNode }) {
-  return <NexusRecruiterRoot>{children}</NexusRecruiterRoot>;
+  return <CodeVoxRecruiterRoot>{children}</CodeVoxRecruiterRoot>;
 }

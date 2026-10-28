@@ -36,6 +36,24 @@
   --color-error-container: rgba(244, 63, 94, 0.14);
   --color-gradient: linear-gradient(135deg, #1685FF 0%, #22D3EE 100%);
   --shadow-card: 0 8px 32px rgba(5, 11, 24, 0.7);
+
+  /* Shared assessment aliases — same palette for portal / coding / interview / admin */
+  --assessment-primary: var(--color-primary);
+  --assessment-primary-container: var(--color-primary-container);
+  --assessment-on-primary: #ffffff;
+  --assessment-on-primary-container: #BAE6FD;
+  --assessment-surface: var(--color-bg);
+  --assessment-surface-container: var(--color-surface-container);
+  --assessment-surface-container-high: var(--color-surface-elevated);
+  --assessment-surface-container-low: var(--color-surface-low);
+  --assessment-surface-container-lowest: var(--color-surface-solid);
+  --assessment-surface-container-highest: var(--color-surface-highest);
+  --assessment-on-surface: var(--color-on-surface);
+  --assessment-on-surface-variant: var(--color-text-muted);
+  --assessment-outline: var(--color-outline);
+  --assessment-outline-variant: var(--color-outline-variant);
+  --assessment-error: var(--color-error);
+  --assessment-error-container: var(--color-error-container);
 }
 
 body {
@@ -47,7 +65,7 @@ body {
 }
 
 .codevox-input,
-.nexus-input {
+.codevox-input {
   width: 100%;
   border-radius: 0.75rem;
   border: 1px solid #293B57;
@@ -60,18 +78,18 @@ body {
 }
 
 .codevox-input:focus,
-.nexus-input:focus {
+.codevox-input:focus {
   border-color: #1685FF !important;
   box-shadow: 0 0 0 2px rgba(22, 133, 255, 0.3) !important;
 }
 
 .codevox-input::placeholder,
-.nexus-input::placeholder {
+.codevox-input::placeholder {
   color: rgba(167, 183, 205, 0.6) !important;
 }
 
 .codevox-input option,
-.nexus-input option {
+.codevox-input option {
   background-color: #081426 !important;
   color: #F8FAFC !important;
 }

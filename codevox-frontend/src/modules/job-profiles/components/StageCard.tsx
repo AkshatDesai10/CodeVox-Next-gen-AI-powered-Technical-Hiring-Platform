@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 export type JobStageType = 'ai_screening' | 'screening' | 'coding' | 'ai_verbal' | 'hr_verbal' | 'panel' | 'project_interview' | 'custom';
@@ -38,15 +38,15 @@ export function StageCard(props: {
   return (
     <div
       className={`relative flex flex-col gap-3 rounded-lg border bg-[var(--assessment-surface-container)] p-4 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center ${
-        props.aiSuggested ? 'nexus-ai-sparkle-border' : 'border-[var(--assessment-outline-variant)]'
+        props.aiSuggested ? 'codevox-ai-sparkle-border' : 'border-[var(--assessment-outline-variant)]'
       }`}
     >
       {props.aiSuggested ? (
-        <span className="absolute -top-3 right-4 rounded-full bg-[var(--nexus-secondary)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-tighter text-white">
+        <span className="absolute -top-3 right-4 rounded-full bg-[var(--codevox-secondary)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-tighter text-white">
           AI suggested
         </span>
       ) : null}
-      <span className="cursor-grab text-[var(--nexus-outline)]">
+      <span className="cursor-grab text-[var(--codevox-outline)]">
         <AssessmentMaterialIcon name="drag_indicator" size={20} />
       </span>
       <div className="min-w-0 flex-1 space-y-2">
@@ -98,7 +98,7 @@ export function StageCard(props: {
             className={`rounded px-3 py-1 text-[10px] font-bold uppercase ${
               displayMode === 'ai_led'
                 ? props.aiSuggested
-                  ? 'bg-[var(--nexus-secondary)] text-white shadow-sm'
+                  ? 'bg-[var(--codevox-secondary)] text-white shadow-sm'
                   : 'bg-[var(--assessment-primary)] text-white shadow-sm'
                 : 'text-[var(--assessment-on-surface-variant)]'
             } disabled:cursor-not-allowed`}
@@ -121,7 +121,7 @@ export function StageCard(props: {
         {props.onDelete ? (
           <button
             type="button"
-            className="text-[var(--nexus-outline)] hover:text-red-600"
+            className="text-[var(--codevox-outline)] hover:text-red-600"
             onClick={props.onDelete}
           >
             âœ•

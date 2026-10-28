@@ -33,7 +33,7 @@ import { disconnectLiveKitRoom } from '@/modules/autonomous-interview/lib/liveki
 import { useInterviewLeaveGuard, releaseInterviewLeaveGuard, type LeaveAttempt } from '@/modules/autonomous-interview/lib/interview-leave-guard';
 import type { ProctorEventInput } from '@/modules/proctor/types';
 
-const NOTES_PREFIX = 'nexus-interview-notes:';
+const NOTES_PREFIX = 'codevox-interview-notes:';
 
 type Props = {
   onForceExit?: () => void;
@@ -1189,7 +1189,7 @@ export function LiveKitVoiceStagePanel({
         onReturn={() => void returnToFullscreen()}
       />
 
-      {/* TOP HEADER BAR — Nexus Assessment shell */}
+      {/* TOP HEADER BAR — CodeVox Assessment shell */}
       <header className="z-30 flex h-14 shrink-0 items-center justify-between bg-[var(--assessment-primary)] px-4 shadow-md sm:px-6">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex items-center gap-2">
@@ -1197,7 +1197,7 @@ export function LiveKitVoiceStagePanel({
               <AssessmentMaterialIcon name="neurology" size={18} />
             </div>
             <span className="shrink-0 text-base font-bold text-[var(--assessment-on-primary)]">
-              Nexus Assessment
+              CodeVox Assessment
             </span>
           </div>
           <div className="hidden h-6 w-px bg-white/30 sm:block" />
@@ -1317,7 +1317,7 @@ export function LiveKitVoiceStagePanel({
 
             {/* Middle: interviewer tile + HUD */}
             <div className="my-4 grid min-h-0 flex-1 grid-cols-12 items-stretch gap-5">
-              <div className="group relative col-span-8 flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[#1d3054] shadow-sm">
+              <div className="group relative col-span-8 flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] shadow-sm">
                 <img
                   alt="AI interviewer"
                   className="absolute inset-0 h-full w-full scale-[1.02] object-cover object-[center_18%] brightness-[0.96] contrast-[1.04] saturate-[1.05] transition-transform duration-500 group-hover:scale-[1.04]"
@@ -1372,8 +1372,8 @@ export function LiveKitVoiceStagePanel({
               {/* Right HUD + candidate PiP */}
               <div className="col-span-4 flex flex-col justify-between gap-3">
                 {/* Candidate PiP */}
-                <div className="relative flex flex-1 flex-col justify-between overflow-hidden rounded-xl border-2 border-[var(--assessment-primary)] bg-[#1d3054] p-3 shadow-2xl">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1d3054]">
+                <div className="relative flex flex-1 flex-col justify-between overflow-hidden rounded-xl border-2 border-[var(--assessment-primary)] bg-[var(--assessment-surface-container-high)] p-3 shadow-2xl">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--assessment-surface-container-high)]">
                     {videoEnabled ? (
                       <video
                         ref={videoRef}

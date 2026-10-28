@@ -19,7 +19,7 @@ export type AssessmentNavSection = {
 
 export const RECRUITMENT_NAV_SECTIONS: AssessmentNavSection[] = [
   {
-    label: 'Recruitment',
+    label: 'Hiring',
     items: [
       { href: '/assessments/job-profiles', label: 'Job Profiles', icon: 'work', permission: ['job_profiles:read', 'assessments:read'] },
       { href: '/assessments/recruitment/leads', label: 'Lead Inbox', icon: 'inbox', permission: ['job_profiles:read', 'assessments:read'] },

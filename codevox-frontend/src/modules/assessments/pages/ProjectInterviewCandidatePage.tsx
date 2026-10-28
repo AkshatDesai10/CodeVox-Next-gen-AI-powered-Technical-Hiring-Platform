@@ -84,7 +84,7 @@ function Shell(props: { data: ProjectInterviewCandidateView; children: React.Rea
     <div className="min-h-screen bg-[var(--assessment-surface)] font-sans">
       <div className="flex items-center justify-between border-b bg-[var(--assessment-surface-container)] px-8 py-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="text-xl font-bold tracking-tight text-[var(--assessment-primary)]">CodeVox Recruitment</div>
+          <div className="text-xl font-bold tracking-tight text-[var(--assessment-primary)]">CodeVox</div>
           <div className="h-6 w-px bg-[var(--assessment-surface-container-high)]" />
           <div className="text-xs font-semibold uppercase tracking-wider text-[var(--assessment-outline-variant)]">
             Build &amp; Defend
@@ -992,7 +992,7 @@ export function ProjectInterviewCandidatePage({ token }: { token: string }) {
       return (
         <Shell data={data}>
           <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 font-sans">
-            <div className="rounded-sm bg-[#005ea2] p-12 text-center text-white shadow-sm">
+            <div className="rounded-sm bg-[#1685FF] p-12 text-center text-white shadow-sm">
               <h1 className="mb-4 text-4xl font-semibold tracking-tight">Assessment complete</h1>
               <h2 className="text-2xl font-medium">Thank you!</h2>
             </div>
@@ -1009,7 +1009,7 @@ export function ProjectInterviewCandidatePage({ token }: { token: string }) {
       return (
         <Shell data={data}>
           <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 font-sans">
-            <div className="rounded-sm bg-[#005ea2] p-12 text-center text-white shadow-sm">
+            <div className="rounded-sm bg-[#1685FF] p-12 text-center text-white shadow-sm">
               <h1 className="mb-4 text-4xl font-semibold tracking-tight">Round completed</h1>
               <h2 className="text-2xl font-medium">Thank you!</h2>
             </div>
@@ -1023,7 +1023,7 @@ export function ProjectInterviewCandidatePage({ token }: { token: string }) {
     return (
       <Shell data={data}>
         <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 font-sans">
-          <div className="rounded-sm bg-[#005ea2] p-12 text-center text-white shadow-sm">
+          <div className="rounded-sm bg-[#1685FF] p-12 text-center text-white shadow-sm">
             <h1 className="mb-4 text-4xl font-semibold tracking-tight">Assessment complete</h1>
             <h2 className="text-2xl font-medium">Thank you!</h2>
           </div>

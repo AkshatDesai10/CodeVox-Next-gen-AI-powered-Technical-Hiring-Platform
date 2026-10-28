@@ -964,7 +964,7 @@ export function JobProfileConfigurePage() {
           {/* Left Column: Pipeline Stages (8 cols) */}
           <div className="col-span-12 space-y-6 lg:col-span-8">
             {/* Interview Pipeline Presets */}
-            <section className="nexus-card p-5 shadow-sm border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]">
+            <section className="codevox-card p-5 shadow-sm border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]">
               <div className="mb-4">
                 <div className="flex items-center gap-2">
                   <AssessmentMaterialIcon name="auto_awesome" size={20} className="text-[#55E63B]" />
@@ -1005,7 +1005,7 @@ export function JobProfileConfigurePage() {
                           <span className="font-semibold text-sm text-white">{preset.title}</span>
                         </div>
                         {isCurrent ? (
-                          <span className="rounded-full bg-[var(--nexus-secondary)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--nexus-secondary)] border border-[var(--nexus-secondary)]/30">
+                          <span className="rounded-full bg-[var(--codevox-secondary)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--codevox-secondary)] border border-[var(--codevox-secondary)]/30">
                             ACTIVE
                           </span>
                         ) : null}
@@ -1029,10 +1029,10 @@ export function JobProfileConfigurePage() {
           {/* Right Column: AI Assistant, NL Editing, Pipeline Velocity (4 cols) */}
           <aside className="col-span-12 space-y-6 lg:col-span-4">
             {/* Card 1: AI Assistant Actions */}
-            <div className="nexus-card p-5 shadow-sm space-y-4">
+            <div className="codevox-card p-5 shadow-sm space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] border border-[var(--assessment-outline-variant)]">
-                  <svg className="w-4 h-4 text-[var(--nexus-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="p-1.5 rounded-lg bg-[var(--assessment-surface-container-low)] text-[var(--codevox-secondary)] border border-[var(--assessment-outline-variant)]">
+                  <svg className="w-4 h-4 text-[var(--codevox-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -1057,8 +1057,8 @@ export function JobProfileConfigurePage() {
                   className="w-full text-left p-3 rounded-lg border border-[var(--assessment-outline-variant)] hover:bg-[var(--assessment-surface-container-low)] hover:border-[var(--assessment-primary)] transition-all flex items-center justify-between group disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-md bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] border border-[var(--assessment-outline-variant)] group-hover:bg-[var(--assessment-surface-container)] transition-colors">
-                      <svg className="w-4 h-4 text-[var(--nexus-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="p-2 rounded-md bg-[var(--assessment-surface-container-low)] text-[var(--codevox-secondary)] border border-[var(--assessment-outline-variant)] group-hover:bg-[var(--assessment-surface-container)] transition-colors">
+                      <svg className="w-4 h-4 text-[var(--codevox-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -1140,7 +1140,7 @@ export function JobProfileConfigurePage() {
             </div>
 
             {/* Card 2: NL Profile Editing */}
-            <div className="nexus-card p-5 shadow-sm space-y-3">
+            <div className="codevox-card p-5 shadow-sm space-y-3">
               <div>
                 <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--assessment-on-surface-variant)] mb-1">
                   NL PROFILE EDITING
@@ -1174,7 +1174,7 @@ export function JobProfileConfigurePage() {
             </div>
 
             {/* Card 3: Pipeline Velocity */}
-            <div className="nexus-card p-5 shadow-sm space-y-4">
+            <div className="codevox-card p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-[var(--assessment-on-surface)]">Pipeline velocity</h4>
                 <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -1197,11 +1197,11 @@ export function JobProfileConfigurePage() {
                 <div>
                   <div className="mb-1 flex justify-between text-[11px] font-bold">
                     <span className="text-[var(--assessment-on-surface-variant)]">AI efficiency gain</span>
-                    <span className="text-[var(--nexus-secondary)]">+{Math.min(95, aiStageCount * 11)}%</span>
+                    <span className="text-[var(--codevox-secondary)]">+{Math.min(95, aiStageCount * 11)}%</span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-[var(--assessment-surface-container-high)]">
                     <div
-                      className="h-full bg-[var(--nexus-secondary)] rounded-full transition-all"
+                      className="h-full bg-[var(--codevox-secondary)] rounded-full transition-all"
                       style={{ width: `${Math.min(100, Math.max(20, aiStageCount * 22))}%` }}
                     />
                   </div>
@@ -1220,11 +1220,11 @@ export function JobProfileConfigurePage() {
                     const pct = Math.max(5, (mins / totalDuration) * 100);
                     const colors = [
                       'bg-[var(--assessment-primary)]',
-                      'bg-[var(--nexus-secondary)]',
-                      'bg-[var(--nexus-tertiary)]',
+                      'bg-[var(--codevox-secondary)]',
+                      'bg-[var(--codevox-tertiary)]',
                       'bg-[var(--assessment-primary-container)]',
                       'bg-[var(--recruitment-secondary)]',
-                      'bg-[var(--nexus-secondary-container)]',
+                      'bg-[var(--codevox-secondary-container)]',
                     ];
                     const color = colors[i % colors.length];
                     return (
@@ -1242,11 +1242,11 @@ export function JobProfileConfigurePage() {
                     const mins = getStageDurationMinutes(st.stage_type);
                     const colors = [
                       'bg-[var(--assessment-primary)]',
-                      'bg-[var(--nexus-secondary)]',
-                      'bg-[var(--nexus-tertiary)]',
+                      'bg-[var(--codevox-secondary)]',
+                      'bg-[var(--codevox-tertiary)]',
                       'bg-[var(--assessment-primary-container)]',
                       'bg-[var(--recruitment-secondary)]',
-                      'bg-[var(--nexus-secondary-container)]',
+                      'bg-[var(--codevox-secondary-container)]',
                     ];
                     const color = colors[i % colors.length];
                     return (
@@ -1262,12 +1262,12 @@ export function JobProfileConfigurePage() {
 
             {/* AI Rubric Tip Box */}
             {showAiTip && weightTotal < 100 && competencies.length > 0 ? (
-              <div className="nexus-glass-lite rounded-xl border border-[var(--nexus-secondary)]/30 p-4 shadow-sm">
+              <div className="codevox-glass-lite rounded-xl border border-[var(--codevox-secondary)]/30 p-4 shadow-sm">
                 <div className="mb-2 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[var(--nexus-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-[var(--codevox-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  <span className="text-xs font-bold text-[var(--nexus-secondary)]">CodeVox AI assistant</span>
+                  <span className="text-xs font-bold text-[var(--codevox-secondary)]">CodeVox AI assistant</span>
                 </div>
                 <p className="text-xs italic text-[var(--assessment-on-surface)] mb-3">
                   &ldquo;Rubric weights total {weightTotal.toFixed(0)}%. Should I balance them to 100%?&rdquo;
@@ -1277,14 +1277,14 @@ export function JobProfileConfigurePage() {
                     type="button"
                     disabled={aiBusy}
                     onClick={() => setCompetencies(normalizeCompetencyWeights(competencies))}
-                    className="flex-1 rounded-lg bg-[var(--nexus-secondary)] hover:opacity-90 py-1.5 text-[10px] font-bold uppercase text-white transition-all"
+                    className="flex-1 rounded-lg bg-[var(--codevox-secondary)] hover:opacity-90 py-1.5 text-[10px] font-bold uppercase text-white transition-all"
                   >
                     Balance to 100%
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAiTip(false)}
-                    className="flex-1 rounded-lg border border-[var(--nexus-secondary)] py-1.5 text-[10px] font-bold uppercase text-[var(--nexus-secondary)] hover:bg-[var(--assessment-surface-container-low)] transition-all"
+                    className="flex-1 rounded-lg border border-[var(--codevox-secondary)] py-1.5 text-[10px] font-bold uppercase text-[var(--codevox-secondary)] hover:bg-[var(--assessment-surface-container-low)] transition-all"
                   >
                     Dismiss
                   </button>
@@ -1330,7 +1330,7 @@ export function JobProfileConfigurePage() {
       ) : null}
 
       {/* Advanced settings accordion */}
-      <details className="nexus-card p-5 shadow-sm rounded-xl border border-[var(--assessment-outline-variant)]">
+      <details className="codevox-card p-5 shadow-sm rounded-xl border border-[var(--assessment-outline-variant)]">
         <summary className="cursor-pointer font-bold text-sm text-[var(--assessment-on-surface)] flex items-center justify-between select-none">
           <span>Advanced settings (approval, thresholds)</span>
           <svg className="w-4 h-4 text-[var(--assessment-on-surface-variant)] transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">

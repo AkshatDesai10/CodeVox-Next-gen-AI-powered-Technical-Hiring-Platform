@@ -16,7 +16,7 @@ export function AnchorQuestionBlock(props: {
       <p className="mb-4 text-lg font-semibold leading-tight">{props.prompt}</p>
       {props.adaptiveBranches?.length ? (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[var(--nexus-secondary)]">
+          <div className="flex items-center gap-2 text-[var(--codevox-secondary)]">
             <span className="text-sm">⎇</span>
             <span className="font-label-caps text-[10px]">AI branching logic</span>
           </div>
@@ -24,12 +24,12 @@ export function AnchorQuestionBlock(props: {
             {props.adaptiveBranches.map((b) => (
               <div
                 key={b.condition}
-                className={`rounded-lg border p-3 ${b.ai ? 'nexus-glass-ai' : 'border-[var(--assessment-outline-variant)]/50 bg-[var(--assessment-surface-container-low)]'}`}
+                className={`rounded-lg border p-3 ${b.ai ? 'codevox-glass-ai' : 'border-[var(--assessment-outline-variant)]/50 bg-[var(--assessment-surface-container-low)]'}`}
               >
                 <div className="mb-2 flex justify-between">
-                  <span className="font-mono-data text-xs text-[var(--nexus-secondary)]">{b.condition}</span>
+                  <span className="font-mono-data text-xs text-[var(--codevox-secondary)]">{b.condition}</span>
                   {b.ai ? (
-                    <span className="rounded bg-[var(--nexus-secondary)]/10 px-1.5 py-0.5 text-[10px] font-bold text-[var(--nexus-secondary)]">
+                    <span className="rounded bg-[var(--codevox-secondary)]/10 px-1.5 py-0.5 text-[10px] font-bold text-[var(--codevox-secondary)]">
                       GEN AI
                     </span>
                   ) : null}

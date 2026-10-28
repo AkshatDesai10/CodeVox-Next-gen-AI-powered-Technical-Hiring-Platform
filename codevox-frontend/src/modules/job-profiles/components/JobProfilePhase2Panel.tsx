@@ -68,7 +68,7 @@ export function JobProfilePhase2Panel(props: {
 
   return (
     <div className="space-y-6">
-      <section className="nexus-card p-5">
+      <section className="codevox-card p-5">
         <h2 className="font-headline-md mb-4">Compliance & approval</h2>
         <label className="mb-3 flex items-center gap-2 text-sm">
           <input
@@ -105,7 +105,7 @@ export function JobProfilePhase2Panel(props: {
         ) : null}
       </section>
 
-      <section className="nexus-card p-5">
+      <section className="codevox-card p-5">
         <h2 className="font-headline-md mb-4">Progression mode</h2>
         <p className="mb-4 text-xs text-[var(--assessment-on-surface-variant)]">
           Controls whether candidates unlock the next round after every round, or only when they meet a score threshold.
@@ -191,7 +191,7 @@ export function JobProfilePhase2Panel(props: {
         })()}
       </section>
 
-      <section className="nexus-card p-5">
+      <section className="codevox-card p-5">
         <h2 className="font-headline-md mb-4">Auto-advance thresholds</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -242,7 +242,7 @@ export function JobProfilePhase2Panel(props: {
       </section>
 
       {props.showOrgLibraries ? (
-        <section className="nexus-card p-5">
+        <section className="codevox-card p-5">
           <h2 className="font-headline-md mb-4">Org libraries</h2>
           <div className="grid gap-4 md:grid-cols-1">
             <div>
@@ -274,7 +274,7 @@ export function JobProfilePhase2Panel(props: {
       ) : null}
 
       {props.showVersionHistory ? (
-        <section className="nexus-card p-5">
+        <section className="codevox-card p-5">
           <h2 className="font-headline-md mb-4">Version history</h2>
           <ul className="mb-4 space-y-1 text-sm">
             {(versionsQuery.data ?? []).map((v) => (
@@ -327,7 +327,7 @@ export function JobProfilePhase2Panel(props: {
       ) : null}
 
       {props.showStallNotifications ? (
-        <section className="nexus-card p-5">
+        <section className="codevox-card p-5">
           <h2 className="font-headline-md mb-2">Stall notifications</h2>
           <label className="text-sm">
             Alert after{' '}

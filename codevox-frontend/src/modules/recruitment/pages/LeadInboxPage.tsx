@@ -271,10 +271,10 @@ export function LeadInboxPage() {
                 icon="person"
               />
               <StatCard label="Verified Leads" value={stats?.verified ?? '-'} icon="verified_user" />
-              <div className="col-span-1 flex items-center gap-3 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4 md:col-span-2 md:border-l-4 md:border-l-[var(--nexus-tertiary)]">
-                <span className="material-symbols-outlined text-[var(--nexus-tertiary)]">auto_awesome</span>
+              <div className="col-span-1 flex items-center gap-3 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4 md:col-span-2 md:border-l-4 md:border-l-[var(--codevox-tertiary)]">
+                <span className="material-symbols-outlined text-[var(--codevox-tertiary)]">auto_awesome</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-[var(--nexus-tertiary)]">AI INSIGHT</p>
+                  <p className="text-xs font-bold text-[var(--codevox-tertiary)]">AI INSIGHT</p>
                   <p className="text-sm text-[var(--assessment-on-surface-variant)]">
                     {stats?.verified != null
                       ? `${stats.verified} verified leads on this page | ${stats.duplicates ?? 0} duplicates flagged.`
@@ -376,7 +376,7 @@ export function LeadInboxPage() {
                                         </span>
                                       ) : null}
                                       {row.priority === 'High' ? (
-                                        <span className="rounded bg-[var(--nexus-tertiary-container)] px-1 text-[10px] font-bold uppercase text-white">
+                                        <span className="rounded bg-[var(--codevox-tertiary-container)] px-1 text-[10px] font-bold uppercase text-white">
                                           Priority
                                         </span>
                                       ) : null}
@@ -506,7 +506,7 @@ function StatusBadge(props: { stage: string | null }) {
   const cls = qualified
     ? 'bg-[var(--assessment-primary-container)]/10 text-[var(--assessment-primary)]'
     : scheduled || interviewed
-      ? 'bg-[var(--nexus-tertiary-container)]/10 text-[var(--nexus-tertiary)]'
+      ? 'bg-[var(--codevox-tertiary-container)]/10 text-[var(--codevox-tertiary)]'
       : offered
         ? 'bg-green-100 text-green-800'
         : 'bg-[var(--assessment-surface-container-highest)] text-[var(--assessment-on-surface-variant)]';

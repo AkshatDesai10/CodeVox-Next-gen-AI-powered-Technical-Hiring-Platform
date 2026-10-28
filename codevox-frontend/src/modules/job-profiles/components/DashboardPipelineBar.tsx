@@ -16,8 +16,8 @@ export function DashboardPipelineBar(props: {
   if (isDraft || total === 0) {
     return (
       <div className="min-w-[200px] space-y-1">
-        <div className="nexus-pipeline-bar flex w-full overflow-hidden bg-[var(--assessment-surface-container)]" />
-        <p className="font-mono-data text-[10px] italic text-[var(--nexus-outline)]">Awaiting launch</p>
+        <div className="codevox-pipeline-bar flex w-full overflow-hidden bg-[var(--assessment-surface-container)]" />
+        <p className="font-mono-data text-[10px] italic text-[var(--codevox-outline)]">Awaiting launch</p>
       </div>
     );
   }
@@ -25,10 +25,10 @@ export function DashboardPipelineBar(props: {
   if (isClosed && total > 0) {
     return (
       <div className="min-w-[200px] space-y-1">
-        <div className="nexus-pipeline-bar flex w-full overflow-hidden">
-          <div className="h-full w-full bg-[var(--nexus-tertiary)]" />
+        <div className="codevox-pipeline-bar flex w-full overflow-hidden">
+          <div className="h-full w-full bg-[var(--codevox-tertiary)]" />
         </div>
-        <p className="font-mono-data text-[10px] font-bold text-[var(--nexus-tertiary)]">Hired pipeline</p>
+        <p className="font-mono-data text-[10px] font-bold text-[var(--codevox-tertiary)]">Hired pipeline</p>
       </div>
     );
   }
@@ -43,11 +43,11 @@ export function DashboardPipelineBar(props: {
 
   return (
     <div className="min-w-[200px] space-y-1">
-      <div className="nexus-pipeline-bar flex w-full overflow-hidden">
+      <div className="codevox-pipeline-bar flex w-full overflow-hidden">
         {labels.map((seg, i) => (
           <div
             key={seg.id}
-            className="nexus-pipeline-bar-segment h-full"
+            className="codevox-pipeline-bar-segment h-full"
             style={{ width: `${seg.pct}%`, backgroundColor: seg.color }}
             title={`${seg.short}: ${seg.count}`}
           />
@@ -56,7 +56,7 @@ export function DashboardPipelineBar(props: {
           <div className="h-full flex-1 bg-[var(--assessment-surface-container)]" />
         ) : null}
       </div>
-      <div className="flex justify-between font-mono-data text-[10px] text-[var(--nexus-outline)]">
+      <div className="flex justify-between font-mono-data text-[10px] text-[var(--codevox-outline)]">
         {labels.map((seg) => (
           <span key={seg.id}>
             {seg.count} {seg.short}

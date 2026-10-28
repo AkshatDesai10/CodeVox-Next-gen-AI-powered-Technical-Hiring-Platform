@@ -22,7 +22,7 @@ export function ProfileHealthGauge(props: { score: number; label?: string }) {
       </svg>
       <div className="absolute text-center">
         <span className="font-display-lg block text-[var(--assessment-primary)]">{pct}%</span>
-        <span className="font-label-caps text-[var(--nexus-outline)]">
+        <span className="font-label-caps text-[var(--codevox-outline)]">
           {(props.label ?? 'HEALTH').toUpperCase()}
         </span>
       </div>

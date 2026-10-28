@@ -714,8 +714,8 @@ export function QuestionBankCreatePage() {
 
               <section className="rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] p-6">
                 {generatedDrafts.length > 0 ? (
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--nexus-secondary)]/30 bg-[var(--nexus-secondary-container)]/20 px-3 py-2">
-                    <p className="text-xs font-semibold text-[var(--nexus-secondary)]">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--codevox-secondary)]/30 bg-[var(--codevox-secondary-container)]/20 px-3 py-2">
+                    <p className="text-xs font-semibold text-[var(--codevox-secondary)]">
                       Editing draft {selectedDraftIndex + 1} of {generatedDrafts.length}
                     </p>
                     <p className="text-[11px] text-[var(--assessment-on-surface-variant)]">
@@ -831,7 +831,7 @@ export function QuestionBankCreatePage() {
                         key={keyword.label}
                         className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs ${
                           keyword.aiSuggested
-                            ? 'nexus-ai-sparkle-border bg-[var(--nexus-secondary-container)] text-[var(--nexus-on-secondary-container)]'
+                            ? 'codevox-ai-sparkle-border bg-[var(--codevox-secondary-container)] text-[var(--codevox-on-secondary-container)]'
                             : 'bg-[var(--assessment-surface-container-high)]'
                         }`}
                       >
@@ -882,8 +882,8 @@ export function QuestionBankCreatePage() {
                 </div>
                 {followUpEnabled ? (
                   <div className="space-y-4">
-                    <div className="nexus-ai-sparkle-border rounded-lg bg-[var(--assessment-surface)] p-4">
-                      <label className="mb-1 block text-xs font-bold text-[var(--nexus-secondary)]">Generated Probe</label>
+                    <div className="codevox-ai-sparkle-border rounded-lg bg-[var(--assessment-surface)] p-4">
+                      <label className="mb-1 block text-xs font-bold text-[var(--codevox-secondary)]">Generated Probe</label>
                       <textarea
                         value={followUpQuestion}
                         onChange={(e) => setFollowUpQuestion(e.target.value)}
@@ -931,14 +931,14 @@ export function QuestionBankCreatePage() {
             </div>
 
             <div className="col-span-12 space-y-6 xl:col-span-4">
-              <section className="overflow-hidden rounded-xl border border-[var(--nexus-secondary)]/30 bg-[var(--nexus-secondary-container)]/10 shadow-sm">
-                <div className="flex items-center gap-2 bg-[var(--nexus-secondary)] p-4 text-white">
+              <section className="overflow-hidden rounded-xl border border-[var(--codevox-secondary)]/30 bg-[var(--codevox-secondary-container)]/10 shadow-sm">
+                <div className="flex items-center gap-2 bg-[var(--codevox-secondary)] p-4 text-white">
                   <AssessmentMaterialIcon name="auto_awesome" size={20} style={{ fontVariationSettings: "'FILL' 1" }} />
                   <h3 className="font-title-sm font-bold">Magic Create</h3>
                 </div>
                 <div className="space-y-4 p-6">
                   <div>
-                    <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Competency</label>
+                    <label className="mb-2 block font-label-caps text-[var(--codevox-secondary)]">Competency</label>
                     <CompetencyLibrarySearchSelect
                       value={competency}
                       onChange={setCompetency}
@@ -947,9 +947,9 @@ export function QuestionBankCreatePage() {
                       placeholder="Search or enter custom competency..."
                     />
                   {/* AI Suggest Competencies by Role */}
-                  <div className="rounded-lg border border-dashed border-[var(--nexus-secondary)]/40 bg-[var(--nexus-secondary-container)]/20 p-3">
+                  <div className="rounded-lg border border-dashed border-[var(--codevox-secondary)]/40 bg-[var(--codevox-secondary-container)]/20 p-3">
                     <div className="mb-1.5 flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-[var(--nexus-secondary)]">
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-[var(--codevox-secondary)]">
                         <AssessmentMaterialIcon name="auto_awesome" size={15} />
                         Suggest by Job / Role
                       </span>
@@ -967,13 +967,13 @@ export function QuestionBankCreatePage() {
                           }
                         }}
                         placeholder="e.g. Backend Dev, React..."
-                        className="flex-1 rounded-md border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-2.5 py-1 text-xs text-[var(--assessment-on-surface)] focus:outline-none focus:ring-1 focus:ring-[var(--nexus-secondary)]"
+                        className="flex-1 rounded-md border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-2.5 py-1 text-xs text-[var(--assessment-on-surface)] focus:outline-none focus:ring-1 focus:ring-[var(--codevox-secondary)]"
                       />
                       <button
                         type="button"
                         onClick={() => handleSuggestCompetencies()}
                         disabled={isSuggestingCompetencies}
-                        className="inline-flex items-center gap-1 rounded-md bg-[var(--nexus-secondary)] px-2.5 py-1 text-xs font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-md bg-[var(--codevox-secondary)] px-2.5 py-1 text-xs font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
                       >
                         {isSuggestingCompetencies ? 'Thinking...' : '✨ Suggest'}
                       </button>
@@ -999,8 +999,8 @@ export function QuestionBankCreatePage() {
                                 title={chip.description}
                                 className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium transition ${
                                   isSelected
-                                    ? 'bg-[var(--nexus-secondary)] text-white shadow-sm'
-                                    : 'border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] text-[var(--assessment-on-surface)] hover:border-[var(--nexus-secondary)] hover:text-[var(--nexus-secondary)]'
+                                    ? 'bg-[var(--codevox-secondary)] text-white shadow-sm'
+                                    : 'border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-lowest)] text-[var(--assessment-on-surface)] hover:border-[var(--codevox-secondary)] hover:text-[var(--codevox-secondary)]'
                                 }`}
                               >
                                 <span>{chip.name}</span>
@@ -1016,7 +1016,7 @@ export function QuestionBankCreatePage() {
                   </div>
                   </div>
                   <div>
-                    <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Seniority</label>
+                    <label className="mb-2 block font-label-caps text-[var(--codevox-secondary)]">Seniority</label>
                     <select
                       value={seniorityLevel}
                       onChange={(e) => setSeniorityLevel(e.target.value)}
@@ -1030,7 +1030,7 @@ export function QuestionBankCreatePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Question Type</label>
+                    <label className="mb-2 block font-label-caps text-[var(--codevox-secondary)]">Question Type</label>
                     <div className="flex flex-wrap gap-2">
                       {MAGIC_QUESTION_TYPE_OPTIONS.map((item) => {
                         const active = selectedQuestionTypes.includes(item.value);
@@ -1045,7 +1045,7 @@ export function QuestionBankCreatePage() {
                             }
                             className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                               active
-                                ? 'bg-[var(--nexus-secondary)] text-white'
+                                ? 'bg-[var(--codevox-secondary)] text-white'
                                 : 'border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] text-[var(--assessment-on-surface-variant)]'
                             }`}
                           >
@@ -1056,7 +1056,7 @@ export function QuestionBankCreatePage() {
                     </div>
                   </div>
                   <div>
-                    <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Question Count</label>
+                    <label className="mb-2 block font-label-caps text-[var(--codevox-secondary)]">Question Count</label>
                     <input
                       type="number"
                       min="1"
@@ -1075,7 +1075,7 @@ export function QuestionBankCreatePage() {
                   <button
                     type="button"
                     onClick={() => setShowGeneratorAdvanced((open) => !open)}
-                    className="flex w-full items-center justify-between text-xs font-semibold text-[var(--nexus-secondary)]"
+                    className="flex w-full items-center justify-between text-xs font-semibold text-[var(--codevox-secondary)]"
                   >
                     <span>Advanced options</span>
                     <AssessmentMaterialIcon name={showGeneratorAdvanced ? 'expand_less' : 'expand_more'} size={18} />
@@ -1083,7 +1083,7 @@ export function QuestionBankCreatePage() {
                   {showGeneratorAdvanced ? (
                     <div className="space-y-4 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-3">
                       <div>
-                        <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Difficulty</label>
+                        <label className="mb-2 block font-label-caps text-[var(--codevox-secondary)]">Difficulty</label>
                         <div className="flex gap-1">
                           {GENERATOR_DIFFICULTY_OPTIONS.map((item, index) => {
                             const active = generatorDifficulty === item.value;
@@ -1096,7 +1096,7 @@ export function QuestionBankCreatePage() {
                                 onClick={() => setGeneratorDifficulty(item.value)}
                                 className={`flex-1 py-2 text-xs font-bold ${rounded} border border-[var(--assessment-outline-variant)] ${
                                   active
-                                    ? 'bg-[var(--nexus-secondary)] text-white'
+                                    ? 'bg-[var(--codevox-secondary)] text-white'
                                     : 'bg-[var(--assessment-surface-container-high)] text-[var(--assessment-on-surface)]'
                                 }`}
                               >
@@ -1110,7 +1110,7 @@ export function QuestionBankCreatePage() {
                         </p>
                       </div>
                       <div>
-                        <label className="mb-2 block font-label-caps text-[var(--nexus-secondary)]">Additional Context</label>
+                        <label className="mb-2 block font-label-caps text-[var(--codevox-secondary)]">Additional Context</label>
                         <textarea
                           value={additionalContext}
                           onChange={(e) => setAdditionalContext(e.target.value)}
@@ -1123,8 +1123,8 @@ export function QuestionBankCreatePage() {
                   ) : null}
 
                   {generatorContext ? (
-                    <div className="space-y-2 border-t border-[var(--nexus-secondary)]/20 pt-4">
-                      <p className="font-label-caps text-[var(--nexus-secondary)]">Generator context</p>
+                    <div className="space-y-2 border-t border-[var(--codevox-secondary)]/20 pt-4">
+                      <p className="font-label-caps text-[var(--codevox-secondary)]">Generator context</p>
                       <div className="flex flex-wrap gap-2">
                         {[
                           { label: 'Competency', value: generatorContext.competencyName },
@@ -1136,16 +1136,16 @@ export function QuestionBankCreatePage() {
                             key={chip.label}
                             className="rounded-full border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] px-3 py-1 text-[11px] text-[var(--assessment-on-surface-variant)]"
                           >
-                            <span className="font-bold text-[var(--nexus-secondary)]">{chip.label}:</span> {chip.value}
+                            <span className="font-bold text-[var(--codevox-secondary)]">{chip.label}:</span> {chip.value}
                           </span>
                         ))}
                       </div>
                       <p className="text-[11px] leading-relaxed text-[var(--assessment-on-surface-variant)]">
-                        <span className="font-bold text-[var(--nexus-secondary)]">Competency:</span>{' '}
+                        <span className="font-bold text-[var(--codevox-secondary)]">Competency:</span>{' '}
                         {generatorContext.competencyDescription}
                       </p>
                       <p className="text-[11px] leading-relaxed text-[var(--assessment-on-surface-variant)]">
-                        <span className="font-bold text-[var(--nexus-secondary)]">Rubric:</span>{' '}
+                        <span className="font-bold text-[var(--codevox-secondary)]">Rubric:</span>{' '}
                         {generatorContext.rubricCriteria}
                       </p>
                     </div>
@@ -1155,7 +1155,7 @@ export function QuestionBankCreatePage() {
                     type="button"
                     disabled={!canGenerateAi || aiMutation.isPending}
                     onClick={() => aiMutation.mutate()}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--nexus-secondary)] py-2.5 font-title-sm text-white transition hover:shadow-lg disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--codevox-secondary)] py-2.5 font-title-sm text-white transition hover:shadow-lg disabled:opacity-60"
                   >
                     {aiMutation.isPending ? (
                       <AssessmentMaterialIcon name="sync" size={20} className="animate-spin" />
@@ -1163,7 +1163,7 @@ export function QuestionBankCreatePage() {
                     {questionCount > 1 ? `Generate ${questionCount} Questions` : 'Generate Question with AI'}
                   </button>
                   <p
-                    className={`text-center text-xs text-[var(--nexus-secondary)] transition-opacity ${
+                    className={`text-center text-xs text-[var(--codevox-secondary)] transition-opacity ${
                       aiMutation.isPending ? 'opacity-100' : 'opacity-0'
                     }`}
                   >
@@ -1171,9 +1171,9 @@ export function QuestionBankCreatePage() {
                   </p>
 
                   {generatedDrafts.length > 0 ? (
-                    <div className="space-y-3 border-t border-[var(--nexus-secondary)]/20 pt-4">
+                    <div className="space-y-3 border-t border-[var(--codevox-secondary)]/20 pt-4">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-label-caps text-[var(--nexus-secondary)]">
+                        <p className="font-label-caps text-[var(--codevox-secondary)]">
                           Generated drafts ({generatedDrafts.length})
                         </p>
                         {!editId ? (
@@ -1181,7 +1181,7 @@ export function QuestionBankCreatePage() {
                             type="button"
                             disabled={saveAllMutation.isPending}
                             onClick={() => saveAllMutation.mutate({ status: 'draft' })}
-                            className="text-[11px] font-bold text-[var(--nexus-secondary)] underline-offset-2 hover:underline disabled:opacity-60"
+                            className="text-[11px] font-bold text-[var(--codevox-secondary)] underline-offset-2 hover:underline disabled:opacity-60"
                           >
                             Save all
                           </button>
@@ -1196,7 +1196,7 @@ export function QuestionBankCreatePage() {
                               key={`draft-${index}`}
                               className={`rounded-lg border p-3 transition ${
                                 isActive
-                                  ? 'border-[var(--nexus-secondary)] bg-[var(--assessment-surface-container)] shadow-sm'
+                                  ? 'border-[var(--codevox-secondary)] bg-[var(--assessment-surface-container)] shadow-sm'
                                   : 'border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]'
                               }`}
                             >
@@ -1206,7 +1206,7 @@ export function QuestionBankCreatePage() {
                                   onClick={() => selectGeneratedDraft(index)}
                                   className="min-w-0 flex-1 text-left"
                                 >
-                                  <span className="mb-1 block text-xs font-bold text-[var(--nexus-secondary)]">
+                                  <span className="mb-1 block text-xs font-bold text-[var(--codevox-secondary)]">
                                     Draft {index + 1} | {draft.question_type} | {draft.difficulty}
                                   </span>
                                   <span className="line-clamp-3 text-[11px] text-[var(--assessment-on-surface-variant)]">
@@ -1226,7 +1226,7 @@ export function QuestionBankCreatePage() {
                                     e.stopPropagation();
                                     regenerateDraftMutation.mutate(index);
                                   }}
-                                  className="shrink-0 rounded-lg border border-[var(--assessment-outline-variant)] p-1.5 text-[var(--nexus-secondary)] transition hover:bg-[var(--nexus-secondary-container)] disabled:opacity-50"
+                                  className="shrink-0 rounded-lg border border-[var(--assessment-outline-variant)] p-1.5 text-[var(--codevox-secondary)] transition hover:bg-[var(--codevox-secondary-container)] disabled:opacity-50"
                                 >
                                   <AssessmentMaterialIcon
                                     name="refresh"
@@ -1236,7 +1236,7 @@ export function QuestionBankCreatePage() {
                                 </button>
                               </div>
                               {isActive ? (
-                                <span className="inline-block rounded-full bg-[var(--nexus-secondary)]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--nexus-secondary)]">
+                                <span className="inline-block rounded-full bg-[var(--codevox-secondary)]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--codevox-secondary)]">
                                   Editing
                                 </span>
                               ) : null}

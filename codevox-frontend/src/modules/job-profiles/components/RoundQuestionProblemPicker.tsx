@@ -342,7 +342,7 @@ export function RoundQuestionProblemPicker(props: Props) {
             type="button"
             disabled={aiMapMutation.isPending}
             onClick={() => aiMapMutation.mutate()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--nexus-secondary)]/40 bg-[var(--nexus-secondary-container)]/20 py-2.5 text-sm font-bold text-[var(--nexus-secondary)] transition hover:bg-[var(--nexus-secondary-container)]/35 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--codevox-secondary)]/40 bg-[var(--codevox-secondary-container)]/20 py-2.5 text-sm font-bold text-[var(--codevox-secondary)] transition hover:bg-[var(--codevox-secondary-container)]/35 disabled:opacity-60"
           >
             <AssessmentMaterialIcon
               name="auto_awesome"
@@ -355,8 +355,8 @@ export function RoundQuestionProblemPicker(props: Props) {
         ) : null}
 
         {mappingNotes ? (
-          <p className="rounded-lg border border-[var(--nexus-secondary)]/25 bg-[var(--nexus-secondary-container)]/15 px-3 py-2 text-[11px] text-[var(--assessment-on-surface-variant)]">
-            <span className="font-bold text-[var(--nexus-secondary)]">AI: </span>
+          <p className="rounded-lg border border-[var(--codevox-secondary)]/25 bg-[var(--codevox-secondary-container)]/15 px-3 py-2 text-[11px] text-[var(--assessment-on-surface-variant)]">
+            <span className="font-bold text-[var(--codevox-secondary)]">AI: </span>
             {mappingNotes}
           </p>
         ) : null}
@@ -438,7 +438,7 @@ export function RoundQuestionProblemPicker(props: Props) {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {competencyTag ? (
-                        <span className="rounded bg-[var(--nexus-secondary-fixed)] px-1.5 font-mono text-[10px] uppercase text-[var(--nexus-on-secondary-fixed)]">
+                        <span className="rounded bg-[var(--codevox-secondary-fixed)] px-1.5 font-mono text-[10px] uppercase text-[var(--codevox-on-secondary-fixed)]">
                           {String(competencyTag)}
                         </span>
                       ) : null}
@@ -500,7 +500,7 @@ export function RoundQuestionProblemPicker(props: Props) {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {topicTag ? (
-                        <span className="rounded bg-[var(--nexus-secondary-fixed)] px-1.5 font-mono text-[10px] uppercase">
+                        <span className="rounded bg-[var(--codevox-secondary-fixed)] px-1.5 font-mono text-[10px] uppercase">
                           {String(topicTag)}
                         </span>
                       ) : null}

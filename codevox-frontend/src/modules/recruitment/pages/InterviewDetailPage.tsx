@@ -98,7 +98,7 @@ export function InterviewDetailPage() {
           </p>
           {data.ai_brief ? (
             <p className="mt-2 text-sm">
-              <span className="font-semibold text-[var(--nexus-tertiary)]">AI brief: </span>
+              <span className="font-semibold text-[var(--codevox-tertiary)]">AI brief: </span>
               {data.ai_brief}
             </p>
           ) : null}
@@ -125,7 +125,7 @@ export function InterviewDetailPage() {
           ) : null}
         </div>
 
-        <section className="nexus-card grid gap-4 p-4 md:grid-cols-2">
+        <section className="codevox-card grid gap-4 p-4 md:grid-cols-2">
           <Info label="Date" value={`${interview.appointment_date} ${interview.appointment_time}`} />
           <Info label="Mode" value={String(interview.interview_mode ?? '-')} />
           <Info label="Interview status" value={String(interview.interview_status ?? '-')} />
@@ -134,7 +134,7 @@ export function InterviewDetailPage() {
           <Info label="Recruiter" value={String(interview.created_by_name ?? '-')} />
         </section>
 
-        <section className="nexus-card p-4">
+        <section className="codevox-card p-4">
           <h2 className="mb-3 font-semibold">Status lifecycle</h2>
           <div className="flex flex-wrap gap-2">
             {STATUS_FLOW.map((s) => (
@@ -194,7 +194,7 @@ export function InterviewDetailPage() {
           />
         </section>
 
-        <section className="nexus-card p-4">
+        <section className="codevox-card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">Post-interview result</h2>
             <button
@@ -235,7 +235,7 @@ export function InterviewDetailPage() {
           </div>
         </section>
 
-        <section className="nexus-card p-4">
+        <section className="codevox-card p-4">
           <h2 className="mb-3 font-semibold">Pre-interview checklist</h2>
           <div className="grid gap-2 sm:grid-cols-2">
             {(
@@ -260,7 +260,7 @@ export function InterviewDetailPage() {
           </div>
         </section>
 
-        <section className="nexus-card p-4">
+        <section className="codevox-card p-4">
           <h2 className="mb-3 font-semibold">All rounds</h2>
           <ul className="space-y-2 text-sm">
             {data.all_rounds?.map((r) => (
@@ -272,7 +272,7 @@ export function InterviewDetailPage() {
           </ul>
         </section>
 
-        <section className="nexus-card p-4">
+        <section className="codevox-card p-4">
           <h2 className="mb-3 font-semibold">Status history</h2>
           <ul className="space-y-1 text-sm">
             {data.status_history?.map((h, i) => (

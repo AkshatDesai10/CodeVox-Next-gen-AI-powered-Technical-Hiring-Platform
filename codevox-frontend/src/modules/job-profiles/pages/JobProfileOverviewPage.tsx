@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { NexusStatusBadge } from '@/modules/job-profiles/components/NexusStatusBadge';import { PipelineMiniBar } from '@/modules/job-profiles/components/PipelineMiniBar';
+import { CodeVoxStatusBadge } from '@/modules/job-profiles/components/CodeVoxStatusBadge';import { PipelineMiniBar } from '@/modules/job-profiles/components/PipelineMiniBar';
 import { getJobProfile } from '@/modules/job-profiles/lib/job-profiles-api';
 
 export function JobProfileOverviewPage() {
@@ -33,7 +33,7 @@ export function JobProfileOverviewPage() {
             </Link>
             <div className="mt-2 flex items-center gap-3">
               <h1 className="font-display-lg">{profile.title}</h1>
-              <NexusStatusBadge status={profile.status} />
+              <CodeVoxStatusBadge status={profile.status} />
             </div>
           </div>
           <div className="flex gap-2">
@@ -59,7 +59,7 @@ export function JobProfileOverviewPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="nexus-card p-5">
+          <div className="codevox-card p-5">
             <h2 className="font-headline-md mb-3">Pipeline</h2>
             <PipelineMiniBar segments={segments} total={1} />
             <ul className="mt-4 space-y-2 text-sm">
@@ -71,7 +71,7 @@ export function JobProfileOverviewPage() {
               ))}
             </ul>
           </div>
-          <div className="nexus-card p-5">
+          <div className="codevox-card p-5">
             <h2 className="font-headline-md mb-3">Details</h2>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">

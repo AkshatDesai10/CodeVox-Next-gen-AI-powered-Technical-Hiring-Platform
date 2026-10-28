@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 import { DashboardPipelineBar } from '@/modules/job-profiles/components/DashboardPipelineBar';
-import { NexusStatusBadge } from '@/modules/job-profiles/components/NexusStatusBadge';
+import { CodeVoxStatusBadge } from '@/modules/job-profiles/components/CodeVoxStatusBadge';
 import {
   approveJobProfile,
   archiveJobProfile,
@@ -154,27 +154,27 @@ export function JobProfilesDashboardPage() {
     <>
       <div className="w-full space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="nexus-card group relative overflow-hidden p-6">
+          <div className="codevox-card group relative overflow-hidden p-6">
             <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-20">
               <AssessmentMaterialIcon name="work" size={72} className="text-[var(--assessment-primary)]" />
             </div>
-            <p className="font-label-caps mb-2 text-[var(--nexus-outline)]">Job profiles</p>
+            <p className="font-label-caps mb-2 text-[var(--codevox-outline)]">Job profiles</p>
             <div className="flex items-baseline gap-2">
               <h3 className="font-display-lg text-[var(--assessment-primary)]">{stats.total}</h3>
-              <span className="text-sm text-[var(--nexus-outline)]">total</span>
+              <span className="text-sm text-[var(--codevox-outline)]">total</span>
             </div>
             <p className="mt-2 text-sm text-[var(--assessment-on-surface-variant)]">
               {stats.active} active | {stats.pending} pending approval
             </p>
           </div>
 
-          <div className="nexus-card group relative overflow-hidden p-6">
+          <div className="codevox-card group relative overflow-hidden p-6">
             <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-20">
-              <AssessmentMaterialIcon name="pending_actions" size={72} className="text-[var(--nexus-secondary)]" />
+              <AssessmentMaterialIcon name="pending_actions" size={72} className="text-[var(--codevox-secondary)]" />
             </div>
-            <p className="font-label-caps mb-2 text-[var(--nexus-outline)]">Pending approvals</p>
+            <p className="font-label-caps mb-2 text-[var(--codevox-outline)]">Pending approvals</p>
             <div className="flex items-baseline gap-2">
-              <h3 className="font-display-lg text-[var(--nexus-secondary)]">
+              <h3 className="font-display-lg text-[var(--codevox-secondary)]">
                 {String(stats.pending).padStart(2, '0')}
               </h3>
               {stats.pending > 0 ? (
@@ -187,14 +187,14 @@ export function JobProfilesDashboardPage() {
             <p className="mt-2 text-sm text-[var(--assessment-on-surface-variant)]">Among configured profiles</p>
           </div>
 
-          <div className="nexus-card group relative overflow-hidden p-6">
+          <div className="codevox-card group relative overflow-hidden p-6">
             <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-20">
-              <AssessmentMaterialIcon name="groups" size={72} className="text-[var(--nexus-tertiary)]" />
+              <AssessmentMaterialIcon name="groups" size={72} className="text-[var(--codevox-tertiary)]" />
             </div>
-            <p className="font-label-caps mb-2 text-[var(--nexus-outline)]">Active openings</p>
+            <p className="font-label-caps mb-2 text-[var(--codevox-outline)]">Active openings</p>
             <div className="flex items-baseline gap-2">
               <h3 className="font-display-lg">{stats.active}</h3>
-              <span className="text-sm text-[var(--nexus-outline)]">live roles</span>
+              <span className="text-sm text-[var(--codevox-outline)]">live roles</span>
             </div>
             <p className="mt-2 text-sm text-[var(--assessment-on-surface-variant)]">
               {stats.openings} total seats across active profiles
@@ -202,7 +202,7 @@ export function JobProfilesDashboardPage() {
           </div>
         </div>
 
-        <div className="nexus-card flex flex-col overflow-hidden">
+        <div className="codevox-card flex flex-col overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--assessment-outline-variant)] p-4">
             <div className="flex items-center gap-4">
               <h4 className="font-title-sm">Job profiles</h4>
@@ -271,14 +271,14 @@ export function JobProfilesDashboardPage() {
             <p className="p-8 text-sm text-red-600">Failed to load job profiles.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="nexus-table-dense w-full text-left">
+              <table className="codevox-table-dense w-full text-left">
                 <thead>
                   <tr>
-                    <th className="font-label-caps text-[var(--nexus-outline)]">Job profile title</th>
-                    <th className="font-label-caps text-[var(--nexus-outline)]">Status</th>
-                    <th className="font-label-caps text-[var(--nexus-outline)]">Pipeline progress</th>
-                    <th className="font-label-caps text-[var(--nexus-outline)]">Openings</th>
-                    <th className="font-label-caps text-[var(--nexus-outline)]">Last updated</th>
+                    <th className="font-label-caps text-[var(--codevox-outline)]">Job profile title</th>
+                    <th className="font-label-caps text-[var(--codevox-outline)]">Status</th>
+                    <th className="font-label-caps text-[var(--codevox-outline)]">Pipeline progress</th>
+                    <th className="font-label-caps text-[var(--codevox-outline)]">Openings</th>
+                    <th className="font-label-caps text-[var(--codevox-outline)]">Last updated</th>
                     <th />
                   </tr>
                 </thead>
@@ -296,10 +296,10 @@ export function JobProfilesDashboardPage() {
                           >
                             {profile.title}
                           </button>
-                          <p className="text-sm text-[var(--nexus-outline)]">{loc || '-'}</p>
+                          <p className="text-sm text-[var(--codevox-outline)]">{loc || '-'}</p>
                         </td>
                         <td>
-                          <NexusStatusBadge status={profile.status as JobProfileStatus} />
+                          <CodeVoxStatusBadge status={profile.status as JobProfileStatus} />
                         </td>
                         <td>
                           <DashboardPipelineBar
@@ -315,7 +315,7 @@ export function JobProfilesDashboardPage() {
                           </span>
                         </td>
                         <td>
-                          <span className="text-sm text-[var(--nexus-outline)]">
+                          <span className="text-sm text-[var(--codevox-outline)]">
                             {formatDate(profile.updated_at ?? profile.created_at)}
                           </span>
                         </td>
@@ -343,7 +343,7 @@ export function JobProfilesDashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => actionMutation.mutate({ action: 'approve', id: profile.id })}
-                                className="rounded-full p-2 text-[var(--nexus-secondary)] hover:bg-[var(--color-primary-container)]"
+                                className="rounded-full p-2 text-[var(--codevox-secondary)] hover:bg-[var(--color-primary-container)]"
                                 title="Approve"
                               >
                                 <AssessmentMaterialIcon name="check" size={18} />
@@ -375,19 +375,19 @@ export function JobProfilesDashboardPage() {
           )}
 
           <div className="flex items-center justify-between border-t border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)]/30 p-4">
-            <span className="text-sm text-[var(--nexus-outline)]">
+            <span className="text-sm text-[var(--codevox-outline)]">
               {stats.total} job profiles
             </span>
           </div>
         </div>
       </div>
 
-      <div className="nexus-fab flex flex-col items-end gap-4">
+      <div className="codevox-fab flex flex-col items-end gap-4">
         {showAiTip && draftProfile ? (
-          <div className="nexus-glass-ai max-w-xs rounded-xl p-6 shadow-xl">
+          <div className="codevox-glass-ai max-w-xs rounded-xl p-6 shadow-xl">
             <div className="mb-2 flex items-center gap-2">
-              <AssessmentMaterialIcon name="auto_awesome" size={20} className="text-[var(--nexus-secondary)]" />
-              <span className="font-title-sm text-[var(--nexus-secondary)]">AI recommendation</span>
+              <AssessmentMaterialIcon name="auto_awesome" size={20} className="text-[var(--codevox-secondary)]" />
+              <span className="font-title-sm text-[var(--codevox-secondary)]">AI recommendation</span>
             </div>
             <p className="text-sm">
               &ldquo;{draftProfile.title}&rdquo; may be missing competencies. Open configure to run AI suggestions.
@@ -395,7 +395,7 @@ export function JobProfilesDashboardPage() {
             <div className="mt-4 flex gap-2">
               <Link
                 href={`/assessments/job-profiles/${draftProfile.id}/configure`}
-                className="flex-1 rounded-lg bg-[var(--nexus-secondary)] py-2 text-center font-label-caps text-xs text-white"
+                className="flex-1 rounded-lg bg-[var(--codevox-secondary)] py-2 text-center font-label-caps text-xs text-white"
               >
                 Open profile
               </Link>
@@ -412,11 +412,11 @@ export function JobProfilesDashboardPage() {
         <button
           type="button"
           onClick={() => setShowAiTip((v) => !v)}
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[var(--nexus-secondary)] text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[var(--codevox-secondary)] text-white shadow-lg transition-transform hover:scale-110 active:scale-95"
         >
           <AssessmentMaterialIcon name="auto_awesome" size={28} />
           {draftProfile ? (
-            <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full border-2 border-white bg-[var(--nexus-tertiary)]" />
+            <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full border-2 border-white bg-[var(--codevox-tertiary)]" />
           ) : null}
         </button>
       </div>

@@ -14,8 +14,8 @@ const COMPETENCY_FILTERS = ['Problem Solving', 'Leadership', 'Communication', 'T
 
 function questionTypeClass(type: string) {
   const t = type.toLowerCase();
-  if (t.includes('behavior')) return 'bg-[var(--nexus-secondary-container)]/20 text-[var(--nexus-on-secondary-container)]';
-  if (t.includes('technical')) return 'bg-[var(--nexus-tertiary-container)]/20 text-[var(--nexus-tertiary)]';
+  if (t.includes('behavior')) return 'bg-[var(--codevox-secondary-container)]/20 text-[var(--codevox-on-secondary-container)]';
+  if (t.includes('technical')) return 'bg-[var(--codevox-tertiary-container)]/20 text-[var(--codevox-tertiary)]';
   if (t.includes('culture')) return 'bg-[var(--assessment-surface-container-highest)] text-[var(--assessment-on-surface)]';
   return 'bg-[var(--assessment-surface-container-high)] text-[var(--assessment-on-surface-variant)]';
 }
@@ -337,7 +337,7 @@ export function QuestionBankManagementPage() {
                           <span>{usagePct}%</span>
                         </div>
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--assessment-outline-variant)]">
-                          <div className="h-full bg-[var(--nexus-secondary)]" style={{ width: `${usagePct}%` }} />
+                          <div className="h-full bg-[var(--codevox-secondary)]" style={{ width: `${usagePct}%` }} />
                         </div>
                       </div>
                     </td>
