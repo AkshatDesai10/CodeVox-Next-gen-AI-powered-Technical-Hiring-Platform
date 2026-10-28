@@ -13,6 +13,7 @@ import {
   ProctorEventInput,
   VoiceTurnTimingMeta,
 } from './proctor.types';
+import { getProctorStrikeConfig } from './proctor-env.config';
 import {
   evaluateRecruitmentFraudSignals,
   TurnHistorySample,
@@ -214,12 +215,27 @@ export class InterviewProctorService {
     candidateToken: string,
     events: ProctorEventInput[],
     patchSession: (patch: Record<string, unknown>) => Promise<unknown>,
+    options?: { currentRoundType?: string | null },
   ) {
-    if (!events.length) return { ingested: 0 };
-    await this.proctorRepo.insertBatch(candidateToken, this.sessionType, events);
-    const summary = await this.proctorRepo.buildSummary(candidateToken, this.sessionType);
+    if (!events.length) {
+      return { ingested: 0, summary: null };
+    }
+    const roundType = options?.currentRoundType?.trim() || null;
+    const tagged = events.map((event) => ({
+      ...event,
+      payload: {
+        ...(event.payload ?? {}),
+        ...(roundType && !(typeof event.payload?.round_type === 'string')
+          ? { round_type: roundType }
+          : {}),
+      },
+    }));
+    const saved = await this.proctorRepo.insertBatch(candidateToken, this.sessionType, tagged);
+    const summary = await this.proctorRepo.buildSummary(candidateToken, this.sessionType, {
+      currentRoundType: options?.currentRoundType,
+    });
     await patchSession({ proctorSummary: summary });
-    return { ingested: events.length, summary };
+    return { ingested: saved.length, summary };
   }
 
   async evaluateVoiceTurn(
@@ -267,13 +283,49 @@ export class InterviewProctorService {
 
   async getProctorReportData(row: InterviewSessionProctorRow) {
     const events = await this.getEventsForAudit(row.candidateToken);
-    const summary =
-      (row.proctorSummary as object | null) ??
-      (await this.proctorRepo.buildSummary(row.candidateToken, this.sessionType));
+    const dynamicSummary = await this.proctorRepo.buildSummary(row.candidateToken, this.sessionType);
+    const existingMeta = (row.proctorSummary as Record<string, unknown> | null) ?? {};
+    const cfg = getProctorStrikeConfig();
+
+    const summary: Record<string, unknown> = {
+      ...dynamicSummary,
+      ...existingMeta,
+      media_strike_count: dynamicSummary.media_strike_count,
+      focus_strike_count: dynamicSummary.focus_strike_count,
+      current_round_strikes: dynamicSummary.current_round_strikes,
+      by_type: dynamicSummary.by_type,
+      total_events: dynamicSummary.total_events,
+      critical_count: dynamicSummary.critical_count,
+      warning_count: dynamicSummary.warning_count,
+    };
+
+    const hasFocusTerm = events.some((e) => e.event_type === 'focus_strike_terminated');
+    const hasMediaTerm = events.some((e) => e.event_type === 'media_permission_terminated');
+
+    if (!summary.terminated_by) {
+      if (
+        hasFocusTerm ||
+        (cfg.enableFocusStrikes &&
+          cfg.autoSubmitOnFocusStrike &&
+          (dynamicSummary.focus_strike_count ?? 0) >= cfg.maxFocusStrikes)
+      ) {
+        summary.terminated_by = 'proctor';
+        summary.termination_reason = 'max_focus_strikes_exceeded';
+      } else if (
+        hasMediaTerm ||
+        (cfg.enableMediaStrikes &&
+          cfg.autoSubmitOnMediaStrike &&
+          (dynamicSummary.media_strike_count ?? 0) >= cfg.maxMediaStrikes)
+      ) {
+        summary.terminated_by = 'proctor';
+        summary.termination_reason = 'max_media_strikes_exceeded';
+      }
+    }
+
     return {
       identity_verified_at: row.identityVerifiedAt?.toISOString() ?? null,
       liveness_verified_at: row.livenessVerifiedAt?.toISOString() ?? null,
-      proctor_summary: summary as Record<string, unknown>,
+      proctor_summary: summary,
       proctor_events: events,
     };
   }

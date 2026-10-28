@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { LeadAnswersRenderer } from '@/modules/recruitment/components/LeadAnswersRenderer';
+import { InviteSlotDialog } from '@/modules/recruitment/components/InviteSlotDialog';
 import { RecruitmentOpsShell } from '@/modules/recruitment/components/RecruitmentOpsShell';
 import {
   getRecruitmentLead,
@@ -34,6 +35,7 @@ export function LeadDetailPage() {
   const leadId = String(params?.leadId ?? '');
   const queryClient = useQueryClient();
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showInviteSlot, setShowInviteSlot] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
     appointment_date: '',
@@ -70,9 +72,12 @@ export function LeadDetailPage() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: () => inviteLeadToAssessment(leadId),
+    mutationFn: (input: { slotId: string; slotDate: string }) =>
+      inviteLeadToAssessment(leadId, input),
     onSuccess: () => {
+      setShowInviteSlot(false);
       void queryClient.invalidateQueries({ queryKey: ['recruitment-lead', leadId] });
+      void queryClient.invalidateQueries({ queryKey: ['recruitment-time-slots'] });
       void queryClient.invalidateQueries({ queryKey: ['recruitment-interviews-today'] });
     },
     onError: (err: any) => {
@@ -132,8 +137,15 @@ export function LeadDetailPage() {
           onSchedule={() => setShowSchedule(true)}
           onQualify={() => aiQualMutation.mutate()}
           qualifyLoading={aiQualMutation.isPending}
-          onInvite={() => inviteMutation.mutate()}
+          onInvite={() => setShowInviteSlot(true)}
           inviteLoading={inviteMutation.isPending}
+        />
+
+        <InviteSlotDialog
+          open={showInviteSlot}
+          submitting={inviteMutation.isPending}
+          onClose={() => setShowInviteSlot(false)}
+          onConfirm={(input) => inviteMutation.mutate(input)}
         />
 
         <div className="lead-detail-bento">

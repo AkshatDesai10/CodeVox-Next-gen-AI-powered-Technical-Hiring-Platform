@@ -420,42 +420,35 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
     const failed = threshold !== null && submitResult.score_pct < threshold;
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#090414] p-6 font-sans text-white">
-        <div className="mx-auto max-w-xl rounded-3xl border border-[#2D1B69] bg-[#160A30] p-10 text-center shadow-2xl">
-          <div
-            className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${
-              failed
-                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/20'
-            }`}
-          >
-            {failed ? <AlertTriangle className="h-8 w-8" /> : <CheckCircle2 className="h-8 w-8" />}
-          </div>
-
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            {failed ? 'Round Completed' : 'Assessment Completed!'}
+      <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 font-sans">
+        <div className="bg-[#005ea2] text-white p-12 text-center rounded-sm shadow-sm">
+          <h1 className="text-4xl font-semibold mb-4 tracking-tight">
+            {failed ? 'Assessment over' : 'Assessment complete'}
           </h1>
-          <h2 className="mt-2 text-base font-medium text-[#C4B5FD]">
-            {failed ? 'Score criteria logged for review' : 'Your solutions were submitted successfully'}
-          </h2>
-
-          <div className="mt-8 rounded-2xl border border-[#2D1B69] bg-[#090414]/70 p-6 shadow-inner">
-            <p className="text-4xl font-black text-[#55E63B] mb-2">{submitResult.score_pct}%</p>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#94A3B8]">
-              {threshold !== null ? `Required Pass Score: ${threshold}%` : 'Evaluation Score'}
+          <h2 className="text-2xl font-medium">Thank you!</h2>
+        </div>
+        <div className="px-2 text-gray-800 space-y-4">
+          {failed ? (
+            <p className="text-[15px]">
+              Unfortunately, you did not meet the criteria required to continue to the next round. We
+              appreciate your time and interest.
             </p>
-            <p className="mt-2 text-xs font-semibold text-[#C4B5FD]">
-              {submitResult.passed} / {submitResult.total} Test Cases Passed
-            </p>
-          </div>
-
-          <div className="mt-8">
+          ) : (
+            <>
+              <p className="text-[15px]">We have received your Assessment form.</p>
+              <p className="text-[15px]">
+                Please return to the portal to check your application status or continue to the next
+                round.
+              </p>
+            </>
+          )}
+          <div className="mt-6">
             <button
               type="button"
               onClick={() => router.push(`/candidate/portal/${token}`)}
-              className="rounded-xl bg-[#55E63B] px-8 py-3 text-xs font-black text-black shadow-lg shadow-emerald-500/20 hover:bg-[#4bd133] transition-all"
+              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition-colors"
             >
-              Return to Candidate Portal
+              Return to portal
             </button>
           </div>
         </div>

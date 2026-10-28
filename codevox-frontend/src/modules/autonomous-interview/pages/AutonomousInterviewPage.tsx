@@ -309,111 +309,43 @@ export function AutonomousInterviewPage({ candidateToken }: Props) {
         ) : null}
 
         {showCompleted ? (
-          !session.finalDecision ? (
-            <div className="flex-1 flex items-center justify-center bg-slate-50 h-full overflow-y-auto">
-              <div className="mx-auto max-w-2xl space-y-6 p-6 py-12 text-center w-full">
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 shadow-sm">
-                  <h1 className="text-2xl font-bold text-emerald-900">Interview complete</h1>
-                  <p className="mt-2 text-sm text-emerald-800">
-                    Thank you for completing the interview. Your answers have been submitted for evaluation.
+          <div className="flex-1 flex flex-col bg-slate-50 h-full overflow-y-auto">
+            <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 w-full mt-10 font-sans">
+              <div className="bg-[#005ea2] text-white p-12 text-center rounded-sm shadow-sm w-full">
+                <h1 className="text-4xl font-semibold mb-4 tracking-tight">
+                  {session.finalDecision === 'AUTO_REJECT' ? 'Assessment over' : 'Assessment complete'}
+                </h1>
+                <h2 className="text-2xl font-medium">Thank you!</h2>
+              </div>
+              <div className="px-2 text-gray-800 space-y-4">
+                {session.finalDecision === 'AUTO_REJECT' ? (
+                  <p className="text-[15px]">
+                    Unfortunately, you did not meet the criteria required to continue to the next round. We
+                    appreciate your time and interest.
                   </p>
-                  <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-xs font-semibold text-emerald-900">
-                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-                    <span>Returning to dashboard in {countdown}s…</span>
-                  </div>
-                  <div className="mt-6 flex justify-center">
-                    <a
-                      href={portalHref}
-                      className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-all active:scale-95"
-                    >
-                      Return to dashboard now
-                    </a>
-                  </div>
+                ) : (
+                  <>
+                    <p className="text-[15px]">Your interview submission has been successfully recorded.</p>
+                    <p className="text-[15px]">
+                      Please return to the portal to check your application status or continue to the next
+                      round.
+                    </p>
+                  </>
+                )}
+                <p className="text-xs text-slate-500 font-medium">
+                  Returning to dashboard in {countdown}s…
+                </p>
+                <div className="mt-6">
+                  <a
+                    href={portalHref}
+                    className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
+                  >
+                    Return to portal now
+                  </a>
                 </div>
               </div>
             </div>
-          ) : session.finalDecision === 'AUTO_REJECT' ? (
-            <div className="flex-1 flex flex-col bg-slate-50 h-full overflow-y-auto">
-              <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 w-full mt-10 font-sans">
-                <div className="bg-[#005ea2] text-white p-12 text-center rounded-sm shadow-sm w-full">
-                  <h1 className="text-4xl font-semibold mb-4 tracking-tight">Assessment complete</h1>
-                  <h2 className="text-2xl font-medium">Thank you!</h2>
-                </div>
-                <div className="px-2 text-gray-800 space-y-4">
-                  <p className="text-[15px]">Unfortunately, your score did not meet the requirement to advance to the next stage of the process. We sincerely appreciate the time and effort you invested in this assessment.</p>
-                  {!(session as any).isBehavioral && (
-                    <div className="mt-6 rounded-xl border border-slate-200 bg-[var(--assessment-surface-container)] p-6 shadow-sm">
-                      <p className="text-3xl font-black text-[var(--color-primary)] mb-2">{Math.round((session.stage1VoiceScore || 0) * 10)}%</p>
-                      <p className="text-slate-600 font-medium">Required passing score: {Math.round(((session as any).thresholdInfo?.required_score || 7.5) * 10)}%</p>
-                    </div>
-                  )}
-                  <p className="text-xs text-slate-500 font-medium">Returning to dashboard in {countdown}s…</p>
-                  <div className="mt-6">
-                    <a
-                      href={portalHref}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
-                    >
-                      Return to portal now
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : session.finalDecision === 'AUTO_PASS_TO_OFFER' ? (
-            <div className="flex-1 flex flex-col bg-slate-50 h-full overflow-y-auto">
-              <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 w-full mt-10 font-sans">
-                <div className="bg-[#005ea2] text-white p-12 text-center rounded-sm shadow-sm w-full">
-                  <h1 className="text-4xl font-semibold mb-4 tracking-tight">Congratulations!</h1>
-                  <h2 className="text-2xl font-medium">You completed this round.</h2>
-                </div>
-                <div className="px-2 text-gray-800 space-y-4">
-                  {!(session as any).isBehavioral && (
-                    <div className="mt-6 rounded-xl border border-slate-200 bg-[var(--assessment-surface-container)] p-6 shadow-sm">
-                      <p className="text-3xl font-black text-[var(--color-primary)] mb-2">{Math.round((session.stage1VoiceScore || 0) * 10)}%</p>
-                      <p className="text-slate-600 font-medium">Your score for this round</p>
-                    </div>
-                  )}
-                  <p className="text-xs text-slate-500 font-medium">Returning to dashboard in {countdown}s…</p>
-                  <div className="mt-6">
-                    <a
-                      href={portalHref}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
-                    >
-                      Return to portal now
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col bg-slate-50 h-full overflow-y-auto">
-              <div className="mx-auto max-w-4xl space-y-8 p-6 py-12 w-full mt-10 font-sans">
-                <div className="bg-[#005ea2] text-white p-12 text-center rounded-sm shadow-sm w-full">
-                  <h1 className="text-4xl font-semibold mb-4 tracking-tight">Assessment complete</h1>
-                  <h2 className="text-2xl font-medium">Thank you!</h2>
-                </div>
-                <div className="px-2 text-gray-800 space-y-4">
-                  <p className="text-[15px]">Your interview submission has been successfully recorded.</p>
-                  <p className="text-[15px]">Please return to the portal to check your application status or continue to the next round.</p>
-                  {!(session as any).isBehavioral && (
-                    <div className="mt-6 rounded-xl border border-slate-200 bg-[var(--assessment-surface-container)] p-6 shadow-sm">
-                      <p className="text-3xl font-black text-[var(--color-primary)] mb-2">{Math.round((session.stage1VoiceScore || 0) * 10)}%</p>
-                      <p className="text-slate-600 font-medium">Your score for this round</p>
-                    </div>
-                  )}
-                  <p className="text-xs text-slate-500 font-medium">Returning to dashboard in {countdown}s…</p>
-                  <div className="mt-8">
-                    <a
-                      href={portalHref}
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
-                    >
-                      Return to portal now
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
+          </div>
         ) : null}
 
         {!showVoiceFull && !showVoiceCompact && !showSandbox && !showCompleted ? (
