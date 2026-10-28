@@ -18,7 +18,7 @@ export function InterviewOpsPage() {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
-    refetchInterval: 15_000,
+    refetchInterval: 8_000,
   });
 
   const today = todayQuery.data?.items ?? [];
@@ -117,6 +117,8 @@ export function InterviewOpsPage() {
 }
 
 function CandidateRow({ candidate: c }: { candidate: GroupedCandidate }) {
+  const isAnyRoundLive = c.rounds.some((r) => r.status === 'live');
+  const isAllCompleted = c.completedCount === c.totalCount && c.totalCount > 0;
   const activeRound =
     c.rounds.find((r) => r.status === 'live') ||
     c.rounds.find((r) => r.status === 'not_started') ||
@@ -125,11 +127,17 @@ function CandidateRow({ candidate: c }: { candidate: GroupedCandidate }) {
   const joinUrl = activeRound?.joinUrl;
   const monitorUrl = activeRound?.monitorUrl;
 
+  const reportUrl = c.applicationId
+    ? `/assessments/assessment-reports/${c.applicationId}`
+    : c.inviteToken
+    ? `/assessments/interview-reports/${encodeURIComponent(c.inviteToken)}`
+    : null;
+
   let statusColor = 'bg-[var(--assessment-surface-container)] text-[var(--assessment-on-surface)]';
-  if (c.completedCount === c.totalCount && c.totalCount > 0) {
+  if (isAllCompleted) {
     statusColor = 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30';
-  } else if (c.rounds.some((r) => r.status === 'live')) {
-    statusColor = 'bg-blue-950/40 text-blue-300 border border-blue-500/30';
+  } else if (isAnyRoundLive) {
+    statusColor = 'bg-rose-950/40 text-rose-300 border border-rose-500/30';
   } else if (c.rounds.some((r) => r.status === 'no-show')) {
     statusColor = 'bg-rose-950/40 text-rose-300 border border-rose-500/30';
   }
@@ -195,19 +203,42 @@ function CandidateRow({ candidate: c }: { candidate: GroupedCandidate }) {
         </span>
       </td>
       <td className="px-6 py-4 text-right">
-        <div className="flex justify-end gap-2">
-          {joinUrl ? (
+        <div className="flex items-center justify-end gap-2">
+          {isAnyRoundLive && monitorUrl && (
+            <Link
+              href={monitorUrl}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 py-2 text-xs font-bold uppercase tracking-wide text-white shadow-md transition-all hover:bg-rose-500 animate-pulse"
+            >
+              <span className="h-2 w-2 rounded-full bg-white" />
+              <span className="material-symbols-outlined text-[16px]">visibility</span>
+              Monitor Live
+            </Link>
+          )}
+
+          {reportUrl && (isAllCompleted || c.completedCount > 0) && (
+            <Link
+              href={reportUrl}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--assessment-primary)] px-3.5 py-2 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-[var(--assessment-primary)]/90"
+            >
+              <span className="material-symbols-outlined text-[16px]">assessment</span>
+              View Report
+            </Link>
+          )}
+
+          {!isAnyRoundLive && !isAllCompleted && joinUrl && (
             <Link
               href={joinUrl}
               target={monitorUrl ? '_self' : '_blank'}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--assessment-primary)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-[var(--assessment-primary)]/90 focus:ring-2 focus:ring-[var(--assessment-primary)] focus:ring-offset-2"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--assessment-primary)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-[var(--assessment-primary)]/90"
             >
               <span className="material-symbols-outlined text-[16px]">
                 {monitorUrl ? 'visibility' : 'videocam'}
               </span>
               {monitorUrl ? 'Monitor' : 'Join'}
             </Link>
-          ) : (
+          )}
+
+          {!isAnyRoundLive && !reportUrl && !joinUrl && (
             <Link
               href={`/assessments/recruitment/interviews/${c.leadId}`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--assessment-outline)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[var(--assessment-on-surface)] transition-colors hover:bg-[var(--assessment-surface-container-low)]"
@@ -226,6 +257,8 @@ function CandidateRow({ candidate: c }: { candidate: GroupedCandidate }) {
 
 type GroupedCandidate = {
   leadId: string;
+  applicationId?: string | null;
+  inviteToken?: string | null;
   candidateName: string;
   initials: string;
   jobProfile: string;
@@ -257,11 +290,16 @@ function processInterviews(items: RecruitmentInterviewItem[]): GroupedCandidate[
 
   for (const row of items) {
     const leadId = row.lead_id || row.id || 'unknown';
+    const appId =
+      row.application_id ??
+      (row.lead_id?.startsWith('app:') ? row.lead_id.slice(4) : (row.lead_id?.startsWith('demo:') ? row.lead_id.slice(5) : null));
 
     let group = grouped.get(leadId);
     if (!group) {
       group = {
         leadId,
+        applicationId: appId,
+        inviteToken: row.invite_token ?? null,
         candidateName: row.candidate_name || 'Candidate',
         initials: candidateInitials(row.candidate_name),
         jobProfile: row.course_name || 'Interview',

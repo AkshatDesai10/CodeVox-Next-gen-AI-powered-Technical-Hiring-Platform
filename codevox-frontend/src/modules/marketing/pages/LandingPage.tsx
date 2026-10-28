@@ -90,9 +90,6 @@ export function LandingPage() {
             <a href="#advantages" className="transition duration-200 hover:text-white">Why CodeVox</a>
           </nav>
           <div className="flex items-center gap-5">
-            <Link href="/signin" className="hidden text-[15px] font-semibold text-[#A7B7CD] transition duration-200 hover:text-white sm:inline">
-              Sign in
-            </Link>
             <Link href="/signin" className="cvx-btn-primary px-6 py-2.5 text-sm font-semibold">
               Start hiring
             </Link>

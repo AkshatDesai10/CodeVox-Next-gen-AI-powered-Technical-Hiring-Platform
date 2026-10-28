@@ -2973,15 +2973,19 @@ export class AssessmentReportsService {
           finalCombinedScorePct: this.asFiniteNumber(thBlock?.final_combined_score_pct),
         },
       },
-      // Recording + transcript live only on the full interview report page
-      // (View full interview report). Do not duplicate them on this stage tab.
-      recordingUrl: null,
+      recordingUrl:
+        this.roundRecordingUrl(
+          interview,
+          stage.stageType === JobStageType.HR_VERBAL
+            ? AutonomousInterviewRoundType.HR_VERBAL
+            : AutonomousInterviewRoundType.INTRO_VERBAL,
+        ) ?? interview?.recordingUrl ?? null,
       interviewReportPath: hasSessionReport
         ? `/assessments/interview-reports/${encodeURIComponent(sessionToken!)}`
         : null,
       integrityDisqualification,
       endedByCandidate: this.candidateEndedInterview(interview),
-      transcript: [],
+      transcript: this.buildVerbalTranscript(stage.stageType, interview),
       hrVoiceAudit: hrAuditOut,
       rawAiPayload: interview
         ? {

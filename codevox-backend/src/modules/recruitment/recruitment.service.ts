@@ -1183,6 +1183,7 @@ export class RecruitmentService {
 
     type TodayInterviewRow = (typeof mappedLocal)[number] | {
       id: string;
+      application_id?: string | null;
       overlay_id: string | null;
       interview_ref_id: null;
       lead_id: string;
@@ -1206,31 +1207,43 @@ export class RecruitmentService {
       source: 'demo';
     };
 
-    // Only demos for *today* (IST). Avoid TypeORM take+join+orderBy (crashes with
-    // "databaseName of undefined"); filter recent rows then sort in memory.
-    const sinceUtc = new Date(Date.now() - 36 * 60 * 60 * 1000); // buffer for TZ edge
+    // Include all active or recently updated applications for *today* (IST).
+    // Buffer 48h to safely capture timezone overlaps and active sessions.
+    const sinceUtc = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const demoAppsRaw = await this.applications
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.profile', 'profile')
-      .where('a.source = :source', { source: 'demo_testing' })
-      .andWhere('a.inactive = 0')
+      .where('a.inactive = 0')
       .andWhere('a.status IN (:...statuses)', {
         statuses: [
           JobApplicationStatus.APPLIED,
           JobApplicationStatus.IN_PROGRESS,
           JobApplicationStatus.COMPLETED,
+          JobApplicationStatus.HIRED,
         ],
       })
-      .andWhere('a.applied_at >= :since', { since: sinceUtc })
+      .andWhere(
+        '(a.applied_at >= :since OR a.updated_at >= :since OR a.status = :inProgress)',
+        { since: sinceUtc, inProgress: JobApplicationStatus.IN_PROGRESS },
+      )
       .getMany();
+
     const demoApps = demoAppsRaw
-      .filter((a) => (a.appliedAt ? formatDateInIst(a.appliedAt) : today) === today)
+      .filter((a) => {
+        const appliedDay = a.appliedAt ? formatDateInIst(a.appliedAt) : null;
+        const updatedDay = a.updatedAt ? formatDateInIst(a.updatedAt) : null;
+        return (
+          appliedDay === today ||
+          updatedDay === today ||
+          a.status === JobApplicationStatus.IN_PROGRESS
+        );
+      })
       .sort((a, b) => {
         const at = a.updatedAt?.getTime?.() ?? a.appliedAt?.getTime?.() ?? 0;
         const bt = b.updatedAt?.getTime?.() ?? b.appliedAt?.getTime?.() ?? 0;
         return bt - at;
       })
-      .slice(0, 40);
+      .slice(0, 50);
 
     const demoCandidateIds = [
       ...new Set(demoApps.map((a) => String(a.candidateId ?? '')).filter(Boolean)),
@@ -1289,7 +1302,6 @@ export class RecruitmentService {
       const appliedDay = app.appliedAt
         ? formatDateInIst(app.appliedAt)
         : today;
-      if (appliedDay !== today) continue;
       const cand = candidateById.get(String(app.candidateId));
       const fromCand = cand
         ? [cand.firstName, cand.lastName].filter(Boolean).join(' ').trim()
@@ -1298,24 +1310,26 @@ export class RecruitmentService {
         fromCand ||
         seedNameByToken.get(token) ||
         cand?.email?.split('@')[0] ||
-        'Demo Candidate';
+        'Candidate';
       const joinUrl = `${baseUrl}/candidate/portal/${token}`;
       const appliedTime = app.appliedAt ? formatTimeInIst(app.appliedAt) : null;
       const sortAt = (app.updatedAt ?? app.appliedAt)?.toISOString?.() ?? `${appliedDay}T${appliedTime ?? '00:00'}`;
+      const isCompleted = app.status === JobApplicationStatus.COMPLETED || app.status === JobApplicationStatus.HIRED;
       demoRows.push({
-        id: `demo-${app.id}`,
+        id: `app-${app.id}`,
+        application_id: String(app.id),
         overlay_id: null,
         interview_ref_id: null,
-        lead_id: `demo:${app.id}`,
+        lead_id: `app:${app.id}`,
         candidate_name: candidateName,
         email: cand?.email ?? null,
-        phone: null,
-        course_name: app.profile?.title ?? 'Demo Assessment',
-        interview_type: 'Demo',
+        phone: cand?.phone ?? null,
+        course_name: app.profile?.title ?? 'Technical Assessment',
+        interview_type: app.profile?.title ? 'Assessment' : 'Demo',
         interview_mode: 'Portal',
-        interview_status: 'Scheduled',
+        interview_status: isCompleted ? 'Completed' : 'Scheduled',
         portal_status: app.status,
-        effective_status: 'Scheduled',
+        effective_status: isCompleted ? 'Completed' : 'Scheduled',
         appointment_date: appliedDay,
         appointment_time: appliedTime,
         meeting_url: joinUrl,

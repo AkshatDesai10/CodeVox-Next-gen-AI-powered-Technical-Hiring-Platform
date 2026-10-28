@@ -105,6 +105,7 @@ export type ResumeMatchResult = {
 
 export type RecruitmentInterviewItem = {
   id?: string;
+  application_id?: string | null;
   overlay_id?: string;
   interview_ref_id?: string;
   lead_id: string;
