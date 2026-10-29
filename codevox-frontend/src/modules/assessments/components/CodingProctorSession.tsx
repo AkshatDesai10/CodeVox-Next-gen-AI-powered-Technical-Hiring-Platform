@@ -27,8 +27,37 @@ import {
 import { InterviewConfirmDialog } from '@/modules/autonomous-interview/components/InterviewConfirmDialog';
 import { ScreenShareRequiredOverlay } from '@/modules/autonomous-interview/components/LiveKitConnectionBanner';
 import { postInterviewProctorEvents } from '@/modules/autonomous-interview/lib/autonomous-interview-api';
+import { ensureRuntimeProctorConfig } from '@/modules/autonomous-interview/lib/runtime-proctor-config';
+import {
+  getFocusStrikeThresholdSeconds,
+  getMaxFocusStrikes,
+  getMaxMediaStrikes,
+  isAutoSubmitOnFocusStrikeEnabled,
+  isAutoSubmitOnMediaStrikeEnabled,
+  isFocusStrikesEnabled,
+  isMediaStrikesEnabled,
+} from '@/modules/autonomous-interview/lib/media-recovery';
 import { useFocusIntegrity } from '@/modules/proctor/useFocusIntegrity';
 import type { ProctorEventInput } from '@/modules/proctor/types';
+
+function formatLiveKitConnectError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? '');
+  const lower = raw.toLowerCase();
+  if (
+    lower.includes('failed to fetch') ||
+    lower.includes('signal connection') ||
+    lower.includes('websocket') ||
+    lower.includes('networkerror') ||
+    lower.includes('load failed')
+  ) {
+    return (
+      'Could not reach the proctoring server (LiveKit). ' +
+      'Start the LiveKit Docker stack (port 7885) and confirm LIVEKIT_PUBLIC_URL, then try again. ' +
+      `(${raw || 'connection failed'})`
+    );
+  }
+  return raw || 'Failed to connect to the proctoring session.';
+}
 
 export type CodingProctorSessionProps = {
   portalToken: string;
@@ -74,30 +103,35 @@ export function CodingProctorSession({
   portalTokenRef.current = portalToken;
   const sessionTokenRef = useRef<string | null>(null);
 
+  // Server proctorConfig (System Configurations → DynamicConfig) wins; else runtime-config cache / NEXT_PUBLIC_*.
   const enableFocus =
     typeof proctorConfig?.enableFocusStrikes === 'boolean'
       ? proctorConfig.enableFocusStrikes
-      : true;
+      : isFocusStrikesEnabled();
   const maxFocus =
-    typeof proctorConfig?.maxFocusStrikes === 'number' ? proctorConfig.maxFocusStrikes : 5;
+    typeof proctorConfig?.maxFocusStrikes === 'number'
+      ? proctorConfig.maxFocusStrikes
+      : getMaxFocusStrikes();
   const autoFocus =
     typeof proctorConfig?.autoSubmitOnFocusStrike === 'boolean'
       ? proctorConfig.autoSubmitOnFocusStrike
-      : true;
+      : isAutoSubmitOnFocusStrikeEnabled();
   const focusThreshold =
     typeof proctorConfig?.focusStrikeThresholdSeconds === 'number'
       ? proctorConfig.focusStrikeThresholdSeconds
-      : 5;
+      : getFocusStrikeThresholdSeconds();
   const enableMedia =
     typeof proctorConfig?.enableMediaStrikes === 'boolean'
       ? proctorConfig.enableMediaStrikes
-      : true;
+      : isMediaStrikesEnabled();
   const maxMedia =
-    typeof proctorConfig?.maxMediaStrikes === 'number' ? proctorConfig.maxMediaStrikes : 5;
+    typeof proctorConfig?.maxMediaStrikes === 'number'
+      ? proctorConfig.maxMediaStrikes
+      : getMaxMediaStrikes();
   const autoMedia =
     typeof proctorConfig?.autoSubmitOnMediaStrike === 'boolean'
       ? proctorConfig.autoSubmitOnMediaStrike
-      : true;
+      : isAutoSubmitOnMediaStrikeEnabled();
 
   const postEvents = useCallback((events: ProctorEventInput[]) => {
     const tok = sessionTokenRef.current;
@@ -185,6 +219,11 @@ export function CodingProctorSession({
       void cleanupRoom();
     };
   }, [cleanupRoom]);
+
+  useEffect(() => {
+    if (disabled) return;
+    void ensureRuntimeProctorConfig();
+  }, [disabled]);
 
   const publishScreenAndRecord = useCallback(
     async (room: Room, track: MediaStreamTrack, sessionTok: string) => {
@@ -290,9 +329,7 @@ export function CodingProctorSession({
       setGateError(
         name === 'NotAllowedError' || name === 'AbortError'
           ? 'You must share your entire screen to continue the coding round.'
-          : err instanceof Error
-            ? err.message
-            : 'You must share your entire screen to continue.',
+          : formatLiveKitConnectError(err),
       );
     } finally {
       setGateBusy(false);

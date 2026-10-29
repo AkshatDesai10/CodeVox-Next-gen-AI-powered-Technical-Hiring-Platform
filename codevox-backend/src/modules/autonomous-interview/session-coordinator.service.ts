@@ -33,7 +33,7 @@ import { InterviewProctorService, InterviewSessionProctorRow } from '../proctor/
 import { InterviewGlobalConfigRepository } from '../proctor/interview-global-config.repository';
 import { CandidateAutonomousInterviewMysql } from './entities/candidate-autonomous-interview.mysql.entity';
 import type { ProctorEventInput } from '../proctor/proctor.types';
-import { getProctorStrikeConfig } from '../proctor/proctor-env.config';
+import { resolveProctorStrikeConfig } from '../proctor/proctor-env.config';
 import { JobProfilePipelineService } from '../job-profiles/job-profile-pipeline.service';
 import { JobProfilesRepository } from '../job-profiles/job-profiles.repository';
 import { RoundSnapshotService } from '../assessment-reports/round-snapshot.service';
@@ -99,7 +99,9 @@ export class SessionCoordinatorService {
 
   async getProctorConfig() {
     const global = await this.interviewConfig.getConfig();
-    const strikeCfg = getProctorStrikeConfig();
+    const strikeCfg = resolveProctorStrikeConfig((key, fallback = '') =>
+      this.dynamicConfig.getSync(key, fallback),
+    );
     return {
       consentText: global.consentText,
       proctorConfig: {
@@ -107,6 +109,7 @@ export class SessionCoordinatorService {
         faceMatchThreshold: global.proctorFaceMatchThreshold,
         requireCameraForStart: global.requireCameraForStart === 1,
         requireVoiceEnroll: global.requireVoiceEnroll === 1,
+        graceSeconds: strikeCfg.graceSeconds,
         enableMediaStrikes: strikeCfg.enableMediaStrikes,
         maxMediaStrikes: strikeCfg.maxMediaStrikes,
         autoSubmitOnMediaStrike: strikeCfg.autoSubmitOnMediaStrike,
@@ -284,13 +287,16 @@ export class SessionCoordinatorService {
           : null,
       voiceEnrolled: !!row.voiceReferenceEmbedding?.length,
       proctorConfig: (() => {
-        const strikeCfg = getProctorStrikeConfig();
+        const strikeCfg = resolveProctorStrikeConfig((key, fallback = '') =>
+          this.dynamicConfig.getSync(key, fallback),
+        );
         return {
           faceCheckIntervalMs: global.proctorFaceCheckIntervalMs,
           faceMatchThreshold: global.proctorFaceMatchThreshold,
           // For preview/demo sessions, disable all proctoring checks
           requireCameraForStart: row.isPreview !== 1 && global.requireCameraForStart === 1,
           requireVoiceEnroll: row.isPreview !== 1 && global.requireVoiceEnroll === 1,
+          graceSeconds: strikeCfg.graceSeconds,
           enableMediaStrikes: strikeCfg.enableMediaStrikes,
           maxMediaStrikes: strikeCfg.maxMediaStrikes,
           autoSubmitOnMediaStrike: strikeCfg.autoSubmitOnMediaStrike,

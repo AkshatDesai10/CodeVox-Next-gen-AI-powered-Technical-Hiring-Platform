@@ -7,7 +7,7 @@ import {
   InterviewProctorSeverity,
 } from './entities/interview-proctor-event.mysql.entity';
 import {
-  getProctorStrikeConfig,
+  resolveProctorStrikeConfig,
   isFocusStrikeEvent,
   isMediaStrikeEvent,
 } from './proctor-env.config';
@@ -16,6 +16,7 @@ import {
   ProctorEventInput,
   ProctorSummary,
 } from './proctor.types';
+import { DynamicConfigService } from '../system-config/dynamic-config.service';
 
 /** Dedupe window for (sessionToken, eventType, clientTs) retries. */
 const DEDUPE_WINDOW_MS = 30_000;
@@ -25,7 +26,14 @@ export class ProctorRepository {
   constructor(
     @InjectRepository(InterviewProctorEventMysql)
     private readonly events: Repository<InterviewProctorEventMysql>,
+    private readonly dynamicConfig: DynamicConfigService,
   ) {}
+
+  private strikeConfig() {
+    return resolveProctorStrikeConfig((key, fallback = '') =>
+      this.dynamicConfig.getSync(key, fallback),
+    );
+  }
 
   async insertBatch(
     sessionToken: string,
@@ -122,7 +130,7 @@ export class ProctorRepository {
             ? payload.phase
             : null;
 
-      const cfg = getProctorStrikeConfig();
+      const cfg = this.strikeConfig();
       const isMedia = cfg.enableMediaStrikes && isMediaStrikeEvent(row.eventType);
       const isFocus = cfg.enableFocusStrikes && isFocusStrikeEvent(row.eventType);
       if (isMedia) media_strike_count += 1;

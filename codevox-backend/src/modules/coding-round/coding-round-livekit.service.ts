@@ -23,8 +23,9 @@ import {
 import { InterviewRecordingMysql } from '../autonomous-interview/entities/interview-recording.mysql.entity';
 import { LiveKitService } from '../autonomous-interview/livekit.service';
 import { interviewRecordingPrefix } from '../autonomous-interview/recording-playback';
-import { getProctorStrikeConfig } from '../proctor/proctor-env.config';
+import { resolveProctorStrikeConfig } from '../proctor/proctor-env.config';
 import { InterviewGlobalConfigRepository } from '../proctor/interview-global-config.repository';
+import { DynamicConfigService } from '../system-config/dynamic-config.service';
 
 type ApplicationRow = {
   id: string;
@@ -43,6 +44,7 @@ export class CodingRoundLiveKitService {
     private readonly rounds: AutonomousInterviewRoundsRepository,
     private readonly livekit: LiveKitService,
     private readonly interviewConfig: InterviewGlobalConfigRepository,
+    private readonly dynamicConfig: DynamicConfigService,
     private readonly dataSource: DataSource,
     @InjectRepository(InterviewRecordingMysql)
     private readonly recordings: Repository<InterviewRecordingMysql>,
@@ -155,7 +157,9 @@ export class CodingRoundLiveKitService {
       });
 
     const global = await this.interviewConfig.getConfig();
-    const strikeCfg = getProctorStrikeConfig();
+    const strikeCfg = resolveProctorStrikeConfig((key, fallback = '') =>
+      this.dynamicConfig.getSync(key, fallback),
+    );
 
     return {
       portalToken,
@@ -172,6 +176,7 @@ export class CodingRoundLiveKitService {
         requireCameraForStart: false,
         requireVoiceEnroll: false,
         requireScreenShare: true,
+        graceSeconds: strikeCfg.graceSeconds,
         enableMediaStrikes: strikeCfg.enableMediaStrikes,
         maxMediaStrikes: strikeCfg.maxMediaStrikes,
         autoSubmitOnMediaStrike: strikeCfg.autoSubmitOnMediaStrike,
