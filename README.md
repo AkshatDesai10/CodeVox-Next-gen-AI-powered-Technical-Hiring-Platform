@@ -3,14 +3,14 @@
 **AI-powered technical hiring** — autonomous voice interviews, sandboxed coding assessments, and integrity-backed reports in one platform.
 
 <p align="center">
-  <img src="docs/screenshots/landing.png" alt="CodeVox landing page" width="100%" />
+  <img src="docs/screenshots/landing.png" alt="CodeVox landing page — AI interviews and proctored coding assessments" width="100%" />
 </p>
 
 <p align="center">
+  <a href="#screenshots">Screenshots</a> ·
   <a href="#features">Features</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#project-structure">Structure</a> ·
-  <a href="#tech-stack">Tech stack</a> ·
   <a href="#getting-started">Getting started</a>
 </p>
 
@@ -18,34 +18,92 @@
 
 ## Overview
 
-CodeVox is an end-to-end recruitment assessment platform for engineering hiring. Recruiters define multi-stage job pipelines; candidates complete coding rounds, Build & Defend projects, and AI voice interviews; the system scores, proctors, and produces shareable reports.
+CodeVox is an end-to-end recruitment assessment platform for engineering hiring. Recruiters design job pipelines and problem banks; candidates complete system-readiness checks, timed coding rounds, and LiveKit AI voice interviews; ops monitor live sessions and review stage-level reports.
 
 | Role | What you get |
 |------|----------------|
-| **Recruiters** | Job profiles, problem/question banks, lead inbox, live session monitor, assessment & interview reports |
-| **Candidates** | Tokenized portal, Monaco IDE with Docker sandbox, LiveKit AI interviews, warmup & consent flows |
-| **Ops** | Face/focus proctoring, plagiarism & AI-content checks, integrity overrides, PDF/Excel export |
+| **Recruiters** | Job profiles, AI problem architect, lead inbox, live coding monitor, assessment reports |
+| **Candidates** | Portal roadmap, camera/mic/network checks, Monaco coding IDE, AI verbal interview room |
+| **Ops** | Screen-share proctoring, strike policies, integrity signals, AI evaluation synthesis |
 
 ---
 
 ## Screenshots
 
-### Landing page
+### Landing
+
+Product marketing surface — AI interviews, proctored coding, and hiring signal at a glance.
 
 <p align="center">
   <img src="docs/screenshots/landing.png" alt="CodeVox landing page" width="100%" />
 </p>
 
-### Candidate interview report
+### Recruiter — AI problem bank
+
+Create coding / SQL problems manually or generate them with the **Coding Problem Architect** (difficulty, seniority, presets).
 
 <p align="center">
-  <img src="docs/screenshots/candidate-report.png" alt="Candidate interview report" width="100%" />
+  <img src="docs/screenshots/problem-bank-create.jpeg" alt="Create coding problem with AI architect" width="100%" />
 </p>
 
-### AI interview
+### Candidate — portal & readiness
+
+Welcome portal with language preference, assessment roadmap, then **System readiness** (camera, mic, network) before entering a round.
 
 <p align="center">
-  <img src="docs/screenshots/interview.png" alt="Autonomous AI interview page" width="100%" />
+  <img src="docs/screenshots/candidate-portal.jpeg" alt="Candidate assessment portal" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/system-readiness.jpeg" alt="System readiness camera mic network checks" width="100%" />
+</p>
+
+### Candidate — application stages
+
+Sequential stages (e.g. coding → unified AI voice interview) with estimated time and proctoring flags.
+
+<p align="center">
+  <img src="docs/screenshots/application-stages.jpeg" alt="Application stages coding and AI voice interview" width="100%" />
+</p>
+
+### Candidate — coding assessment
+
+Timed Monaco IDE with problem statement, test cases, run/submit, and live screen recording (`REC`).
+
+<p align="center">
+  <img src="docs/screenshots/coding-ide.jpeg" alt="CodeVox coding assessment IDE" width="100%" />
+</p>
+
+### Ops — live coding monitor
+
+Silent admin viewport over the candidate screen share, with strikes, gaze hint, dual/screen/camera layout, and flag-moment.
+
+<p align="center">
+  <img src="docs/screenshots/live-monitor.jpeg" alt="Live recruitment monitor for coding session" width="100%" />
+</p>
+
+### Candidate — AI verbal interview
+
+LiveKit voice room: AI interviewer speaking, mic/cam/screen controls, assessment engine panel, realtime dialogue sync.
+
+<p align="center">
+  <img src="docs/screenshots/ai-interview.jpeg" alt="AI verbal interview LiveKit room" width="100%" />
+</p>
+
+### Candidate — assessment complete
+
+Thank-you state after the candidate finishes the assessment flow.
+
+<p align="center">
+  <img src="docs/screenshots/assessment-complete.jpeg" alt="Assessment complete thank you screen" width="70%" />
+</p>
+
+### Recruiter — assessment report
+
+Per-application round breakdown (coding scores, languages, test-case pass rates) plus AI evaluation synthesis.
+
+<p align="center">
+  <img src="docs/screenshots/assessment-report.jpeg" alt="Assessment report with coding round detail" width="100%" />
 </p>
 
 ---
@@ -54,34 +112,28 @@ CodeVox is an end-to-end recruitment assessment platform for engineering hiring.
 
 ### Autonomous AI interviews
 - Real-time conversational interviewer over **LiveKit WebRTC**
-- Python **voice engine** with Sarvam STT/TTS and adaptive LLM follow-ups
-- Phases: intro, AI verbal, HR verbal, AI soft screening, Build & Defend defense
-- Live transcription, recordings under `local-recordings/`, shareable interview reports
+- Python **voice engine** (Sarvam STT/TTS + adaptive LLM follow-ups)
+- Phases: screening, AI verbal, HR verbal, Build & Defend defense
+- Live dialogue sync, recordings, and shareable interview reports
 
 ### Sandboxed coding assessments
-- Multi-language **Monaco** IDE (Python, JavaScript, SQL, PHP, and more)
-- **Docker** runners for visible and private test cases
-- Screen share / track recording via LiveKit during the attempt
+- Multi-language **Monaco** IDE (Python, SQL, JavaScript, PHP, and more)
+- Visible / private test cases via **Docker** runners
+- Timed attempts with screen share + track recording for ops review
 
-### Job profiles & pipelines
-- Configurable stages: screening, coding, take-home, project interview, AI/HR verbal, panel, custom
-- LLM-assisted JD drafting, competencies, rubrics, and problem generation
-- Public apply page at `/apply/[slug]` with resume upload/parse
+### Job profiles & problem banks
+- Configurable pipeline stages (coding, AI verbal, take-home, project interview, …)
+- Manual authoring plus **AI Coding Problem Architect** generation
+- Public apply URL and resume parse into the candidate portal
 
 ### Recruitment operations
-- Lead inbox, bulk invites, time slots, human interview checklist
-- Queued resume screening and AI qualification signals
-- Silent admin viewport to monitor live candidate A/V and transcripts
+- Lead inbox, invites, time slots, human interview tooling
+- Live monitor for coding / interview rooms (dual · screen · camera)
+- System Configurations dashboard for FACE / proctor strike policies
 
-### Integrity & proctoring
-- Client-side face presence / multi-face detection (`@vladmandic/face-api`)
-- Focus, fullscreen, and media-strike policies (configurable)
-- Plagiarism (Dolos) and AI-content detection (Deepflag) for submissions
-
-### Analytics & reports
-- Per-application stage scores, transcripts, and integrity status
-- Overall evaluation with optional integrity override
-- Frontend PDF / Excel export; share tokens for interview reports
+### Integrity & reports
+- Focus / media strikes, fullscreen and tab-away policies
+- Stage snapshots, AI evaluation synthesis, PDF / Excel export
 
 ---
 
@@ -91,16 +143,14 @@ CodeVox is an end-to-end recruitment assessment platform for engineering hiring.
 
 ```mermaid
 flowchart TD
-  A[Publish job profile] --> B[Candidate applies or receives invite]
-  B --> C[Portal token: consent / face / stages]
+  A[Publish job profile + problem bank] --> B[Candidate applies / invite]
+  B --> C[Portal: consent · language · readiness]
   C --> D{Pipeline stage}
-  D -->|Coding| E[Monaco + Docker tests + LiveKit record]
-  D -->|Build & Defend| F[Project submit then AI defense]
-  D -->|AI / HR / Screening| G[LiveKit room + Voice Engine agent]
-  E --> H[Scores · proctor events · recordings]
-  F --> H
-  G --> H
-  H --> I[Assessment & interview reports]
+  D -->|Coding| E[Monaco + Docker tests + LiveKit screen]
+  D -->|AI verbal| F[LiveKit room + Voice Engine agent]
+  E --> G[Live monitor · proctor events]
+  F --> G
+  G --> H[Assessment reports]
 ```
 
 ### System architecture
@@ -138,17 +188,9 @@ flowchart LR
   FE --> LK
 ```
 
-**Voice interview path**
-1. Nest creates a LiveKit room and candidate token.
-2. Nest calls `POST /api/v1/voice/start-agent` on the voice engine with job/phase context.
-3. The agent joins the room (STT → LLM → TTS); the browser uses `livekit-client`.
-4. Optional egress writes MP4s to `local-recordings/`.
-5. Transcripts and scores callback to Nest via `NESTJS_CALLBACK_URL` + service key.
+**Coding path** — portal → system readiness → `/candidate/coding/[token]` → Docker run/submit → LiveKit screen share for monitor & recording.
 
-**Coding path**
-1. Candidate opens `/candidate/coding/[token]`.
-2. Nest runs submissions in Docker against test cases.
-3. LiveKit captures screen/audio for ops review while proctor hooks log integrity events.
+**Voice path** — Nest mints LiveKit room → voice-engine `start-agent` → browser `livekit-client` → transcripts/scores callback to Nest.
 
 ---
 
@@ -157,49 +199,18 @@ flowchart LR
 ```
 CodeVox/
 ├── codevox-frontend/                 # Next.js 15 (App Router) + React 19
-│   ├── src/app/                      # Routes
-│   │   ├── apply/[slug]/             # Public job application
-│   │   ├── assessments/(admin)/      # Recruiter console (auth-gated)
-│   │   ├── assessments/candidate/    # Candidate assessment / B&D
-│   │   ├── autonomous-interview/     # AI voice interview room
-│   │   ├── candidate/                # Portal, coding IDE, warmup, demo
-│   │   ├── interview-report/         # Shareable interview report
-│   │   └── signin/                   # Local credentials login
-│   ├── src/modules/
-│   │   ├── assessments/              # Admin IDE shell, assessment UI
-│   │   ├── autonomous-interview/     # LiveKit room, proctor hooks
-│   │   ├── job-profiles/             # Profile builder, banks, analytics
-│   │   ├── recruitment/              # Leads, interviews, monitor, config
-│   │   ├── assessment-reports/       # Application-level reports
-│   │   ├── proctor/                  # Face / focus / liveness helpers
-│   │   └── marketing/                # Landing page
-│   └── public/                       # Face-API models, interview assets
+│   ├── src/app/                      # Routes (apply, assessments, candidate, interview)
+│   ├── src/modules/                  # Feature modules (job-profiles, recruitment, AI interview, …)
+│   └── public/                       # Face-API models, brand assets
 │
 ├── codevox-backend/                  # NestJS 11 API
-│   ├── src/
-│   │   ├── auth/ · authorization/    # Local bearer + RBAC
-│   │   ├── modules/
-│   │   │   ├── job-profiles/         # Profiles, stages, portal, AI gen
-│   │   │   ├── recruitment/          # Leads, invites, slots, resume screen
-│   │   │   ├── autonomous-interview/ # Sessions, LiveKit, voice client
-│   │   │   ├── coding-round/         # Timed coding attempt + submit
-│   │   │   ├── project-interview/    # Build & Defend + LLM/Excel grade
-│   │   │   ├── assessment-execution/ # Docker runners, plagiarism
-│   │   │   ├── assessment-platform/  # Question engine & evaluation
-│   │   │   ├── assessment-reports/   # Aggregated reports
-│   │   │   ├── ai-detection/         # AI-written content analysis
-│   │   │   ├── proctor/ · integrity/ # Integrity entities & helpers
-│   │   │   ├── email/                # SMTP invites / reminders
-│   │   │   └── system-config/        # Dashboard-tunable keys
-│   │   ├── queue/                    # BullMQ (eval, plagiarism, resume)
-│   │   └── files/                    # Local disk storage helpers
+│   ├── src/modules/                  # coding-round, autonomous-interview, reports, …
 │   ├── services/voice-engine/        # FastAPI LiveKit voice agents
 │   ├── sql/                          # Migrations + local RBAC bootstrap
-│   ├── local-uploads/                # Uploaded files
-│   └── local-recordings/             # Interview / coding recordings
+│   ├── local-uploads/ · local-recordings/
 │
 ├── docs/screenshots/                 # README product screenshots
-├── LICENSE                           # MIT
+├── LICENSE
 └── README.md
 ```
 
@@ -208,17 +219,13 @@ CodeVox/
 | Area | Path |
 |------|------|
 | Landing | `/` |
-| Admin login | `/signin` |
-| Dashboard | `/assessments` |
-| Job profiles | `/assessments/job-profiles` |
-| Leads / interviews | `/assessments/recruitment/leads`, `…/interviews` |
+| Admin | `/signin` → `/assessments` |
+| Problem bank | `/assessments/job-profiles/problem-bank` |
 | Live monitor | `/assessments/recruitment/monitor/[token]` |
-| Reports | `/assessments/assessment-reports` |
-| Public apply | `/apply/[slug]` |
+| Assessment reports | `/assessments/assessment-reports` |
 | Candidate portal | `/candidate/portal/[token]` |
 | Coding IDE | `/candidate/coding/[token]` |
 | AI interview | `/autonomous-interview/[token]` |
-| Shared report | `/interview-report/[shareToken]` |
 
 ---
 
@@ -226,14 +233,14 @@ CodeVox/
 
 | Layer | Technologies |
 |-------|----------------|
-| **Frontend** | Next.js 15, React 19, Tailwind CSS, TanStack Query, Monaco, TipTap, LiveKit client, face-api, xterm, jsPDF, xlsx |
-| **Backend** | NestJS 11, TypeORM, Passport (bearer), BullMQ, WebSockets, ExcelJS, Nodemailer |
+| **Frontend** | Next.js 15, React 19, Tailwind, TanStack Query, Monaco, TipTap, LiveKit client, face-api |
+| **Backend** | NestJS 11, TypeORM, Passport bearer, BullMQ, WebSockets |
 | **Database** | MySQL |
 | **Queues** | Redis + BullMQ |
-| **Voice** | FastAPI, LiveKit Agents, Sarvam STT/TTS, Silero VAD |
-| **Execution** | Docker sandboxes for code & SQL |
-| **AI** | OpenAI-compatible APIs, Gemini (take-home), Cerebras, Sarvam LLM, Deepflag |
-| **Auth** | NextAuth credentials ↔ `LOCAL_AUTH_TOKEN` bearer + MySQL RBAC |
+| **Voice** | FastAPI, LiveKit Agents, Sarvam STT/TTS |
+| **Execution** | Docker sandboxes |
+| **AI** | OpenAI-compatible APIs, Gemini (take-home / problem gen), Sarvam LLM |
+| **Auth** | NextAuth credentials ↔ `LOCAL_AUTH_TOKEN` + MySQL RBAC |
 | **Storage** | Local disk (`local-uploads/`, `local-recordings/`) |
 
 ---
@@ -244,107 +251,67 @@ CodeVox/
 
 - Node.js 20+
 - MySQL 8+
-- Docker Desktop (coding sandboxes; optional LiveKit stack)
+- Docker Desktop (coding sandboxes + LiveKit stack)
 - Redis (when queues are enabled)
-- Python 3.11+ (voice engine, or run via Docker Compose)
 
 ### 1. Backend
 
 ```bash
 cd codevox-backend
 cp .env.example .env
-# Fill MySQL, LOCAL_AUTH_*, LiveKit, VOICE_ENGINE_URL, LLM keys — see below
 npm install
-# Apply SQL under sql/local/ (e.g. 001_rbac_bootstrap.sql) and sql/migrations/
+# Apply sql/local/001_rbac_bootstrap.sql and migrations
 npm run dev
 ```
 
-Health check: [http://localhost:4000/health](http://localhost:4000/health)
+Health: [http://localhost:4000/health](http://localhost:4000/health)
 
 ### 2. Frontend
 
 ```bash
 cd codevox-frontend
 cp .env.example .env.local
-# Match LOCAL_AUTH_TOKEN with the backend; set NEXT_PUBLIC_RECRUITMENT_API_URL=http://localhost:4000
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and sign in with `admin@localhost` / `admin` (or your `LOCAL_AUTH_*` values).
+Open [http://localhost:3000](http://localhost:3000) — sign in with `admin@localhost` / `admin` (or your `LOCAL_AUTH_*` values).
 
-### 3. Voice engine & LiveKit (AI interviews)
+### 3. LiveKit / voice engine
 
 ```bash
 cd codevox-backend/services/voice-engine
-# Option A — Docker stack (Redis + LiveKit + egress + voice engine)
 docker compose up -d
-
-# Option B — local Python
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
-
-Point Nest at the agent with `VOICE_ENGINE_URL=http://localhost:8001` and a shared `AUTONOMOUS_INTERVIEW_SERVICE_KEY`.
-
-### Default ports
 
 | Service | Port |
 |---------|------|
 | Frontend | `3000` |
 | Nest API | `4000` |
 | Voice engine | `8001` |
-| LiveKit (compose) | `7885` (mapped), plus `7886` / `7887/udp` |
-| Redis (compose) | `6379` |
+| LiveKit | `7885` (+ `7886`, `7887/udp`) |
+| Redis | `6379` |
 
 ---
 
 ## Configuration
 
-Keep frontend and backend auth tokens in sync.
+Keep frontend and backend `LOCAL_AUTH_TOKEN` in sync. Proctor / FACE knobs can be set in `.env` or overridden from **System Configurations** in the admin UI (they apply to coding rounds and interviews).
 
-**Frontend** (`.env.local`) — see `codevox-frontend/.env.example`:
+**Frontend** — `NEXTAUTH_*`, `NEXT_PUBLIC_RECRUITMENT_API_URL`, `LOCAL_AUTH_*`, `NEXT_PUBLIC_FACE`, `NEXT_PUBLIC_PROCTOR_*`
 
-- `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_RECRUITMENT_API_URL` → Nest base URL
-- `LOCAL_AUTH_TOKEN`, `LOCAL_AUTH_EMAIL`, `LOCAL_AUTH_PASSWORD`
-- `NEXT_PUBLIC_FACE`, `NEXT_PUBLIC_PROCTOR_*` strike policies
-
-**Backend** (`.env`) — copy from `.env.example` and set at least:
-
-- **MySQL:** `RECRUITMENT_MYSQL_HOST|PORT|USER|PASSWORD|DATABASE`
-- **Auth:** `LOCAL_AUTH_TOKEN`, `LOCAL_AUTH_EMAIL`, `LOCAL_AUTH_NAME`, `LOCAL_AUTH_ADMNO`
-- **App:** `PORT`, `CORS_ORIGIN`, `PUBLIC_API_BASE_URL`, `LOCAL_UPLOADS_DIR`
-- **Redis:** `REDIS_URL`, `REDIS_ENABLED`
-- **LiveKit:** `LIVEKIT_URL`, `LIVEKIT_PUBLIC_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`
-- **Voice:** `VOICE_ENGINE_URL`, `AUTONOMOUS_INTERVIEW_SERVICE_KEY`, `NESTJS_CALLBACK_URL`, `SARVAM_API_KEY`
-- **LLM:** `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` (plus optional take-home / Cerebras keys)
-- **Optional:** `SMTP_*`, `DEEPFLAG_API_KEY`, `FACE`, `PROCTOR_*`, `RECORDING_MODE`
-
-Admin API calls use `Authorization: Bearer <LOCAL_AUTH_TOKEN>`. Candidate portal, coding, interview join, and public apply routes are token-scoped and do not require the admin bearer.
+**Backend** — MySQL `RECRUITMENT_MYSQL_*`, `LOCAL_AUTH_*`, LiveKit, `VOICE_ENGINE_URL`, LLM keys, `PROCTOR_*`, `FACE`
 
 ---
 
-## Auth model
+## Auth
 
-- **Frontend:** NextAuth credentials provider (no Keycloak in this repo). Session JWT carries `LOCAL_AUTH_TOKEN` as the API access token.
-- **Backend:** Custom bearer strategy validates that token and provisions/loads the local admin into shared `users` / `user_roles` / `permissions`.
-- **Permissions:** `assessments:read|write`, `job_profiles:read|write` (and related approve/moderate keys where used). Seed via `codevox-backend/sql/local/001_rbac_bootstrap.sql`.
-
----
-
-## Repository layout at a glance
-
-| Package | Role |
-|---------|------|
-| [`codevox-frontend`](./codevox-frontend) | Recruiter console, candidate experiences, marketing site |
-| [`codevox-backend`](./codevox-backend) | Nest API, queues, Docker execution, LiveKit orchestration |
-| [`codevox-backend/services/voice-engine`](./codevox-backend/services/voice-engine) | FastAPI voice agents for autonomous interviews |
-
-More detail: [backend README](./codevox-backend/README.md) · [voice-engine README](./codevox-backend/services/voice-engine/README.md)
+- **Frontend:** NextAuth credentials → JWT carries `LOCAL_AUTH_TOKEN`
+- **Backend:** Bearer `LOCAL_AUTH_TOKEN` + RBAC (`assessments:*`, `job_profiles:*`)
+- Candidate portal / coding / interview join routes are token-scoped (no admin bearer)
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE) — Copyright © 2026 Akshat Desai.
+[MIT](./LICENSE) — Copyright © 2026 Akshat Desai.

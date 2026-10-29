@@ -434,7 +434,7 @@ export function InterviewRoomProvider({
           : 0,
       };
       void target.localParticipant
-        .publishData(encodeProctorData(payload), { reliable: true })
+        .publishData(encodeProctorData(payload) as any, { reliable: true })
         .catch(() => undefined);
     },
     [],

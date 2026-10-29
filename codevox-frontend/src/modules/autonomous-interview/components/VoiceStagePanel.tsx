@@ -1,5 +1,6 @@
-import { CircularAudioVisualizer } from '@/modules/autonomous-interview/components/CircularAudioVisualizer';
 'use client';
+import { AI_INTERVIEWER_AVATAR_URL } from '@/modules/autonomous-interview/lib/ai-interviewer-avatar';
+import { CircularAudioVisualizer } from '@/modules/autonomous-interview/components/CircularAudioVisualizer';
 
 /// <reference types="@types/dom-speech-recognition" />
 import { useCallback, useEffect, useRef, useState } from 'react';

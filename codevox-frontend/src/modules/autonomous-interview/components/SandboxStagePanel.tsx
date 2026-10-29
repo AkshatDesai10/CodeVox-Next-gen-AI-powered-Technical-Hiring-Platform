@@ -54,7 +54,7 @@ export function SandboxStagePanel({
     [enqueue],
   );
 
-  useFocusIntegrity(visible, handleProctorEvent);
+  useFocusIntegrity({ enabled: visible, onEvent: handleProctorEvent });
 
   const pipEnabled =
     visible &&

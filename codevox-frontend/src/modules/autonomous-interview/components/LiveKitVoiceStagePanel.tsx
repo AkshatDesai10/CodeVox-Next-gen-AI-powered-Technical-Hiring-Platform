@@ -1324,7 +1324,7 @@ export function LiveKitVoiceStagePanel({
                   <CircularAudioVisualizer
                     size={280}
                     isSpeaking={status === 'agent_speaking'}
-                    isListening={status === 'listening' || status === 'live'}
+                    isListening={status === 'live'}
                     isAnalyzing={status === 'connecting' || status === 'idle'}
                     agentConnected={agentConnected}
                   />
