@@ -152,6 +152,7 @@ export type CodingLiveKitInit = {
   roundType: string;
   proctorConfig: {
     requireScreenShare?: boolean;
+    graceSeconds?: number;
     enableMediaStrikes?: boolean;
     maxMediaStrikes?: number;
     autoSubmitOnMediaStrike?: boolean;

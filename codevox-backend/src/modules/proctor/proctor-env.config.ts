@@ -1,6 +1,7 @@
 /**
  * Server-side proctor strike configuration.
- * Backend is source of truth for auto-termination thresholds.
+ * Prefer DynamicConfigService (DB → env → default) so System Configurations
+ * apply to coding rounds and interviews alike.
  */
 
 function readEnv(name: string): string {
@@ -27,32 +28,73 @@ export type ProctorStrikeConfig = {
   maxFocusStrikes: number;
   autoSubmitOnFocusStrike: boolean;
   focusStrikeThresholdSeconds: number;
+  graceSeconds: number;
 };
 
-export function getProctorStrikeConfig(): ProctorStrikeConfig {
+/** Sync reader matching DynamicConfigService.getSync(key, fallback). */
+export type ProctorConfigReader = (key: string, fallback?: string) => string;
+
+function readConfig(
+  getSync: ProctorConfigReader | undefined,
+  key: string,
+  altKey?: string,
+): string {
+  if (getSync) {
+    const primary = (getSync(key, '') ?? '').trim();
+    if (primary) return primary;
+    if (altKey) {
+      const alt = (getSync(altKey, '') ?? '').trim();
+      if (alt) return alt;
+    }
+  }
+  return readEnv(key) || (altKey ? readEnv(altKey) : '');
+}
+
+/**
+ * Resolve strike thresholds. Pass `dynamicConfig.getSync.bind(dynamicConfig)` so
+ * dashboard overrides win over raw process.env.
+ */
+export function resolveProctorStrikeConfig(
+  getSync?: ProctorConfigReader,
+): ProctorStrikeConfig {
   const enableMedia = parseBool(
-    readEnv('PROCTOR_ENABLE_MEDIA_STRIKES') || readEnv('PROCTOR_ENABLE_STRIKES'),
+    readConfig(getSync, 'PROCTOR_ENABLE_MEDIA_STRIKES', 'PROCTOR_ENABLE_STRIKES'),
     false,
   );
-  const maxMedia = parsePositiveInt(
-    readEnv('PROCTOR_MAX_MEDIA_STRIKES') || readEnv('PROCTOR_MAX_STRIKES'),
+  let maxMedia = parsePositiveInt(
+    readConfig(getSync, 'PROCTOR_MAX_MEDIA_STRIKES', 'PROCTOR_MAX_STRIKES'),
     5,
   );
+  if (maxMedia > 10) maxMedia = 10;
   const autoMedia = parseBool(
-    readEnv('PROCTOR_AUTO_SUBMIT_ON_MEDIA_STRIKE') ||
-      readEnv('PROCTOR_AUTO_SUBMIT_ON_STRIKE'),
+    readConfig(
+      getSync,
+      'PROCTOR_AUTO_SUBMIT_ON_MEDIA_STRIKE',
+      'PROCTOR_AUTO_SUBMIT_ON_STRIKE',
+    ),
     false,
   );
   const enableFocus = parseBool(
-    readEnv('PROCTOR_ENABLE_FOCUS_STRIKES') || readEnv('PROCTOR_ENABLE_STRIKES'),
+    readConfig(getSync, 'PROCTOR_ENABLE_FOCUS_STRIKES', 'PROCTOR_ENABLE_STRIKES'),
     false,
   );
-  const maxFocus = parsePositiveInt(readEnv('PROCTOR_MAX_FOCUS_STRIKES'), 5);
-  const autoFocus = parseBool(readEnv('PROCTOR_AUTO_SUBMIT_ON_FOCUS_STRIKE'), false);
-  const focusThreshold = parsePositiveInt(
-    readEnv('PROCTOR_FOCUS_STRIKE_THRESHOLD_SECONDS'),
+  let maxFocus = parsePositiveInt(
+    readConfig(getSync, 'PROCTOR_MAX_FOCUS_STRIKES'),
     5,
   );
+  if (maxFocus > 10) maxFocus = 10;
+  const autoFocus = parseBool(
+    readConfig(getSync, 'PROCTOR_AUTO_SUBMIT_ON_FOCUS_STRIKE'),
+    false,
+  );
+  let focusThreshold = parsePositiveInt(
+    readConfig(getSync, 'PROCTOR_FOCUS_STRIKE_THRESHOLD_SECONDS'),
+    5,
+  );
+  if (focusThreshold > 60) focusThreshold = 60;
+  let graceSeconds = parsePositiveInt(readConfig(getSync, 'PROCTOR_GRACE_SECONDS'), 90);
+  if (graceSeconds < 30 || graceSeconds > 300) graceSeconds = 90;
+
   return {
     enableMediaStrikes: enableMedia,
     maxMediaStrikes: maxMedia,
@@ -61,7 +103,13 @@ export function getProctorStrikeConfig(): ProctorStrikeConfig {
     maxFocusStrikes: maxFocus,
     autoSubmitOnFocusStrike: autoFocus,
     focusStrikeThresholdSeconds: focusThreshold,
+    graceSeconds,
   };
+}
+
+/** Env-only fallback (no DB). Prefer resolveProctorStrikeConfig(dynamic.getSync). */
+export function getProctorStrikeConfig(): ProctorStrikeConfig {
+  return resolveProctorStrikeConfig();
 }
 
 export const MEDIA_STRIKE_EVENT_TYPES = new Set([

@@ -13,7 +13,7 @@ import {
   ProctorEventInput,
   VoiceTurnTimingMeta,
 } from './proctor.types';
-import { getProctorStrikeConfig } from './proctor-env.config';
+import { resolveProctorStrikeConfig } from './proctor-env.config';
 import {
   evaluateRecruitmentFraudSignals,
   TurnHistorySample,
@@ -23,6 +23,7 @@ import {
   decodeBase64Pcm16,
   voiceFingerprintDistance,
 } from './voice-biometrics.util';
+import { DynamicConfigService } from '../system-config/dynamic-config.service';
 
 export type InterviewSessionProctorRow = {
   candidateToken: string;
@@ -42,7 +43,14 @@ export class InterviewProctorService {
   constructor(
     private readonly proctorRepo: ProctorRepository,
     private readonly configRepo: InterviewGlobalConfigRepository,
+    private readonly dynamicConfig: DynamicConfigService,
   ) {}
+
+  private strikeConfig() {
+    return resolveProctorStrikeConfig((key, fallback = '') =>
+      this.dynamicConfig.getSync(key, fallback),
+    );
+  }
 
   private sessionType = InterviewProctorSessionType.CANDIDATE_INTERVIEW;
 
@@ -285,7 +293,7 @@ export class InterviewProctorService {
     const events = await this.getEventsForAudit(row.candidateToken);
     const dynamicSummary = await this.proctorRepo.buildSummary(row.candidateToken, this.sessionType);
     const existingMeta = (row.proctorSummary as Record<string, unknown> | null) ?? {};
-    const cfg = getProctorStrikeConfig();
+    const cfg = this.strikeConfig();
 
     const summary: Record<string, unknown> = {
       ...dynamicSummary,
