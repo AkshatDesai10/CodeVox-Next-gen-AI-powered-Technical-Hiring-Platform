@@ -623,7 +623,7 @@ export function AddCandidateDialog({ open, onClose, onCreated }: Props) {
                 <p className="text-xs text-[var(--assessment-on-surface-variant)]">Loading available times...</p>
               ) : slots.length === 0 ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  No open time slots for this date. Add slots under Recruitment → Time Slots, or pick another day.
+                  No open time slots for this date. Add slots under Hiring → Time Slots, or pick another day.
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">

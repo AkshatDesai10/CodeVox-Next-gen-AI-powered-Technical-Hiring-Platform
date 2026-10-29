@@ -34,6 +34,13 @@ export function resolveRoundType(input: {
   }
 
   const stageType = (input.stageType ?? '').trim();
+  if (
+    stageType === 'coding' ||
+    stageType === 'coding_assessment' ||
+    input.currentPhase === 'sandbox_code'
+  ) {
+    return AutonomousInterviewRoundType.CODING;
+  }
   if (stageType === 'project_interview') {
     return AutonomousInterviewRoundType.BND_INTERVIEW;
   }

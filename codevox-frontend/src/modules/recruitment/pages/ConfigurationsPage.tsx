@@ -544,7 +544,7 @@ export function ConfigurationsPage() {
             {(error as Error).message}
           </div>
         ) : (
-          <section className="nexus-tonal-layer overflow-hidden rounded-2xl border border-[var(--assessment-outline-variant)] bg-white shadow-sm">
+          <section className="codevox-tonal-layer overflow-hidden rounded-2xl border border-[var(--assessment-outline-variant)] bg-white shadow-sm">
             {/* Category Subheader */}
             <div className="flex items-center justify-between border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-5 py-3.5">
               <div className="flex items-center gap-2.5">

@@ -322,12 +322,23 @@ export class AutonomousInterviewController {
   @Post('session/:token/force-complete')
   async forceComplete(
     @Param('token') token: string,
-    @Body() body?: { ended_by?: 'candidate' },
+    @Body()
+    body?: {
+      ended_by?: 'candidate' | 'proctor';
+      termination_reason?: string;
+    },
   ) {
+    const endedBy =
+      body?.ended_by === 'candidate'
+        ? 'candidate'
+        : body?.ended_by === 'proctor'
+          ? 'proctor'
+          : undefined;
     return ok(
       'Interview forcefully completed',
       await this.coordinator.completeInterview(token, {
-        ended_by: body?.ended_by === 'candidate' ? 'candidate' : undefined,
+        ended_by: endedBy,
+        termination_reason: body?.termination_reason,
       }),
     );
   }

@@ -264,7 +264,7 @@ export function JobProfileBasicsPage() {
   return (
     <div className="w-full space-y-6">
       {/* Top Header / Stepper Container */}
-      <div className="nexus-card p-3 px-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="codevox-card p-3 px-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           {/* Step 1: Active */}
           <div className="bg-[var(--assessment-primary)] text-[var(--assessment-on-primary)] text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-2 shadow-sm">
@@ -275,7 +275,7 @@ export function JobProfileBasicsPage() {
           <button
             type="button"
             disabled
-            className="bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] text-xs font-medium px-3.5 py-1.5 rounded-full opacity-60 cursor-not-allowed"
+            className="bg-[var(--assessment-surface-container-low)] text-[var(--codevox-secondary)] text-xs font-medium px-3.5 py-1.5 rounded-full opacity-60 cursor-not-allowed"
             title="Please click Continue at the bottom to proceed"
           >
             2. Stages Allotment
@@ -285,7 +285,7 @@ export function JobProfileBasicsPage() {
           <button
             type="button"
             disabled
-            className="bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] text-xs font-medium px-3.5 py-1.5 rounded-full opacity-60 cursor-not-allowed"
+            className="bg-[var(--assessment-surface-container-low)] text-[var(--codevox-secondary)] text-xs font-medium px-3.5 py-1.5 rounded-full opacity-60 cursor-not-allowed"
             title="Please complete previous stages first"
           >
             3. Rubric &amp; Round Configuration
@@ -327,7 +327,7 @@ export function JobProfileBasicsPage() {
           </Link>
           <span className="text-[var(--assessment-outline-variant)]">/</span>
           <span className="font-bold text-[var(--assessment-on-surface)] text-base">{title || 'PHP Developer Junior'}</span>
-          <span className="ml-1.5 bg-[var(--assessment-surface-container-low)] text-[var(--nexus-secondary)] border border-[var(--assessment-outline-variant)] font-mono text-xs font-bold px-2.5 py-0.5 rounded tracking-wider">
+          <span className="ml-1.5 bg-[var(--assessment-surface-container-low)] text-[var(--codevox-secondary)] border border-[var(--assessment-outline-variant)] font-mono text-xs font-bold px-2.5 py-0.5 rounded tracking-wider">
             ID: {id || 'JOB-ID'}
           </span>
         </div>
@@ -342,7 +342,7 @@ export function JobProfileBasicsPage() {
         {/* Left Column: Forms */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
           {/* Card 1: Job details */}
-          <section className="nexus-card p-6 shadow-sm">
+          <section className="codevox-card p-6 shadow-sm">
             <div className="flex items-center gap-2.5 mb-1">
               <h2 className="text-lg font-bold text-[var(--assessment-on-surface)]">Job details</h2>
             </div>
@@ -422,7 +422,7 @@ export function JobProfileBasicsPage() {
           </section>
 
           {/* Card 2: Job description */}
-          <section className="nexus-card p-6 shadow-sm">
+          <section className="codevox-card p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[var(--assessment-on-surface)] flex items-center gap-1.5">
                 Job description <span className="text-[var(--assessment-primary)] text-sm leading-none">•</span>
@@ -431,7 +431,7 @@ export function JobProfileBasicsPage() {
                 type="button"
                 onClick={() => aiDraftMutation.mutate()}
                 disabled={!title.trim() || aiDraftMutation.isPending}
-                className="bg-[var(--assessment-surface-container-low)] hover:bg-[var(--assessment-surface-container)] text-[var(--nexus-secondary)] border border-[var(--assessment-outline-variant)] text-xs font-semibold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-sm"
+                className="bg-[var(--assessment-surface-container-low)] hover:bg-[var(--assessment-surface-container)] text-[var(--codevox-secondary)] border border-[var(--assessment-outline-variant)] text-xs font-semibold px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-sm"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
@@ -495,7 +495,7 @@ export function JobProfileBasicsPage() {
               <button
                 type="button"
                 onClick={() => setResponsibilities([...responsibilities, ''])}
-                className="w-full py-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--nexus-secondary)] hover:text-[var(--assessment-primary)] transition-colors rounded-lg border border-dashed border-[var(--assessment-outline-variant)] hover:border-[var(--nexus-secondary)] bg-[var(--assessment-surface-container-low)]/30"
+                className="w-full py-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--codevox-secondary)] hover:text-[var(--assessment-primary)] transition-colors rounded-lg border border-dashed border-[var(--assessment-outline-variant)] hover:border-[var(--codevox-secondary)] bg-[var(--assessment-surface-container-low)]/30"
               >
                 + Add responsibility
               </button>
@@ -539,7 +539,7 @@ export function JobProfileBasicsPage() {
               <button
                 type="button"
                 onClick={() => setRequiredSkills([...requiredSkills, ''])}
-                className="w-full py-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--nexus-secondary)] hover:text-[var(--assessment-primary)] transition-colors rounded-lg border border-dashed border-[var(--assessment-outline-variant)] hover:border-[var(--nexus-secondary)] bg-[var(--assessment-surface-container-low)]/30"
+                className="w-full py-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--codevox-secondary)] hover:text-[var(--assessment-primary)] transition-colors rounded-lg border border-dashed border-[var(--assessment-outline-variant)] hover:border-[var(--codevox-secondary)] bg-[var(--assessment-surface-container-low)]/30"
               >
                 + Add required skill
               </button>
@@ -549,9 +549,9 @@ export function JobProfileBasicsPage() {
 
         {/* Right Column: Setup checklist */}
         <aside className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="nexus-card p-6 shadow-sm">
+          <div className="codevox-card p-6 shadow-sm">
             <div className="flex items-center gap-2.5 mb-1">
-              <svg className="w-4 h-4 text-[var(--nexus-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-[var(--codevox-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -686,7 +686,7 @@ export function JobProfileBasicsPage() {
 
             {/* Info notice box */}
             <div className="mt-6 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-4 flex items-start gap-3">
-              <svg className="w-4 h-4 text-[var(--nexus-secondary)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-[var(--codevox-secondary)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p className="text-xs text-[var(--assessment-on-surface-variant)] leading-relaxed">

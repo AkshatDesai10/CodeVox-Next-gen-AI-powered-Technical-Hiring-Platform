@@ -16,7 +16,7 @@ export function PipelineMiniBar(props: { segments: Segment[]; total?: number }) 
           <div
             key={seg.label}
             title={`${seg.label}: ${seg.count}`}
-            className="nexus-pipeline-bar-segment h-full transition-opacity hover:opacity-80"
+            className="codevox-pipeline-bar-segment h-full transition-opacity hover:opacity-80"
             style={{
               width: `${pct}%`,
               backgroundColor: seg.color ?? 'var(--assessment-primary-container)',

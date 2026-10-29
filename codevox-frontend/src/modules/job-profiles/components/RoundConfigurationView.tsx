@@ -384,13 +384,13 @@ export function RoundConfigurationView(props: Props) {
           setDragQIdx(null);
         }}
         className={`group relative flex items-center gap-4 rounded-xl p-4 transition-colors ${aiGenerated
-            ? 'nexus-glass-lite border border-dashed border-[var(--nexus-secondary)]'
+            ? 'codevox-glass-lite border border-dashed border-[var(--codevox-secondary)]'
             : 'border border-[var(--assessment-outline-variant)] hover:bg-[var(--assessment-surface-container-low)]'
           }`}
       >
         {aiGenerated ? (
           <span className="absolute right-2 top-2">
-            <AssessmentMaterialIcon name="auto_awesome" size={14} className="text-[var(--nexus-secondary)]" />
+            <AssessmentMaterialIcon name="auto_awesome" size={14} className="text-[var(--codevox-secondary)]" />
           </span>
         ) : null}
         <span className="cursor-grab text-[var(--assessment-outline-variant)]">
@@ -407,7 +407,7 @@ export function RoundConfigurationView(props: Props) {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             {topic ? (
-              <span className="rounded border border-[var(--nexus-secondary-container)]/20 bg-[var(--nexus-secondary-container)]/10 px-1.5 text-[11px] text-[var(--assessment-on-surface-variant)]">
+              <span className="rounded border border-[var(--codevox-secondary-container)]/20 bg-[var(--codevox-secondary-container)]/10 px-1.5 text-[11px] text-[var(--assessment-on-surface-variant)]">
                 {topic}
               </span>
             ) : null}
@@ -417,7 +417,7 @@ export function RoundConfigurationView(props: Props) {
               </span>
             ) : null}
             {aiGenerated ? (
-              <span className="rounded bg-[var(--nexus-secondary)]/10 px-1 text-[9px] font-bold text-[var(--nexus-secondary)]">
+              <span className="rounded bg-[var(--codevox-secondary)]/10 px-1 text-[9px] font-bold text-[var(--codevox-secondary)]">
                 AI SUGGESTED
               </span>
             ) : null}

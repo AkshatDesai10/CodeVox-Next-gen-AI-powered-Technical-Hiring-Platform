@@ -322,7 +322,7 @@ export function ProjectInterviewRoundConfigForm(props: Props) {
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4 text-sm">
             <span className="font-bold uppercase tracking-wide">Code build</span>
-            <span className="font-mono text-lg font-bold text-[var(--nexus-secondary)]">{codeWeight}%</span>
+            <span className="font-mono text-lg font-bold text-[var(--codevox-secondary)]">{codeWeight}%</span>
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">

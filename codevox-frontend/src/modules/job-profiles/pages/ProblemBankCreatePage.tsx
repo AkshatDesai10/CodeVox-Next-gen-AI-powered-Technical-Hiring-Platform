@@ -1166,17 +1166,17 @@ export function ProblemBankCreatePage() {
                 </table>
               </div>
               <div className="flex items-center justify-between bg-[var(--assessment-surface-container-low)] p-6">
-                <div className="mr-4 flex flex-1 items-center gap-4 rounded-lg border border-[var(--nexus-secondary)]/20 bg-[var(--nexus-secondary-container)]/10 p-4">
-                  <AssessmentMaterialIcon name="auto_awesome" size={24} className="text-[var(--nexus-secondary)]" />
+                <div className="mr-4 flex flex-1 items-center gap-4 rounded-lg border border-[var(--codevox-secondary)]/20 bg-[var(--codevox-secondary-container)]/10 p-4">
+                  <AssessmentMaterialIcon name="auto_awesome" size={24} className="text-[var(--codevox-secondary)]" />
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-[var(--nexus-secondary)]">Test Case Generator</p>
+                    <p className="text-sm font-bold text-[var(--codevox-secondary)]">Test Case Generator</p>
                     <p className="text-xs text-[var(--assessment-on-surface-variant)]">
                       AI suggests boundary cases (e.g., Capacity=1, Max Keys).
                     </p>
                   </div>
                   <button
                     type="button"
-                    className="rounded-lg bg-[var(--nexus-secondary)] px-4 py-1.5 text-sm font-bold text-white hover:brightness-110"
+                    className="rounded-lg bg-[var(--codevox-secondary)] px-4 py-1.5 text-sm font-bold text-white hover:brightness-110"
                   >
                     Apply Suggested
                   </button>
@@ -1591,7 +1591,7 @@ export function ProblemBankCreatePage() {
                 </div>
                 <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-[var(--assessment-surface-container)]">
                   <div
-                    className="h-full bg-[var(--nexus-secondary)] transition-all duration-500"
+                    className="h-full bg-[var(--codevox-secondary)] transition-all duration-500"
                     style={{ width: `${complexityProgress}%` }}
                   />
                 </div>
@@ -1632,7 +1632,7 @@ export function ProblemBankCreatePage() {
                 </div>
                 <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-[var(--assessment-surface-container)]">
                   <div
-                    className="h-full bg-[var(--nexus-secondary)] transition-all duration-500"
+                    className="h-full bg-[var(--codevox-secondary)] transition-all duration-500"
                     style={{
                       width: `${readiness.schemaReady && readiness.seedReady ? 100 : aiMutation.isPending ? 45 : readiness.schemaReady || readiness.seedReady ? 55 : 0}%`,
                     }}
@@ -1742,20 +1742,20 @@ export function ProblemBankCreatePage() {
               </div>
             </div>
 
-            <div className="nexus-glass-ai space-y-4 rounded-xl border border-[var(--nexus-secondary)]/30 p-6">
+            <div className="codevox-glass-ai space-y-4 rounded-xl border border-[var(--codevox-secondary)]/30 p-6">
               <div className="flex items-center gap-2">
-                <AssessmentMaterialIcon name="lightbulb" size={20} className="text-[var(--nexus-secondary)]" />
+                <AssessmentMaterialIcon name="lightbulb" size={20} className="text-[var(--codevox-secondary)]" />
                 <h4 className="font-label-caps text-[var(--assessment-on-surface)]">AI Suggestions</h4>
               </div>
               <ul className="space-y-3 text-xs text-[var(--assessment-on-surface-variant)]">
                 <li className="flex gap-2">
-                  <span className="mt-0.5 text-[var(--nexus-secondary)]">-</span>
+                  <span className="mt-0.5 text-[var(--codevox-secondary)]">-</span>
                   <p>
                     Add large-scale test cases if constraints mention high upper bounds.
                   </p>
                 </li>
                 <li className="flex gap-2">
-                  <span className="mt-0.5 text-[var(--nexus-secondary)]">-</span>
+                  <span className="mt-0.5 text-[var(--codevox-secondary)]">-</span>
                   <p>Clarify missing-key return behavior in the statement.</p>
                 </li>
               </ul>

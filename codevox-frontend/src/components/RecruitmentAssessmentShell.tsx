@@ -90,7 +90,7 @@ export function RecruitmentAssessmentShell({ children }: { children: React.React
           Code<span className="cvx-text-gradient">Vox</span>
         </Link>
         <div className="flex items-center gap-4 text-sm text-[#A7B7CD]">
-          <span className="hidden sm:inline">{userName ? userName : 'Recruitment Console'}</span>
+          <span className="hidden sm:inline">{userName ? userName : 'CodeVox Console'}</span>
           <span className="hidden rounded-full border border-[rgba(52,211,153,0.35)] bg-[rgba(52,211,153,0.12)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#34D399] sm:inline">
             Pro
           </span>

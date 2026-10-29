@@ -65,7 +65,7 @@ export function JobProfilePreviewPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="nexus-card p-5">
+          <section className="codevox-card p-5">
             <h2 className="font-headline-md mb-4">Logic canvas</h2>
             <div className="space-y-4">
               {anchorQuestions.length ? (
@@ -81,7 +81,7 @@ export function JobProfilePreviewPage() {
             </div>
           </section>
 
-          <section className="nexus-card flex min-h-[420px] flex-col p-5">
+          <section className="codevox-card flex min-h-[420px] flex-col p-5">
             <h2 className="font-headline-md mb-4">Live simulation</h2>
             {previewToken ? (
               <div className="flex flex-1 flex-col gap-4">

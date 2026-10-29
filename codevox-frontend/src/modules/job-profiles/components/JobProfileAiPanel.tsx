@@ -94,9 +94,9 @@ export function JobProfileAiPanel(props: {
 
   return (
     <div className="space-y-4">
-      <div className="nexus-glass-ai p-4">
+      <div className="codevox-glass-ai p-4">
         <div className="mb-3 flex items-center gap-2">
-          <AssessmentMaterialIcon name="auto_awesome" className="text-[var(--nexus-secondary)]" />
+          <AssessmentMaterialIcon name="auto_awesome" className="text-[var(--codevox-secondary)]" />
           <h2 className="font-headline-md">AI assistant</h2>
         </div>
         {insights ? (
@@ -108,35 +108,35 @@ export function JobProfileAiPanel(props: {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="rounded border border-[var(--nexus-secondary)] px-2 py-1 text-xs font-semibold"
+            className="rounded border border-[var(--codevox-secondary)] px-2 py-1 text-xs font-semibold"
             onClick={() => void questionsMutation.mutate()}
           >
             Generate questions
           </button>
           <button
             type="button"
-            className="rounded border border-[var(--nexus-secondary)] px-2 py-1 text-xs font-semibold"
+            className="rounded border border-[var(--codevox-secondary)] px-2 py-1 text-xs font-semibold"
             onClick={() => void run(() => biasScreenJobProfile(props.profileId), 'Bias screen complete')()}
           >
             Bias screen
           </button>
           <button
             type="button"
-            className="rounded border border-[var(--nexus-secondary)] px-2 py-1 text-xs font-semibold"
+            className="rounded border border-[var(--codevox-secondary)] px-2 py-1 text-xs font-semibold"
             onClick={() => void run(() => compensationBenchmark(props.profileId), 'Benchmark ready')()}
           >
             Comp benchmark
           </button>
           <button
             type="button"
-            className="rounded border border-[var(--nexus-secondary)] px-2 py-1 text-xs font-semibold"
+            className="rounded border border-[var(--codevox-secondary)] px-2 py-1 text-xs font-semibold"
             onClick={() => void run(() => generateFaq(props.profileId), 'FAQ generated')()}
           >
             Generate FAQ
           </button>
           <button
             type="button"
-            className="rounded border border-[var(--nexus-secondary)] px-2 py-1 text-xs font-semibold"
+            className="rounded border border-[var(--codevox-secondary)] px-2 py-1 text-xs font-semibold"
             onClick={() => void run(() => checkDuplicateProfiles(props.profileId), 'Duplicate check done')()}
           >
             Check duplicates
@@ -166,7 +166,7 @@ export function JobProfileAiPanel(props: {
       </div>
 
       {insights?.duplicate_matches?.length ? (
-        <div className="nexus-card p-3 text-xs">
+        <div className="codevox-card p-3 text-xs">
           <p className="font-label-caps mb-1">Similar profiles</p>
           {insights.duplicate_matches.map((m) => (
             <p key={m.profile_id}>
@@ -177,7 +177,7 @@ export function JobProfileAiPanel(props: {
       ) : null}
 
       {insights?.candidate_faq?.length ? (
-        <div className="nexus-card max-h-40 overflow-y-auto p-3 text-xs">
+        <div className="codevox-card max-h-40 overflow-y-auto p-3 text-xs">
           <p className="font-label-caps mb-1">Candidate FAQ (voice-grounded)</p>
           {insights.candidate_faq.map((f) => (
             <p key={f.question} className="mb-1">
@@ -188,7 +188,7 @@ export function JobProfileAiPanel(props: {
       ) : null}
 
       {insights?.bias_screening ? (
-        <div className="nexus-card p-3 text-xs">
+        <div className="codevox-card p-3 text-xs">
           <p className="font-label-caps mb-1">Bias Screening</p>
           <p className="mb-1">Score: <strong>{(insights.bias_screening as any).score ?? 'N/A'}</strong></p>
           {((insights.bias_screening as any).flags as Array<any>)?.map((f: any, idx: number) => (
@@ -200,7 +200,7 @@ export function JobProfileAiPanel(props: {
       ) : null}
 
       {insights?.compensation_benchmark ? (
-        <div className="nexus-card p-3 text-xs">
+        <div className="codevox-card p-3 text-xs">
           <p className="font-label-caps mb-1">Compensation Benchmark</p>
           <p className="mb-1">
             <strong>{(insights.compensation_benchmark as any).currency ?? 'USD'} {(insights.compensation_benchmark as any).band_min?.toLocaleString()} - {(insights.compensation_benchmark as any).band_max?.toLocaleString()}</strong>

@@ -301,7 +301,7 @@ export function exportTranscriptToPdf(options: ExportTranscriptOptions): void {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text(`CodeVox Recruitment Assessment · ${name} · ${roundTitle} Transcript`, marginX, 12);
+      doc.text(`CodeVox Assessment · ${name} · ${roundTitle} Transcript`, marginX, 12);
       doc.setDrawColor(226, 232, 240);
       doc.line(marginX, 14, pageWidth - marginX, 14);
     }
@@ -313,7 +313,7 @@ export function exportTranscriptToPdf(options: ExportTranscriptOptions): void {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text('CodeVox Recruitment Platform · Confidential Candidate Report', marginX, pageHeight - 9);
+    doc.text('CodeVox · Confidential Candidate Report', marginX, pageHeight - 9);
     doc.text(`Page ${p} of ${totalPages}`, pageWidth - marginX, pageHeight - 9, { align: 'right' });
   }
 
@@ -543,7 +543,7 @@ export function printTranscriptHtml(options: ExportTranscriptOptions): void {
   <div class="header-bar"></div>
   <div class="title-row">
     <div>
-      <h1 class="main-title">CodeVox Recruitment Assessment</h1>
+      <h1 class="main-title">CodeVox Assessment</h1>
       <div style="color: #64748b; font-size: 12px; margin-top: 2px;">Official Interview Transcript</div>
     </div>
     <div class="round-badge">${escapeHtml(roundTitle)}</div>
@@ -569,7 +569,7 @@ export function printTranscriptHtml(options: ExportTranscriptOptions): void {
   </div>
 
   <div class="footer">
-    <span>CodeVox Recruitment Assessment Platform · Confidential</span>
+    <span>CodeVox Assessment Platform · Confidential</span>
     <span>Generated on ${new Date().toLocaleDateString()}</span>
   </div>
 

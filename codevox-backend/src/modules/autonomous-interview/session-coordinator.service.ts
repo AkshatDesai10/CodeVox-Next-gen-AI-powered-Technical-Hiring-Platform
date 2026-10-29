@@ -33,6 +33,7 @@ import { InterviewProctorService, InterviewSessionProctorRow } from '../proctor/
 import { InterviewGlobalConfigRepository } from '../proctor/interview-global-config.repository';
 import { CandidateAutonomousInterviewMysql } from './entities/candidate-autonomous-interview.mysql.entity';
 import type { ProctorEventInput } from '../proctor/proctor.types';
+import { getProctorStrikeConfig } from '../proctor/proctor-env.config';
 import { JobProfilePipelineService } from '../job-profiles/job-profile-pipeline.service';
 import { JobProfilesRepository } from '../job-profiles/job-profiles.repository';
 import { RoundSnapshotService } from '../assessment-reports/round-snapshot.service';
@@ -98,6 +99,7 @@ export class SessionCoordinatorService {
 
   async getProctorConfig() {
     const global = await this.interviewConfig.getConfig();
+    const strikeCfg = getProctorStrikeConfig();
     return {
       consentText: global.consentText,
       proctorConfig: {
@@ -105,6 +107,13 @@ export class SessionCoordinatorService {
         faceMatchThreshold: global.proctorFaceMatchThreshold,
         requireCameraForStart: global.requireCameraForStart === 1,
         requireVoiceEnroll: global.requireVoiceEnroll === 1,
+        enableMediaStrikes: strikeCfg.enableMediaStrikes,
+        maxMediaStrikes: strikeCfg.maxMediaStrikes,
+        autoSubmitOnMediaStrike: strikeCfg.autoSubmitOnMediaStrike,
+        enableFocusStrikes: strikeCfg.enableFocusStrikes,
+        maxFocusStrikes: strikeCfg.maxFocusStrikes,
+        autoSubmitOnFocusStrike: strikeCfg.autoSubmitOnFocusStrike,
+        focusStrikeThresholdSeconds: strikeCfg.focusStrikeThresholdSeconds,
       },
       livenessProvider: global.livenessProvider,
     };
@@ -274,13 +283,23 @@ export class SessionCoordinatorService {
           ? row.referenceFaceDescriptor
           : null,
       voiceEnrolled: !!row.voiceReferenceEmbedding?.length,
-      proctorConfig: {
-        faceCheckIntervalMs: global.proctorFaceCheckIntervalMs,
-        faceMatchThreshold: global.proctorFaceMatchThreshold,
-        // For preview/demo sessions, disable all proctoring checks
-        requireCameraForStart: row.isPreview !== 1 && global.requireCameraForStart === 1,
-        requireVoiceEnroll: row.isPreview !== 1 && global.requireVoiceEnroll === 1,
-      },
+      proctorConfig: (() => {
+        const strikeCfg = getProctorStrikeConfig();
+        return {
+          faceCheckIntervalMs: global.proctorFaceCheckIntervalMs,
+          faceMatchThreshold: global.proctorFaceMatchThreshold,
+          // For preview/demo sessions, disable all proctoring checks
+          requireCameraForStart: row.isPreview !== 1 && global.requireCameraForStart === 1,
+          requireVoiceEnroll: row.isPreview !== 1 && global.requireVoiceEnroll === 1,
+          enableMediaStrikes: strikeCfg.enableMediaStrikes,
+          maxMediaStrikes: strikeCfg.maxMediaStrikes,
+          autoSubmitOnMediaStrike: strikeCfg.autoSubmitOnMediaStrike,
+          enableFocusStrikes: strikeCfg.enableFocusStrikes,
+          maxFocusStrikes: strikeCfg.maxFocusStrikes,
+          autoSubmitOnFocusStrike: strikeCfg.autoSubmitOnFocusStrike,
+          focusStrikeThresholdSeconds: strikeCfg.focusStrikeThresholdSeconds,
+        };
+      })(),
       livenessProvider: global.livenessProvider,
       proctorSummary: row.proctorSummary,
     };
@@ -1121,15 +1140,28 @@ export class SessionCoordinatorService {
       stage3_chat_history?: Record<string, unknown>[];
       hr_voice_audit?: Record<string, unknown>;
       final_decision?: AutonomousInterviewDecision;
-      ended_by?: 'candidate';
+      ended_by?: 'candidate' | 'proctor';
+      termination_reason?: string;
     },
   ) {
     const row = await this.repo.requireByToken(candidateToken);
     const candidateEnded = body.ended_by === 'candidate';
+    const proctorEnded = body.ended_by === 'proctor';
 
     // Prevent double-completion skipping a stage. Still record a late exit flag.
     if (row.currentPhase === AutonomousInterviewPhase.COMPLETED) {
       if (candidateEnded) await this.markCandidateVoluntaryExit(candidateToken);
+      if (proctorEnded) {
+        const existingMeta = (row.proctorSummary as Record<string, unknown> | null) ?? {};
+        await this.repo.patch(candidateToken, {
+          proctorSummary: {
+            ...existingMeta,
+            terminated_by: 'proctor',
+            termination_reason: body.termination_reason ?? 'max_strikes_exceeded',
+            terminated_at: new Date().toISOString(),
+          },
+        });
+      }
       return this.getSession(candidateToken);
     }
     
@@ -1167,11 +1199,24 @@ export class SessionCoordinatorService {
         ? (platformFromAudit as AutonomousInterviewDecision)
         : undefined);
 
-    const finalDecision =
-      behaviouralDecision ??
-      (threshold.pending_human_review
-        ? AutonomousInterviewDecision.UNDER_REVIEW
-        : body.final_decision ?? threshold.final_decision);
+    const finalDecision = proctorEnded
+      ? AutonomousInterviewDecision.AUTO_REJECT
+      : (behaviouralDecision ??
+        (threshold.pending_human_review
+          ? AutonomousInterviewDecision.UNDER_REVIEW
+          : body.final_decision ?? threshold.final_decision));
+
+    const existingMeta = (row.proctorSummary as Record<string, unknown> | null) ?? {};
+    const nextMeta: Record<string, unknown> = { ...existingMeta };
+    if (proctorEnded) {
+      nextMeta.terminated_by = 'proctor';
+      nextMeta.termination_reason =
+        body.termination_reason ?? 'max_strikes_exceeded';
+      nextMeta.terminated_at = new Date().toISOString();
+    } else if (candidateEnded) {
+      nextMeta.terminated_by =
+        existingMeta.terminated_by === 'proctor' ? 'proctor' : 'candidate';
+    }
 
     await this.repo.patch(candidateToken, {
       currentPhase: AutonomousInterviewPhase.COMPLETED,
@@ -1183,6 +1228,7 @@ export class SessionCoordinatorService {
       stage3ChatHistory: body.stage3_chat_history ?? undefined,
       hrVoiceAudit: body.hr_voice_audit ?? undefined,
       finalDecision,
+      proctorSummary: nextMeta,
     });
     if (candidateEnded) await this.markCandidateVoluntaryExit(candidateToken);
 

@@ -8,7 +8,7 @@
     --color-text-secondary: var(--color-text-muted, #A7B7CD);
     --color-background-primary: var(--color-bg, #050B18);
     --color-background-secondary: var(--color-surface-container, #081426);
-    --color-border-secondary: var(--color-border-strong, rgba(168, 85, 247, 0.35));
+    --color-border-secondary: var(--color-border-strong, rgba(22, 133, 255, 0.35));
     --color-border-tertiary: var(--color-border, rgba(139, 92, 246, 0.22));
   }
 }

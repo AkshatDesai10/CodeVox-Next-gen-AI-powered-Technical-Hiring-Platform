@@ -34,7 +34,7 @@ import { disconnectLiveKitRoom } from '@/modules/autonomous-interview/lib/liveki
 import { useInterviewLeaveGuard, releaseInterviewLeaveGuard, type LeaveAttempt } from '@/modules/autonomous-interview/lib/interview-leave-guard';
 import type { ProctorEventInput } from '@/modules/proctor/types';
 
-const NOTES_PREFIX = 'nexus-interview-notes:';
+const NOTES_PREFIX = 'codevox-interview-notes:';
 
 type Props = {
   onForceExit?: () => void;
@@ -1190,15 +1190,15 @@ export function LiveKitVoiceStagePanel({
         onReturn={() => void returnToFullscreen()}
       />
 
-      {/* TOP HEADER BAR — Nexus Assessment shell */}
-      <header className="z-30 flex h-14 shrink-0 items-center justify-between border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-4 shadow-md sm:px-6">
+      {/* TOP HEADER BAR — CodeVox Assessment shell */}
+      <header className="z-30 flex h-14 shrink-0 items-center justify-between bg-[var(--assessment-primary)] px-4 shadow-md sm:px-6">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-white shadow-sm">
               <AssessmentMaterialIcon name="neurology" size={18} />
             </div>
             <span className="shrink-0 text-base font-bold text-[var(--assessment-on-primary)]">
-              Nexus Assessment
+              CodeVox Assessment
             </span>
           </div>
           <div className="hidden h-6 w-px bg-white/30 sm:block" />

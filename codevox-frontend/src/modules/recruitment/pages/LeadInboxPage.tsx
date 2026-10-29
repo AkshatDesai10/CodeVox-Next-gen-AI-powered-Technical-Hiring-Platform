@@ -14,6 +14,7 @@ import {
 import { RecruitmentOpsShell } from '@/modules/recruitment/components/RecruitmentOpsShell';
 import { AddCandidateDialog } from '@/modules/recruitment/components/AddCandidateDialog';
 import { BulkUploadDialog } from '@/modules/recruitment/components/BulkUploadDialog';
+import { InviteSlotDialog } from '@/modules/recruitment/components/InviteSlotDialog';
 import {
   batchInviteLeads,
   getRecruitmentLeadStageCounts,
@@ -270,10 +271,10 @@ export function LeadInboxPage() {
                 icon="person"
               />
               <StatCard label="Verified Leads" value={stats?.verified ?? '-'} icon="verified_user" />
-              <div className="col-span-1 flex items-center gap-3 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4 md:col-span-2 md:border-l-4 md:border-l-[var(--nexus-tertiary)]">
-                <span className="material-symbols-outlined text-[var(--nexus-tertiary)]">auto_awesome</span>
+              <div className="col-span-1 flex items-center gap-3 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-4 md:col-span-2 md:border-l-4 md:border-l-[var(--codevox-tertiary)]">
+                <span className="material-symbols-outlined text-[var(--codevox-tertiary)]">auto_awesome</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-[var(--nexus-tertiary)]">AI INSIGHT</p>
+                  <p className="text-xs font-bold text-[var(--codevox-tertiary)]">AI INSIGHT</p>
                   <p className="text-sm text-[var(--assessment-on-surface-variant)]">
                     {stats?.verified != null
                       ? `${stats.verified} verified leads on this page | ${stats.duplicates ?? 0} duplicates flagged.`
@@ -375,7 +376,7 @@ export function LeadInboxPage() {
                                         </span>
                                       ) : null}
                                       {row.priority === 'High' ? (
-                                        <span className="rounded bg-[var(--nexus-tertiary-container)] px-1 text-[10px] font-bold uppercase text-white">
+                                        <span className="rounded bg-[var(--codevox-tertiary-container)] px-1 text-[10px] font-bold uppercase text-white">
                                           Priority
                                         </span>
                                       ) : null}
@@ -505,7 +506,7 @@ function StatusBadge(props: { stage: string | null }) {
   const cls = qualified
     ? 'bg-[var(--assessment-primary-container)]/10 text-[var(--assessment-primary)]'
     : scheduled || interviewed
-      ? 'bg-[var(--nexus-tertiary-container)]/10 text-[var(--nexus-tertiary)]'
+      ? 'bg-[var(--codevox-tertiary-container)]/10 text-[var(--codevox-tertiary)]'
       : offered
         ? 'bg-green-100 text-green-800'
         : 'bg-[var(--assessment-surface-container-highest)] text-[var(--assessment-on-surface-variant)]';
@@ -665,10 +666,14 @@ function ResumeMatchCell({ lead }: { lead: RecruitmentLeadListItem }) {
 
 function InviteCell({ lead }: { lead: RecruitmentLeadListItem }) {
   const queryClient = useQueryClient();
+  const [showSlotPicker, setShowSlotPicker] = useState(false);
   const mutation = useMutation({
-    mutationFn: () => inviteLeadToAssessment(lead.lead_id),
+    mutationFn: (input: { slotId: string; slotDate: string }) =>
+      inviteLeadToAssessment(lead.lead_id, input),
     onSuccess: () => {
+      setShowSlotPicker(false);
       queryClient.invalidateQueries({ queryKey: ['recruitment-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['recruitment-time-slots'] });
       queryClient.invalidateQueries({ queryKey: ['recruitment-interviews-today'] });
     },
     onError: (err: any) => {
@@ -682,6 +687,11 @@ function InviteCell({ lead }: { lead: RecruitmentLeadListItem }) {
         <span className="rounded bg-green-100 px-2 py-1 text-xs font-bold text-green-800">
           Invited ✓
         </span>
+        {lead.invite_slot_label ? (
+          <span className="max-w-[140px] text-center text-[10px] text-[var(--assessment-on-surface-variant)]">
+            {lead.invite_slot_label}
+          </span>
+        ) : null}
         {lead.invite_token && (
           <button
             type="button"
@@ -711,23 +721,31 @@ function InviteCell({ lead }: { lead: RecruitmentLeadListItem }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      {lead.invite_status === 'PENDING' ? (
-        <span className="rounded bg-[var(--assessment-surface-container-high)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--assessment-on-surface-variant)]">
-          Pending review
-        </span>
-      ) : null}
-      <button
-        type="button"
-        disabled={mutation.isPending}
-        onClick={(e) => {
-          e.stopPropagation();
-          mutation.mutate();
-        }}
-        className="flex items-center justify-center rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-2 py-1 text-xs font-semibold text-[var(--assessment-primary)] transition-colors hover:bg-[var(--assessment-surface-container-low)] disabled:opacity-50"
-      >
-        {mutation.isPending ? 'Sending...' : 'Send Magic Link'}
-      </button>
-    </div>
+    <>
+      <div className="flex flex-col items-center gap-1">
+        {lead.invite_status === 'PENDING' ? (
+          <span className="rounded bg-[var(--assessment-surface-container-high)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--assessment-on-surface-variant)]">
+            Pending review
+          </span>
+        ) : null}
+        <button
+          type="button"
+          disabled={mutation.isPending}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowSlotPicker(true);
+          }}
+          className="flex items-center justify-center rounded border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-high)] px-2 py-1 text-xs font-semibold text-[var(--assessment-primary)] transition-colors hover:bg-[var(--assessment-surface-container-low)] disabled:opacity-50"
+        >
+          {mutation.isPending ? 'Sending...' : 'Send Magic Link'}
+        </button>
+      </div>
+      <InviteSlotDialog
+        open={showSlotPicker}
+        submitting={mutation.isPending}
+        onClose={() => setShowSlotPicker(false)}
+        onConfirm={(input) => mutation.mutate(input)}
+      />
+    </>
   );
 }

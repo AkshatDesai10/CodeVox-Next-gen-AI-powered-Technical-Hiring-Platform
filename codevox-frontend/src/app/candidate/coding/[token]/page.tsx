@@ -3,8 +3,8 @@
 import { use, useState, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { getCodingProblem, runCodingCode, submitCodingCode } from '@/lib/candidate-api';
-import { Play, Send, Clock, ShieldCheck, Settings, Maximize, User, Code2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { getCodingProblem, runCodingCode, submitCodingCode, stopCodingLiveKit } from '@/lib/candidate-api';
+import { Play, Send, Clock, Settings, Maximize, User, Code2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -13,6 +13,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { InterviewRecBadge } from '@/modules/autonomous-interview/components/InterviewRecBadge';
+import { CodingProctorSession } from '@/modules/assessments/components/CodingProctorSession';
 import '@/modules/autonomous-interview/styles/conversation-session.css';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
@@ -81,7 +82,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionStartRef = useRef(Date.now());
   const [recElapsed, setRecElapsed] = useState('00:00');
-  const [proctorActive] = useState(true);
+  const handleSubmitRef = useRef<(force?: boolean) => Promise<void>>(async () => undefined);
 
   // LocalStorage key for persisting code
   const LS_KEY = `coding_draft_${token}`;
@@ -311,7 +312,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
     }
   };
 
-  const handleSubmit = async (force: boolean = false) => {
+  const handleSubmit = useCallback(async (force: boolean = false) => {
     if (!force && !confirm('Submit your final solution? You cannot modify code after submission.')) {
       return;
     }
@@ -326,6 +327,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
         };
       });
 
+      void stopCodingLiveKit(token);
       const res = await submitCodingCode(token, submissions);
       if (!res.success) {
         setError(res.message ?? 'Submit failed');
@@ -343,13 +345,15 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [problems, langs, codes, token, LS_KEY]);
+
+  handleSubmitRef.current = handleSubmit;
 
   useEffect(() => {
     if (secondsLeft === 0 && !submitting && !submitResult) {
-      handleSubmit(true);
+      void handleSubmit(true);
     }
-  }, [secondsLeft]);
+  }, [secondsLeft, submitting, submitResult, handleSubmit]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -359,10 +363,10 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#090414] text-white">
+      <div className="flex h-screen items-center justify-center bg-[#050B18] text-white">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7C3AED] border-t-transparent shadow-lg shadow-purple-500/20" />
-          <p className="text-xs font-bold uppercase tracking-widest text-[#C4B5FD]">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1685FF] border-t-transparent shadow-lg shadow-sky-500/20" />
+          <p className="text-xs font-bold uppercase tracking-widest text-[#BAE6FD]">
             Initializing Coding IDE Sandbox...
           </p>
         </div>
@@ -374,10 +378,10 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
   if (submitResult) {
     if (submitResult.pending) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#090414] p-6 font-sans text-white">
-          <div className="mx-auto max-w-xl rounded-3xl border border-[#7C3AED]/40 bg-[#160A30] p-10 text-center shadow-2xl">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#7C3AED]/20 text-[#A78BFA] shadow-lg shadow-purple-500/20">
-              <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#55E63B] border-t-transparent" />
+        <div className="flex min-h-screen items-center justify-center bg-[#050B18] p-6 font-sans text-white">
+          <div className="mx-auto max-w-xl rounded-3xl border border-[#1685FF]/40 bg-[#0B1930] p-10 text-center shadow-2xl">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1685FF]/20 text-[#BAE6FD] shadow-lg shadow-sky-500/20">
+              <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#34D399] border-t-transparent" />
             </div>
             <h1 className="text-3xl font-extrabold text-white tracking-tight">
               Evaluating Code Submission
@@ -396,8 +400,8 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
 
     if (submitResult.hidden_summary?.startsWith('Evaluation failed')) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#090414] p-6 font-sans text-white">
-          <div className="mx-auto max-w-xl rounded-3xl border border-red-500/30 bg-[#160A30] p-10 text-center shadow-2xl">
+        <div className="flex min-h-screen items-center justify-center bg-[#050B18] p-6 font-sans text-white">
+          <div className="mx-auto max-w-xl rounded-3xl border border-red-500/30 bg-[#0B1930] p-10 text-center shadow-2xl">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 text-red-400">
               <AlertTriangle className="h-8 w-8" />
             </div>
@@ -407,7 +411,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
               <button
                 type="button"
                 onClick={() => router.push(`/candidate/portal/${token}`)}
-                className="rounded-xl bg-[#7C3AED] px-6 py-3 text-xs font-extrabold text-white shadow-lg hover:bg-[#6D28D9] transition-all"
+                className="rounded-xl bg-[#1685FF] px-6 py-3 text-xs font-extrabold text-white shadow-lg hover:bg-[#0EA5E9] transition-all"
               >
                 Return to Candidate Portal
               </button>
@@ -420,43 +424,40 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
     const failed = threshold !== null && submitResult.score_pct < threshold;
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#090414] p-6 font-sans text-white">
-        <div className="mx-auto max-w-xl rounded-3xl border border-[#2D1B69] bg-[#160A30] p-10 text-center shadow-2xl">
-          <div
-            className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ${
-              failed
-                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/20'
-            }`}
-          >
-            {failed ? <AlertTriangle className="h-8 w-8" /> : <CheckCircle2 className="h-8 w-8" />}
+      <div className="assessments-root flex min-h-screen items-center justify-center bg-[var(--assessment-surface)] p-6 font-sans text-[var(--assessment-on-surface)]">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
+          <div className="rounded-2xl border border-[var(--assessment-outline-variant)] bg-gradient-to-br from-[#1685FF] to-[#22D3EE] p-12 text-center text-white shadow-lg shadow-sky-500/20">
+            <h1 className="text-4xl font-semibold mb-4 tracking-tight">
+              {failed ? 'Assessment over' : 'Assessment complete'}
+            </h1>
+            <h2 className="text-2xl font-medium">Thank you!</h2>
           </div>
-
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            {failed ? 'Round Completed' : 'Assessment Completed!'}
-          </h1>
-          <h2 className="mt-2 text-base font-medium text-[#C4B5FD]">
-            {failed ? 'Score criteria logged for review' : 'Your solutions were submitted successfully'}
-          </h2>
-
-          <div className="mt-8 rounded-2xl border border-[#2D1B69] bg-[#090414]/70 p-6 shadow-inner">
-            <p className="text-4xl font-black text-[#55E63B] mb-2">{submitResult.score_pct}%</p>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#94A3B8]">
-              {threshold !== null ? `Required Pass Score: ${threshold}%` : 'Evaluation Score'}
-            </p>
-            <p className="mt-2 text-xs font-semibold text-[#C4B5FD]">
-              {submitResult.passed} / {submitResult.total} Test Cases Passed
-            </p>
-          </div>
-
-          <div className="mt-8">
-            <button
-              type="button"
-              onClick={() => router.push(`/candidate/portal/${token}`)}
-              className="rounded-xl bg-[#55E63B] px-8 py-3 text-xs font-black text-black shadow-lg shadow-emerald-500/20 hover:bg-[#4bd133] transition-all"
-            >
-              Return to Candidate Portal
-            </button>
+          <div className="space-y-4 rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-6">
+            {failed ? (
+              <p className="text-[15px] text-[var(--assessment-on-surface-variant)]">
+                Unfortunately, you did not meet the criteria required to continue to the next round. We
+                appreciate your time and interest.
+              </p>
+            ) : (
+              <>
+                <p className="text-[15px] text-[var(--assessment-on-surface-variant)]">
+                  We have received your Assessment form.
+                </p>
+                <p className="text-[15px] text-[var(--assessment-on-surface-variant)]">
+                  Please return to the portal to check your application status or continue to the next
+                  round.
+                </p>
+              </>
+            )}
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => router.push(`/candidate/portal/${token}`)}
+                className="rounded-xl bg-[var(--assessment-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-90 transition-colors"
+              >
+                Return to portal
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -464,7 +465,15 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
   }
 
   return (
-    <div className="flex h-screen flex-col bg-[#090414] text-white font-sans overflow-hidden select-none">
+    <CodingProctorSession
+      portalToken={token}
+      disabled={Boolean(submitResult)}
+      onForceSubmit={() => {
+        void handleSubmitRef.current(true);
+      }}
+    >
+      {({ ready, recording, proctorAlert, dismissProctorAlert, mediaStrikeCount, focusStrikeCount }) => (
+    <div className={`assessments-root flex h-screen flex-col bg-[var(--assessment-surface)] text-[var(--assessment-on-surface)] font-sans overflow-hidden select-none ${ready ? '' : 'pointer-events-none opacity-40'}`}>
       {/* Timer Warning Banner */}
       {timerWarning && secondsLeft !== null && secondsLeft > 0 && (
         <div className="flex-shrink-0 flex items-center justify-between bg-red-600 px-5 py-2 text-white text-xs font-bold">
@@ -478,44 +487,42 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
         </div>
       )}
 
-      {/* Proctoring Status Pill */}
-      {proctorActive ? (
-        <div className="flex-shrink-0 border-b border-[#2D1B69] bg-[#160A30] px-5 py-1 text-[11px] font-semibold text-[#C4B5FD] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[#55E63B] animate-pulse" />
-            <span>
-              Proctoring Active: Screen switching & copy-paste behavior are continuously audited.
-            </span>
-          </div>
-          <span className="text-[10px] uppercase tracking-wider text-[#94A3B8]">
-            Code Integrity Mode
-          </span>
+      {proctorAlert ? (
+        <div className="flex-shrink-0 flex items-center justify-between bg-amber-600/90 px-5 py-2 text-white text-xs font-bold">
+          <span>{proctorAlert}</span>
+          <button
+            type="button"
+            onClick={dismissProctorAlert}
+            className="ml-4 text-white opacity-80 hover:opacity-100 font-bold"
+          >
+            ✕
+          </button>
         </div>
       ) : null}
 
       {/* Header Bar */}
-      <header className="flex h-[60px] flex-shrink-0 items-center justify-between border-b border-[#2D1B69] bg-[#160A30] px-5">
+      <header className="flex h-[60px] flex-shrink-0 items-center justify-between border-b border-[#293B57] bg-[#0B1930] px-5">
         {/* Left: Branding & Breadcrumbs */}
         <div className="flex items-center gap-4">
-          <InterviewRecBadge elapsed={recElapsed} active={proctorActive} compact />
+          <InterviewRecBadge elapsed={recElapsed} active={recording} compact />
           <div className="flex items-center gap-2 text-sm font-extrabold text-white">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7C3AED]/20 border border-[#7C3AED]/40 text-[#A78BFA]">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1685FF]/20 border border-[#1685FF]/40 text-[#BAE6FD]">
               <Code2 className="h-4 w-4" />
             </div>
             CodeVox Coding Assessment
           </div>
 
-          <div className="h-4 w-px bg-[#2D1B69] hidden sm:block" />
+          <div className="h-4 w-px bg-[#293B57] hidden sm:block" />
 
           <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-[#94A3B8]">
-            <span className="text-[#55E63B] font-bold">
+            <span className="text-[#34D399] font-bold">
               Problem {activeProblemIdx + 1} of {problems.length || 1}
             </span>
           </div>
 
           {/* Problem Selector Pills */}
           {problems.length > 1 && (
-            <div className="hidden md:flex items-center gap-1 rounded-full border border-[#2D1B69] bg-[#090414] p-1">
+            <div className="hidden md:flex items-center gap-1 rounded-full border border-[#293B57] bg-[#050B18] p-1">
               {problems.map((p, i) => (
                 <button
                   key={p.id}
@@ -525,21 +532,21 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                   }}
                   className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-all ${
                     i === activeProblemIdx
-                      ? 'bg-[#7C3AED] text-white shadow-md'
-                      : 'text-[#94A3B8] hover:bg-[#160A30]'
+                      ? 'bg-[#1685FF] text-white shadow-md'
+                      : 'text-[#94A3B8] hover:bg-[#0B1930]'
                   }`}
                 >
                   {i + 1}
                 </button>
               ))}
-              <div className="w-px h-3 bg-[#2D1B69] mx-1" />
+              <div className="w-px h-3 bg-[#293B57] mx-1" />
               <button
                 disabled={activeProblemIdx === 0}
                 onClick={() => {
                   setActiveProblemIdx((prev) => prev - 1);
                   setSelectedTestCaseIdx(0);
                 }}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[#94A3B8] hover:bg-[#160A30] disabled:opacity-30"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[#94A3B8] hover:bg-[#0B1930] disabled:opacity-30"
               >
                 &lt;
               </button>
@@ -549,7 +556,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                   setActiveProblemIdx((prev) => prev + 1);
                   setSelectedTestCaseIdx(0);
                 }}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[#94A3B8] hover:bg-[#160A30] disabled:opacity-30"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[#94A3B8] hover:bg-[#0B1930] disabled:opacity-30"
               >
                 &gt;
               </button>
@@ -563,42 +570,45 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
             className={`hidden md:flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold border transition-all ${
               secondsLeft < 300
                 ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse'
-                : 'bg-[#090414] border-[#2D1B69] text-[#C4B5FD]'
+                : 'bg-[#050B18] border-[#293B57] text-[#BAE6FD]'
             }`}
           >
-            <Clock className={`h-3.5 w-3.5 ${secondsLeft < 300 ? 'text-red-400' : 'text-[#7C3AED]'}`} />
+            <Clock className={`h-3.5 w-3.5 ${secondsLeft < 300 ? 'text-red-400' : 'text-[#1685FF]'}`} />
             <span>{formatTime(secondsLeft)} Remaining</span>
           </div>
         )}
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
-            <ShieldCheck className="h-4 w-4" /> Proctoring
-          </div>
+          {(mediaStrikeCount > 0 || focusStrikeCount > 0) && (
+            <div className="hidden lg:flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-bold text-amber-300">
+              {focusStrikeCount > 0 ? <span>Focus {focusStrikeCount}</span> : null}
+              {mediaStrikeCount > 0 ? <span>Media {mediaStrikeCount}</span> : null}
+            </div>
+          )}
 
           <button
             onClick={handleRun}
-            disabled={running || submitting}
-            className="flex items-center gap-2 rounded-xl border border-[#2D1B69] bg-[#090414] px-4 py-2 text-xs font-extrabold text-white transition-all hover:border-[#55E63B] hover:text-[#55E63B] disabled:opacity-40"
+            disabled={!ready || running || submitting}
+            className="flex items-center gap-2 rounded-xl border border-[#293B57] bg-[#050B18] px-4 py-2 text-xs font-extrabold text-white transition-all hover:border-[#34D399] hover:text-[#34D399] disabled:opacity-40"
           >
             {running ? (
-              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#55E63B] border-t-transparent" />
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#34D399] border-t-transparent" />
             ) : (
-              <Play className="h-3.5 w-3.5 text-[#55E63B] fill-[#55E63B]" />
+              <Play className="h-3.5 w-3.5 text-[#34D399] fill-[#34D399]" />
             )}
             Run Code
           </button>
 
           <button
-            onClick={() => handleSubmit(false)}
-            disabled={running || submitting}
-            className="flex items-center gap-2 rounded-xl bg-[#7C3AED] px-4 py-2 text-xs font-black text-white shadow-lg shadow-purple-500/20 transition-all hover:bg-[#6D28D9] disabled:opacity-40"
+            onClick={() => void handleSubmit(false)}
+            disabled={!ready || running || submitting}
+            className="flex items-center gap-2 rounded-xl bg-[#1685FF] px-4 py-2 text-xs font-black text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-[#0EA5E9] disabled:opacity-40"
           >
             <Send className="h-3.5 w-3.5" /> Submit Assessment
           </button>
 
-          <div className="ml-1 flex h-8 w-8 items-center justify-center rounded-xl bg-[#090414] border border-[#2D1B69] text-[#C4B5FD]">
+          <div className="ml-1 flex h-8 w-8 items-center justify-center rounded-xl bg-[#050B18] border border-[#293B57] text-[#BAE6FD]">
             <User className="h-4 w-4" />
           </div>
         </div>
@@ -608,10 +618,10 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
       <div className="flex flex-1 overflow-hidden select-text">
         <PanelGroup direction="horizontal">
           {/* LEFT: Problem Specification Panel */}
-          <Panel defaultSize={45} minSize={25} className="flex flex-col bg-[#160A30] border-r border-[#2D1B69]">
+          <Panel defaultSize={45} minSize={25} className="flex flex-col bg-[#0B1930] border-r border-[#293B57]">
             {/* Tabs */}
-            <div className="flex h-11 border-b border-[#2D1B69] px-4 pt-2 bg-[#090414]/50">
-              <button className="flex items-center border-b-2 border-[#7C3AED] px-4 pb-2 text-xs font-bold text-white">
+            <div className="flex h-11 border-b border-[#293B57] px-4 pt-2 bg-[#050B18]/50">
+              <button className="flex items-center border-b-2 border-[#1685FF] px-4 pb-2 text-xs font-bold text-white">
                 Problem Description
               </button>
             </div>
@@ -640,10 +650,10 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                   );
                 })()}
 
-                <span className="rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1 text-[11px] font-semibold text-[#C4B5FD]">
+                <span className="rounded-lg border border-[#293B57] bg-[#050B18] px-2.5 py-1 text-[11px] font-semibold text-[#BAE6FD]">
                   Time: {activeProblem?.time_limit_minutes ?? 5} mins
                 </span>
-                <span className="rounded-lg border border-[#2D1B69] bg-[#090414] px-2.5 py-1 text-[11px] font-semibold text-[#C4B5FD]">
+                <span className="rounded-lg border border-[#293B57] bg-[#050B18] px-2.5 py-1 text-[11px] font-semibold text-[#BAE6FD]">
                   Points: {activeProblem?.marks ?? 10} pts
                 </span>
               </div>
@@ -656,24 +666,24 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                   components={{
                     p: ({ children }) => <p className="mb-3 leading-6 text-[#E2E8F0]">{children}</p>,
                     h2: ({ children }) => (
-                      <h2 className="mt-5 mb-2 text-sm font-bold text-white border-b border-[#2D1B69] pb-1">
+                      <h2 className="mt-5 mb-2 text-sm font-bold text-white border-b border-[#293B57] pb-1">
                         {children}
                       </h2>
                     ),
-                    h3: ({ children }) => <h3 className="mt-3 mb-1 text-xs font-bold text-[#A78BFA]">{children}</h3>,
+                    h3: ({ children }) => <h3 className="mt-3 mb-1 text-xs font-bold text-[#BAE6FD]">{children}</h3>,
                     strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
                     code: ({ children }) => (
-                      <code className="rounded border border-[#7C3AED]/40 bg-[#090414] px-1.5 py-0.5 font-mono text-[11px] text-[#55E63B]">
+                      <code className="rounded border border-[#1685FF]/40 bg-[#050B18] px-1.5 py-0.5 font-mono text-[11px] text-[#34D399]">
                         {children}
                       </code>
                     ),
                     pre: ({ children }) => (
-                      <pre className="my-3 overflow-x-auto rounded-xl border border-[#2D1B69] bg-[#090414] p-4 font-mono text-xs text-[#C4B5FD]">
+                      <pre className="my-3 overflow-x-auto rounded-xl border border-[#293B57] bg-[#050B18] p-4 font-mono text-xs text-[#BAE6FD]">
                         {children}
                       </pre>
                     ),
-                    ul: ({ children }) => <ul className="my-2 space-y-1 pl-4 list-disc text-[#C4B5FD]">{children}</ul>,
-                    ol: ({ children }) => <ol className="my-2 space-y-1 pl-4 list-decimal text-[#C4B5FD]">{children}</ol>,
+                    ul: ({ children }) => <ul className="my-2 space-y-1 pl-4 list-disc text-[#BAE6FD]">{children}</ul>,
+                    ol: ({ children }) => <ol className="my-2 space-y-1 pl-4 list-decimal text-[#BAE6FD]">{children}</ol>,
                   }}
                 >
                   {activeProblem?.description_md || 'No description provided.'}
@@ -683,9 +693,9 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
               {/* Examples */}
               {activeProblem?.examples && activeProblem.examples.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#A78BFA]">Sample Cases</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#BAE6FD]">Sample Cases</h3>
                   {activeProblem.examples.map((ex, i) => (
-                    <div key={i} className="rounded-xl border border-[#2D1B69] bg-[#090414]/70 p-4">
+                    <div key={i} className="rounded-xl border border-[#293B57] bg-[#050B18]/70 p-4">
                       <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">
                         Example {i + 1}
                       </p>
@@ -697,7 +707,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                           <span className="text-[#94A3B8]">Output:</span> {ex.output}
                         </div>
                         {ex.explanation && (
-                          <div className="text-[11px] text-[#A78BFA] mt-1 italic">
+                          <div className="text-[11px] text-[#BAE6FD] mt-1 italic">
                             Explanation: {ex.explanation}
                           </div>
                         )}
@@ -710,8 +720,8 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
               {/* Constraints */}
               {activeProblem?.constraints && (
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#A78BFA]">Constraints</h3>
-                  <div className="rounded-xl border border-[#2D1B69] bg-[#090414]/70 p-4 font-mono text-xs text-[#E2E8F0] whitespace-pre-wrap">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#BAE6FD]">Constraints</h3>
+                  <div className="rounded-xl border border-[#293B57] bg-[#050B18]/70 p-4 font-mono text-xs text-[#E2E8F0] whitespace-pre-wrap">
                     {activeProblem.constraints}
                   </div>
                 </div>
@@ -719,18 +729,18 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
             </div>
           </Panel>
 
-          <PanelResizeHandle className="relative flex w-1.5 items-center justify-center bg-[#090414] hover:bg-[#7C3AED] transition-colors cursor-col-resize z-10" />
+          <PanelResizeHandle className="relative flex w-1.5 items-center justify-center bg-[#050B18] hover:bg-[#1685FF] transition-colors cursor-col-resize z-10" />
 
           {/* RIGHT: Monaco Editor & Test Console */}
-          <Panel defaultSize={55} minSize={30} className="flex flex-col bg-[#090414]">
+          <Panel defaultSize={55} minSize={30} className="flex flex-col bg-[#050B18]">
             <PanelGroup direction="vertical">
               {/* Editor Section */}
-              <Panel defaultSize={60} minSize={25} className="flex flex-col bg-[#160A30]">
+              <Panel defaultSize={60} minSize={25} className="flex flex-col bg-[#0B1930]">
                 {/* Editor Header Toolbar */}
-                <div className="flex h-11 flex-shrink-0 items-center justify-between border-b border-[#2D1B69] bg-[#090414]/80 px-4">
+                <div className="flex h-11 flex-shrink-0 items-center justify-between border-b border-[#293B57] bg-[#050B18]/80 px-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 rounded-lg border border-[#2D1B69] bg-[#160A30] px-3 py-1">
-                      <Code2 className="h-3.5 w-3.5 text-[#7C3AED]" />
+                    <div className="flex items-center gap-2 rounded-lg border border-[#293B57] bg-[#0B1930] px-3 py-1">
+                      <Code2 className="h-3.5 w-3.5 text-[#1685FF]" />
                       <select
                         value={activeLang}
                         onChange={(e) => onLanguageChange(e.target.value)}
@@ -738,10 +748,10 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                         className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
                       >
                         {isSqlProblem ? (
-                          <option value="sql" className="bg-[#160A30] text-white">SQL</option>
+                          <option value="sql" className="bg-[#0B1930] text-white">SQL</option>
                         ) : (
                           languages.map((l) => (
-                            <option key={l} value={l} className="bg-[#160A30] text-white">
+                            <option key={l} value={l} className="bg-[#0B1930] text-white">
                               {LANG_DISPLAY[l] ?? l.toUpperCase()}
                             </option>
                           ))
@@ -760,7 +770,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                 </div>
 
                 {/* Monaco Editor Component */}
-                <div className="flex-1 relative border-b border-[#2D1B69]">
+                <div className="flex-1 relative border-b border-[#293B57]">
                   <MonacoEditor
                     height="100%"
                     language={LANG_MONACO[activeLang] ?? 'plaintext'}
@@ -782,14 +792,14 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                 </div>
               </Panel>
 
-              <PanelResizeHandle className="relative flex h-1.5 items-center justify-center bg-[#090414] hover:bg-[#7C3AED] transition-colors cursor-row-resize z-10" />
+              <PanelResizeHandle className="relative flex h-1.5 items-center justify-center bg-[#050B18] hover:bg-[#1685FF] transition-colors cursor-row-resize z-10" />
 
               {/* Test Cases Console */}
-              <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#160A30]">
+              <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#0B1930]">
                 {/* Console Tabs */}
-                <div className="flex h-10 flex-shrink-0 items-center justify-between border-b border-[#2D1B69] bg-[#090414]/80 px-4">
+                <div className="flex h-10 flex-shrink-0 items-center justify-between border-b border-[#293B57] bg-[#050B18]/80 px-4">
                   <div className="flex h-full items-end gap-2">
-                    <button className="flex h-full items-center border-b-2 border-[#55E63B] px-3 text-xs font-bold text-white">
+                    <button className="flex h-full items-center border-b-2 border-[#34D399] px-3 text-xs font-bold text-white">
                       {isSqlProblem ? 'Query Output' : 'Visible Test Cases'}
                     </button>
                   </div>
@@ -798,12 +808,12 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                     <button
                       onClick={handleRun}
                       disabled={running}
-                      className="flex items-center gap-1.5 text-xs font-extrabold text-[#55E63B] hover:text-[#4bd133] transition-colors disabled:opacity-40"
+                      className="flex items-center gap-1.5 text-xs font-extrabold text-[#34D399] hover:text-[#34D399] transition-colors disabled:opacity-40"
                     >
                       {running ? (
-                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-[#55E63B] border-t-transparent" />
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-[#34D399] border-t-transparent" />
                       ) : (
-                        <Play className="h-3 w-3 fill-[#55E63B]" />
+                        <Play className="h-3 w-3 fill-[#34D399]" />
                       )}
                       Run Code
                     </button>
@@ -842,8 +852,8 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                         const isSelected = selectedTestCaseIdx === idx;
 
                         let pillStyle = isSelected
-                          ? 'bg-[#7C3AED] text-white border-[#A78BFA]'
-                          : 'bg-[#090414] text-[#C4B5FD] border-[#2D1B69] hover:border-[#7C3AED]';
+                          ? 'bg-[#1685FF] text-white border-[#BAE6FD]'
+                          : 'bg-[#050B18] text-[#BAE6FD] border-[#293B57] hover:border-[#1685FF]';
                         let icon = null;
 
                         if (r) {
@@ -881,7 +891,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">
                             Input
                           </p>
-                          <div className="rounded-xl border border-[#2D1B69] bg-[#090414] p-3 font-mono text-xs text-[#E2E8F0] whitespace-pre-wrap">
+                          <div className="rounded-xl border border-[#293B57] bg-[#050B18] p-3 font-mono text-xs text-[#E2E8F0] whitespace-pre-wrap">
                             {visibleCases[selectedTestCaseIdx].input}
                           </div>
                         </div>
@@ -893,7 +903,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
                             <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">
                               Expected Output
                             </p>
-                            <div className="rounded-xl border border-[#2D1B69] bg-[#090414] p-3 font-mono text-xs text-[#E2E8F0] whitespace-pre-wrap">
+                            <div className="rounded-xl border border-[#293B57] bg-[#050B18] p-3 font-mono text-xs text-[#E2E8F0] whitespace-pre-wrap">
                               {visibleCases[selectedTestCaseIdx].expected_output ?? '(none)'}
                             </div>
                           </div>
@@ -942,5 +952,7 @@ export default function CodingRoundPage({ params }: { params: Promise<{ token: s
         </PanelGroup>
       </div>
     </div>
+      )}
+    </CodingProctorSession>
   );
 }

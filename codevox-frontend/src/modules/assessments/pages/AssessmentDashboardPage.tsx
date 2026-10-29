@@ -95,12 +95,12 @@ export function AssessmentDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#A5ABC3]">{card.label}</p>
-                <p className="mt-2 text-3xl font-bold text-white transition-colors group-hover:text-[#A78BFA]">
+                <p className="mt-2 text-3xl font-bold text-white transition-colors group-hover:text-[#BAE6FD]">
                   {card.value}
                 </p>
                 <p className="mt-1 text-[11px] text-[#6B7192]">{card.subtext}</p>
               </div>
-              <div className="rounded-xl bg-[rgba(99,102,241,0.15)] p-2.5 text-[#A78BFA] transition-transform group-hover:scale-105">
+              <div className="rounded-xl bg-[rgba(99,102,241,0.15)] p-2.5 text-[#BAE6FD] transition-transform group-hover:scale-105">
                 <AssessmentMaterialIcon name={card.icon} size={28} />
               </div>
             </div>
@@ -232,7 +232,7 @@ export function AssessmentDashboardPage() {
                       <span
                         className={`mb-1.5 rounded-md px-2 py-0.5 text-xs font-bold ${
                           d.count > 0
-                            ? 'bg-[rgba(99,102,241,0.18)] text-[#A78BFA] ring-1 ring-[rgba(99,102,241,0.3)]'
+                            ? 'bg-[rgba(99,102,241,0.18)] text-[#BAE6FD] ring-1 ring-[rgba(99,102,241,0.3)]'
                             : 'bg-white/5 text-[#6B7192]'
                         }`}
                       >
@@ -296,7 +296,7 @@ export function AssessmentDashboardPage() {
               </div>
               <Link
                 href="/assessments/assessment-reports"
-                className="flex items-center gap-1 text-sm font-medium text-[#A78BFA] hover:text-[#67E8F9]"
+                className="flex items-center gap-1 text-sm font-medium text-[#BAE6FD] hover:text-[#67E8F9]"
               >
                 View All Reports →
               </Link>
@@ -331,7 +331,7 @@ export function AssessmentDashboardPage() {
                         <tr key={i} className="transition-colors hover:bg-white/[0.03]">
                           <td className="px-5 py-3 font-medium text-white">
                             <div className="flex items-center gap-2.5">
-                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(99,102,241,0.18)] text-xs font-bold text-[#A78BFA]">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(99,102,241,0.18)] text-xs font-bold text-[#BAE6FD]">
                                 {row.name?.charAt(0) || 'C'}
                               </div>
                               <span>{row.name}</span>
@@ -419,7 +419,7 @@ export function AssessmentDashboardPage() {
                               ? 'bg-white/10 text-[#A5ABC3]'
                               : i === 2
                                 ? 'bg-[rgba(245,158,11,0.14)] text-[#fbbf24]'
-                                : 'bg-[rgba(99,102,241,0.18)] text-[#A78BFA]'
+                                : 'bg-[rgba(99,102,241,0.18)] text-[#BAE6FD]'
                         }`}
                       >
                         #{i + 1}
@@ -447,7 +447,7 @@ export function AssessmentDashboardPage() {
 
           <div className="assessment-card bg-gradient-to-br from-[#171933] to-[#0F1020] p-5">
             <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-white">
-              <AssessmentMaterialIcon name="insights" size={18} className="text-[#A78BFA]" />
+              <AssessmentMaterialIcon name="insights" size={18} className="text-[#BAE6FD]" />
               Evaluation Cohort Insights
             </h2>
             <div className="mb-4 grid grid-cols-2 gap-3">
@@ -481,7 +481,7 @@ export function AssessmentDashboardPage() {
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7192]">
                   Total Evaluations
                 </p>
-                <p className="mt-1 text-xl font-bold text-[#A78BFA]">
+                <p className="mt-1 text-xl font-bold text-[#BAE6FD]">
                   {data?.completedAttempts ?? 0}
                 </p>
               </div>

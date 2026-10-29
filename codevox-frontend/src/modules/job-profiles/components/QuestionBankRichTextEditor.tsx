@@ -93,7 +93,7 @@ export function QuestionBankRichTextEditor(props: {
           onClick={() => run('bulletList')}
         />
         <ToolbarButton label="Insert link" icon="link" active={editor?.isActive('link')} onClick={() => run('link')} />
-        <div className="ml-auto flex items-center gap-1 text-xs font-bold text-[var(--nexus-secondary)]">
+        <div className="ml-auto flex items-center gap-1 text-xs font-bold text-[var(--codevox-secondary)]">
           <AssessmentMaterialIcon name="spark" size={16} />
           AI Assist On
         </div>

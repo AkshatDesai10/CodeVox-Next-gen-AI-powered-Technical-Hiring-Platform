@@ -19,7 +19,7 @@ export function ProfileStepper(props: {
 
   if (variant === 'toolbar') {
     return (
-      <div className="nexus-card mb-6 flex flex-wrap items-center justify-between gap-4 px-6 py-4 shadow-sm">
+      <div className="codevox-card mb-6 flex flex-wrap items-center justify-between gap-4 px-6 py-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-6">
           {props.steps.map((step, idx) => {
             const active = step.id === props.activeStep;
@@ -32,7 +32,7 @@ export function ProfileStepper(props: {
                   disabled={!clickable}
                   onClick={() => props.onStepClick?.(step.id)}
                   className={`flex items-center gap-2 ${
-                    active ? 'border-b-2 border-[var(--assessment-primary)] font-bold text-[var(--assessment-primary)]' : done ? 'font-bold text-[var(--assessment-primary)]' : 'text-[var(--nexus-outline)]'
+                    active ? 'border-b-2 border-[var(--assessment-primary)] font-bold text-[var(--assessment-primary)]' : done ? 'font-bold text-[var(--assessment-primary)]' : 'text-[var(--codevox-outline)]'
                   } ${clickable ? 'cursor-pointer hover:text-[var(--assessment-primary)]' : 'cursor-default'}`}
                 >
                   {done ? (
@@ -94,7 +94,7 @@ export function ProfileStepper(props: {
           <div key={step.id} className="flex flex-1 items-center">
             <div
               className={`flex flex-1 flex-col items-center gap-2 pb-2 ${
-                active ? 'nexus-stepper-active' : 'text-[var(--nexus-outline)]'
+                active ? 'codevox-stepper-active' : 'text-[var(--codevox-outline)]'
               }`}
             >
               <div

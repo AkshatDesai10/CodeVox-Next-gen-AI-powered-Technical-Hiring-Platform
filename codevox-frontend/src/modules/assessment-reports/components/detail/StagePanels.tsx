@@ -174,7 +174,7 @@ function ProjectSubmissionCard({
         </div>
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Verbal defend</div>
-          <div className="text-xl font-bold text-[var(--nexus-secondary)]">{formatPct(verbalScore)}</div>
+          <div className="text-xl font-bold text-[var(--codevox-secondary)]">{formatPct(verbalScore)}</div>
           {project.scoring_weights ? (
             <div className="text-[11px] text-slate-500">
               {project.scoring_weights.interview_performance}% weight

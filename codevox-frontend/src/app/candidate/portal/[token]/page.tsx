@@ -168,7 +168,7 @@ function getRulesForStage(type: string, name?: string) {
         title: 'Keystroke & Behavioral Tracking',
         desc: 'Automated keystroke dynamics and sandbox execution runtime analysis are active. All code must be authored inside the CodeVox editor.',
         tag: 'Live Tracking',
-        tagColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+        tagColor: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
       },
       {
         id: 5,
@@ -267,7 +267,7 @@ function getRulesForStage(type: string, name?: string) {
         title: '3-Second Answer Completion & Pause Buffer',
         desc: 'After you stop speaking, the AI observes a 3-second pause buffer to confirm your answer has concluded. Keep pauses under 3 seconds to avoid premature progression.',
         tag: 'Pause Buffer',
-        tagColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+        tagColor: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
       },
     ];
   }
@@ -352,7 +352,7 @@ export default function CandidatePortalPage({
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050B18] text-white">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1685FF] border-t-transparent shadow-lg shadow-purple-500/20" />
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1685FF] border-t-transparent shadow-lg shadow-sky-500/20" />
           <span className="text-xs font-bold uppercase tracking-widest text-[#BAE6FD]">
             Loading Candidate Portal...
           </span>
@@ -380,20 +380,25 @@ export default function CandidatePortalPage({
   }
 
   const identity = data.identity;
-  const identityMode: 'face' | 'permissions_only' =
-    identity?.mode ?? (identity?.required === false ? 'permissions_only' : 'face');
-  const identityComplete = Boolean(identity?.complete);
   // Prefer runtime-config so FACE toggles apply immediately even if dashboard identity.mode is stale.
-  const faceMode = runtimeQuery.data
+  const identityMode: 'face' | 'permissions_only' = runtimeQuery.data
     ? runtimeQuery.data.face === 'on'
-    : identityMode === 'face';
-  const needsFaceGate = faceMode && !identityComplete;
-  const needsPermissionsGate = !faceMode && !devicesVerified;
+      ? 'face'
+      : 'permissions_only'
+    : identity?.mode ?? (identity?.required === false ? 'permissions_only' : 'face');
+  // permissions_only never needs server identity ack — once devices pass this session, stay open.
+  const identityComplete =
+    identityMode === 'permissions_only' ? true : Boolean(identity?.complete);
+  const needsFaceGate =
+    identityMode === 'face' && !identityComplete && !devicesVerified;
+  const needsPermissionsGate = identityMode === 'permissions_only' && !devicesVerified;
   const needsIdentityGate = needsFaceGate || needsPermissionsGate;
-  const gateBlockedLabel = faceMode ? 'System check required' : 'Device & network check required';
-  const gateBlockedAlert = faceMode
-    ? 'Please complete the system readiness lobby (camera, mic, network, and face) before starting a round.'
-    : 'Please complete the system readiness lobby (camera, mic, and network) before starting a round.';
+  const gateBlockedLabel =
+    identityMode === 'permissions_only' ? 'System check required' : 'Face & system check required';
+  const gateBlockedAlert =
+    identityMode === 'permissions_only'
+      ? 'Please complete the system readiness lobby (camera, mic, and network) before starting a round.'
+      : 'Please complete the system readiness lobby (camera, mic, network, and face) before starting a round.';
 
   const needsOnboarding = Boolean(data.onboarding && !data.onboarding.complete);
 
@@ -428,20 +433,17 @@ export default function CandidatePortalPage({
 
   if (eliminated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050B18] p-6 text-white font-sans">
-        <div className="mx-auto max-w-xl rounded-3xl border border-red-500/20 bg-[#0B1930] p-10 text-center shadow-2xl">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 text-red-400">
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <div className="assessments-root flex min-h-screen items-center justify-center bg-[var(--assessment-surface)] p-6 font-sans text-[var(--assessment-on-surface)]">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
+          <div className="rounded-2xl border border-[var(--assessment-outline-variant)] bg-gradient-to-br from-[#1685FF] to-[#22D3EE] p-12 text-center text-white shadow-lg shadow-sky-500/20">
+            <h1 className="text-4xl font-semibold mb-4 tracking-tight">Assessment over</h1>
+            <h2 className="text-2xl font-medium">Thank you for your time</h2>
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Assessment Concluded</h1>
-          <h2 className="mt-2 text-lg font-medium text-[#BAE6FD]">Thank you for your time and participation</h2>
-          <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#050B18]/50 p-6 text-sm text-[var(--assessment-on-surface-variant)]">
-            <p>
-              Unfortunately, your score criteria in this assessment did not meet the advancement threshold for this role.
+          <div className="space-y-4 rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-6 text-[var(--assessment-on-surface-variant)]">
+            <p className="text-[15px]">
+              Unfortunately, you did not meet the score criteria required to continue to the next round.
             </p>
-            <p>We appreciate your dedication and wish you the very best in your future endeavors.</p>
+            <p className="text-[15px]">We appreciate your interest and wish you the best in your career.</p>
           </div>
         </div>
       </div>
@@ -457,20 +459,19 @@ export default function CandidatePortalPage({
       data.application.status === 'rejected' ||
       (unwrappedSearch.completed === 'true' && data.stages.every((s) => s.status === 'COMPLETED')));
 
-  if (allCompleted && identityComplete) {
+  if (allCompleted && (identityMode === 'permissions_only' || identityComplete || devicesVerified)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050B18] p-6 text-white font-sans">
-        <div className="mx-auto max-w-xl rounded-3xl border border-emerald-500/30 bg-[#0B1930] p-10 text-center shadow-2xl">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/20">
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="assessments-root flex min-h-screen items-center justify-center bg-[var(--assessment-surface)] p-6 font-sans text-[var(--assessment-on-surface)]">
+        <div className="mx-auto w-full max-w-4xl space-y-6">
+          <div className="rounded-2xl border border-[var(--assessment-outline-variant)] bg-gradient-to-br from-[#1685FF] to-[#22D3EE] p-12 text-center text-white shadow-lg shadow-sky-500/20">
+            <h1 className="text-4xl font-semibold mb-4 tracking-tight">Assessment complete</h1>
+            <h2 className="text-2xl font-medium">Thank you!</h2>
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">All Rounds Complete!</h1>
-          <h2 className="mt-2 text-lg font-medium text-[#34D399]">Your submission has been safely recorded</h2>
-          <div className="mt-6 space-y-3 rounded-2xl border border-white/5 bg-[#050B18]/50 p-6 text-sm text-[#BAE6FD]">
-            <p>All evaluation stages for this role have been finished successfully.</p>
-            <p className="text-[var(--assessment-on-surface-variant)]">The talent team will review your proctoring logs and performance metrics and follow up via email.</p>
+          <div className="space-y-4 rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-6 text-[var(--assessment-on-surface-variant)]">
+            <p className="text-[15px]">We have received your Assessment form.</p>
+            <p className="text-[15px]">
+              We will contact you either to confirm your Application, or to ask for more information.
+            </p>
           </div>
         </div>
       </div>
@@ -482,28 +483,27 @@ export default function CandidatePortalPage({
       {/* Unified Meet/Zoom-style system readiness lobby */}
       {needsIdentityGate ? (
         <SystemReadinessLobby
-          portalToken={token}
+          token={token}
           candidateName={data.candidate.name}
-          faceMode={faceMode}
+          identityMode={identityMode}
           consentText={
             identity?.consent_text ||
             'I consent to capture and store my facial photograph for identity verification and assessment integrity.'
           }
-          consentAlreadyRecorded={Boolean(identity?.consent_recorded)}
-          faceAlreadyCaptured={Boolean(identity?.face_captured)}
-          startLabel="Enter Assessment Dashboard"
-          title="System check"
-          subtitle="Confirm camera, mic, and network before you enter — just like joining a video call."
+          consentRecorded={Boolean(identity?.consent_recorded)}
+          persistFaceCapture={identityMode === 'face'}
+          startLabel={
+            identityMode === 'face' ? 'Start Assessment' : 'All Good — Continue'
+          }
           onComplete={async () => {
-            if (!faceMode) {
-              try {
-                sessionStorage.setItem(devicesSessionKey, '1');
-              } catch {
-                /* ignore */
-              }
-              setDevicesVerified(true);
-              return;
+            // Persist for this browser tab so returning from a round never re-opens the lobby.
+            try {
+              sessionStorage.setItem(devicesSessionKey, '1');
+            } catch {
+              /* ignore quota / private mode */
             }
+            setDevicesVerified(true);
+            if (identityMode === 'permissions_only') return;
             await queryClient.invalidateQueries({ queryKey: ['candidate-portal', token] });
             await refetch();
           }}
@@ -652,7 +652,7 @@ export default function CandidatePortalPage({
                   }}
                   className={`rounded-xl px-4 py-2 text-xs font-extrabold transition-all border ${
                     language === code
-                      ? 'bg-[#1685FF] text-white border-[#38BDF8] shadow-lg shadow-purple-500/20'
+                      ? 'bg-[#1685FF] text-white border-[#38BDF8] shadow-lg shadow-sky-500/20'
                       : 'bg-[#050B18] text-[#BAE6FD] border-[#293B57] hover:border-[#1685FF] hover:text-white'
                   }`}
                 >
@@ -717,7 +717,7 @@ export default function CandidatePortalPage({
                         disabled={!isAvailable}
                         className={`rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all border ${
                           isActive
-                            ? 'bg-[#1685FF] text-white border-[#38BDF8] shadow-md shadow-purple-500/20'
+                            ? 'bg-[#1685FF] text-white border-[#38BDF8] shadow-md shadow-sky-500/20'
                             : isAvailable
                             ? 'bg-[#050B18] text-[#BAE6FD] border-[#293B57] hover:border-[#1685FF]'
                             : 'bg-[#050B18]/40 text-[var(--assessment-on-surface-variant)]/40 border-transparent cursor-not-allowed'
@@ -820,7 +820,7 @@ export default function CandidatePortalPage({
                       key={stage.id}
                       className={`relative overflow-hidden rounded-2xl border transition-all ${
                         isAvailable
-                          ? 'border-[#1685FF] bg-[#0B1930] shadow-xl shadow-purple-900/10'
+                          ? 'border-[#1685FF] bg-[#0B1930] shadow-xl shadow-sky-900/20'
                           : isCompleted
                           ? 'border-[#293B57]/80 bg-[#0B1930]/50'
                           : 'border-[#293B57]/40 bg-[#0B1930]/30 opacity-70'
@@ -834,7 +834,7 @@ export default function CandidatePortalPage({
                                 ? 'bg-emerald-500 text-black'
                                 : isAvailable
                                 ? 'bg-[#34D399] text-black ring-4 ring-[#34D399]/20'
-                                : 'bg-[#2D1B69] text-[var(--assessment-on-surface-variant)]'
+                                : 'bg-[#293B57] text-[var(--assessment-on-surface-variant)]'
                             }`}
                           >
                             {isCompleted ? '✓' : idx + 1}
@@ -1024,7 +1024,7 @@ export default function CandidatePortalPage({
             )}
 
             {/* Pro-Tips Card */}
-            <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-[#160A30] to-[#160A30] p-6 shadow-xl">
+            <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-[#0B1930] to-[#0B1930] p-6 shadow-xl">
               <div className="flex items-center gap-2.5 mb-3">
                 <span className="flex items-center text-[var(--color-primary)]"><AssessmentMaterialIcon name="lightbulb" size={20} /></span>
                 <h3 className="text-sm font-extrabold text-amber-300">Candidate Pro-Tip</h3>

@@ -1,6 +1,6 @@
 'use client';
 
-import { NexusToggleSwitch } from '@/modules/job-profiles/components/NexusToggleSwitch';
+import { CodeVoxToggleSwitch } from '@/modules/job-profiles/components/CodeVoxToggleSwitch';
 import {
   QUESTION_PLAN_LABELS,
   defaultRubricQuestionPlan,
@@ -74,7 +74,7 @@ export function RubricQuestionPlanEditor(props: {
               }`}
             >
               <span className="flex items-center gap-2 text-sm font-medium">
-                <NexusToggleSwitch
+                <CodeVoxToggleSwitch
                   checked={slot.enabled}
                   aria-label={`${QUESTION_PLAN_LABELS[key]} for ${props.rubricName}`}
                   onChange={(enabled) => setSlot(key, { enabled, count: enabled ? Math.max(1, slot.count) : 0 })}

@@ -1,6 +1,6 @@
 'use client';
 
-export function NexusToggleSwitch(props: {
+export function CodeVoxToggleSwitch(props: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
@@ -16,9 +16,9 @@ export function NexusToggleSwitch(props: {
       aria-label={props['aria-label']}
       disabled={props.disabled}
       onClick={() => props.onChange(!props.checked)}
-      className="nexus-switch"
+      className="codevox-switch"
     >
-      <span className="nexus-switch-thumb" />
+      <span className="codevox-switch-thumb" />
     </button>
   );
 }

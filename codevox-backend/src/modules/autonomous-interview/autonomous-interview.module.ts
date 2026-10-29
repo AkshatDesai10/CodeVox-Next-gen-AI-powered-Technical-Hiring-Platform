@@ -55,7 +55,9 @@ import { RoundSnapshotModule } from '../assessment-reports/round-snapshot.module
   exports: [
     SessionCoordinatorService,
     AutonomousInterviewRepository,
+    AutonomousInterviewRoundsRepository,
     InterviewRecordingService,
+    LiveKitService,
   ],
 })
 export class AutonomousInterviewModule {}

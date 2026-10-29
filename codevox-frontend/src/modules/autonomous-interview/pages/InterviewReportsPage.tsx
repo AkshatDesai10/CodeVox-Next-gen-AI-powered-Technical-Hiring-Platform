@@ -52,10 +52,10 @@ export function InterviewReportsPage() {
         <div className="h-8 w-56 animate-pulse rounded bg-[var(--assessment-surface-container-high)]" />
         <div className="grid gap-3 sm:grid-cols-2">
           {[0, 1].map((item) => (
-            <div key={item} className="nexus-card h-20 animate-pulse" />
+            <div key={item} className="codevox-card h-20 animate-pulse" />
           ))}
         </div>
-        <div className="nexus-card h-64 animate-pulse" />
+        <div className="codevox-card h-64 animate-pulse" />
       </div>
     );
   }
@@ -89,17 +89,17 @@ export function InterviewReportsPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <article className="nexus-card p-4">
+        <article className="codevox-card p-4">
           <p className="text-xs text-[var(--assessment-on-surface-variant)]">Reports</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">{rows.length}</p>
         </article>
-        <article className="nexus-card p-4">
+        <article className="codevox-card p-4">
           <p className="text-xs text-[var(--assessment-on-surface-variant)]">Latest</p>
           <p className="mt-1 text-sm font-semibold">{latest ? formatFinalizedAt(latest) : '—'}</p>
         </article>
       </div>
 
-      <div className="nexus-card overflow-hidden">
+      <div className="codevox-card overflow-hidden">
         <table className="min-w-full text-sm">
           <thead className="bg-[var(--assessment-surface-container)] text-left text-xs text-[var(--assessment-on-surface-variant)]">
             <tr>

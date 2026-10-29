@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EgressClient, EgressStatus } from 'livekit-server-sdk';
+import { EgressClient, EgressStatus, DirectFileOutput } from 'livekit-server-sdk';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { TrackSource } from '@livekit/protocol';
 
@@ -313,6 +313,41 @@ export class LiveKitService {
     } catch (err) {
       this.logger.warn(
         `Egress stop failed id=${egressId}: ${err instanceof Error ? err.message : err}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Start a per-track file egress (same layout as voice-engine SessionRecorder).
+   * Used for coding rounds where no voice agent is present to wire track events.
+   */
+  async startTrackEgress(params: {
+    roomName: string;
+    trackId: string;
+    /** Relative path under egress /out mount, without codec extension. */
+    filepath: string;
+  }): Promise<StartedEgress | null> {
+    const filepath = params.filepath.replace(/^\/+/, '').replace(/^out\//, '');
+    try {
+      const info = await this.egressClient().startTrackEgress(
+        params.roomName,
+        new DirectFileOutput({ filepath: `/out/${filepath}` }),
+        params.trackId,
+      );
+      return {
+        egressId: info.egressId,
+        recordingUrl: `local-recordings/${filepath}`,
+        storageKey: filepath.startsWith('local-recordings/')
+          ? filepath
+          : `local-recordings/${filepath}`,
+        mode: 'local',
+      };
+    } catch (err) {
+      this.logger.warn(
+        `Track egress start failed room=${params.roomName} track=${params.trackId}: ${
+          err instanceof Error ? err.message : err
+        }`,
       );
       return null;
     }

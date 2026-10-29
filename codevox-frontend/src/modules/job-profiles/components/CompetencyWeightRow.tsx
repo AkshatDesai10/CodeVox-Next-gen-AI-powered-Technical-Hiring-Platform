@@ -14,24 +14,24 @@ export function CompetencyWeightRow(props: {
   return (
     <tr
       className={`border-b border-[var(--assessment-outline-variant)] transition-colors hover:bg-[var(--assessment-surface-container-low)] ${
-        props.aiIdentified ? 'nexus-ai-sparkle-border' : ''
+        props.aiIdentified ? 'codevox-ai-sparkle-border' : ''
       }`}
     >
       <td className="px-4 py-3">
         <span
-          className={`text-sm font-semibold ${props.aiIdentified ? 'text-[var(--nexus-secondary)]' : ''}`}
+          className={`text-sm font-semibold ${props.aiIdentified ? 'text-[var(--codevox-secondary)]' : ''}`}
         >
           {props.name}
         </span>
         <div
           className={`mt-1 text-[10px] font-bold uppercase tracking-widest ${
-            props.aiIdentified ? 'text-[var(--nexus-secondary)]/70' : 'text-[var(--assessment-on-surface-variant)]'
+            props.aiIdentified ? 'text-[var(--codevox-secondary)]/70' : 'text-[var(--assessment-on-surface-variant)]'
           }`}
         >
           {props.aiIdentified ? 'AI identified' : `${props.category} skill`}
         </div>
       </td>
-      <td className={`px-4 py-3 font-mono-data ${props.aiIdentified ? 'text-[var(--nexus-secondary)]' : ''}`}>
+      <td className={`px-4 py-3 font-mono-data ${props.aiIdentified ? 'text-[var(--codevox-secondary)]' : ''}`}>
         {props.targetScore.toFixed(1)} / 10
       </td>
       <td className="px-4 py-3 text-right">
@@ -67,7 +67,7 @@ export function CompetencyWeightRow(props: {
         <div className="flex items-center justify-end gap-3">
           {props.aiIdentified && (
             <span title="AI Suggested" className="flex items-center">
-              <AssessmentMaterialIcon name="auto_fix_high" size={18} className="text-[var(--nexus-secondary)]" />
+              <AssessmentMaterialIcon name="auto_fix_high" size={18} className="text-[var(--codevox-secondary)]" />
             </span>
           )}
           {props.onDelete ? (
@@ -75,7 +75,7 @@ export function CompetencyWeightRow(props: {
               <AssessmentMaterialIcon name="delete" size={18} />
             </button>
           ) : (
-            <AssessmentMaterialIcon name="tune" size={18} className="text-[var(--nexus-outline)]" />
+            <AssessmentMaterialIcon name="tune" size={18} className="text-[var(--codevox-outline)]" />
           )}
         </div>
       </td>

@@ -142,6 +142,55 @@ export function submitCodingCode(token: string, submissions: Record<string, { la
   }).then((r) => r.json());
 }
 
+export type CodingLiveKitInit = {
+  portalToken: string;
+  sessionToken: string;
+  roomName: string;
+  livekitToken: string;
+  livekitUrl: string;
+  currentPhase: string;
+  roundType: string;
+  proctorConfig: {
+    requireScreenShare?: boolean;
+    enableMediaStrikes?: boolean;
+    maxMediaStrikes?: number;
+    autoSubmitOnMediaStrike?: boolean;
+    enableFocusStrikes?: boolean;
+    maxFocusStrikes?: number;
+    autoSubmitOnFocusStrike?: boolean;
+    focusStrikeThresholdSeconds?: number;
+    faceCheckIntervalMs?: number;
+    faceMatchThreshold?: number;
+  };
+};
+
+export function initCodingLiveKit(token: string): Promise<{ success: boolean; data: CodingLiveKitInit; message?: string }> {
+  return fetch(`${recruitmentApiBase()}/api/coding-round/${encodeURIComponent(token)}/livekit/init`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  }).then((r) => r.json());
+}
+
+export function startCodingRecording(
+  token: string,
+  body: { track_id: string; kind?: string },
+): Promise<{ success: boolean; data?: { recording: boolean; egressId?: string }; message?: string }> {
+  return fetch(`${recruitmentApiBase()}/api/coding-round/${encodeURIComponent(token)}/recording/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then((r) => r.json());
+}
+
+export function stopCodingLiveKit(token: string) {
+  return fetch(`${recruitmentApiBase()}/api/coding-round/${encodeURIComponent(token)}/livekit/stop`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  }).then((r) => r.json()).catch(() => null);
+}
+
 export type PortalRuntimeConfig = {
   face: 'on' | 'off';
   maxStrikes: number;

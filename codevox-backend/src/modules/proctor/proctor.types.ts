@@ -5,6 +5,12 @@ export type ProctorEventInput = {
   client_ts?: number;
 };
 
+export type ProctorRoundStrikeSummary = {
+  round_type: string | null;
+  media_strikes: number;
+  focus_strikes: number;
+};
+
 export type ProctorSummary = {
   total_events: number;
   by_type: Record<string, number>;
@@ -12,6 +18,15 @@ export type ProctorSummary = {
   warning_count: number;
   last_event_at: string | null;
   fraud_risk_score?: number;
+  /** Active-round scoped counters (authoritative for FE hydration). */
+  current_round_type?: string | null;
+  current_round_strikes?: ProctorRoundStrikeSummary;
+  /** Session-lifetime totals (audit). */
+  media_strike_count?: number;
+  focus_strike_count?: number;
+  terminated_by?: string | null;
+  termination_reason?: string | null;
+  pipeline_finished?: boolean;
 };
 
 export type VoiceTurnTimingMeta = {

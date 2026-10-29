@@ -71,7 +71,7 @@ export function FullscreenEnforcementModal({
         <button
           type="button"
           onClick={onReturn}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--assessment-primary,#005ea2)] px-4 py-3 text-sm font-bold text-white shadow-sm hover:opacity-95"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--assessment-primary,#1685FF)] px-4 py-3 text-sm font-bold text-white shadow-sm hover:opacity-95"
         >
           <AssessmentMaterialIcon name="fullscreen" size={18} />
           {strikePendingAck ? 'Resume in Fullscreen' : 'Return to Fullscreen'}

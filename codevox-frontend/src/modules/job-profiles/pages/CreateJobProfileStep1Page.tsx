@@ -256,7 +256,7 @@ export function CreateJobProfileStep1Page() {
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 space-y-6 lg:col-span-9">
-          <section className="nexus-card overflow-hidden p-6">
+          <section className="codevox-card overflow-hidden p-6">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="font-label-caps mb-1 text-[var(--assessment-on-surface-variant)]">
@@ -271,7 +271,7 @@ export function CreateJobProfileStep1Page() {
                 type="button"
                 disabled={!jdPaste.trim() || parseMutation.isPending}
                 onClick={() => parseMutation.mutate()}
-                className="nexus-btn-primary inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm disabled:opacity-50"
+                className="codevox-btn-primary inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm disabled:opacity-50"
               >
                 <AssessmentMaterialIcon name="auto_awesome" size={18} />
                 {parseMutation.isPending ? 'Generating…' : 'Generate with AI'}
@@ -297,7 +297,7 @@ export function CreateJobProfileStep1Page() {
 
 
 
-          <section className="nexus-card p-6">
+          <section className="codevox-card p-6">
             <h2 className="font-headline-md mb-2">Job basics</h2>
             <p className="mb-6 text-sm text-[var(--assessment-on-surface-variant)]">
               Review or edit role details, then continue to configure stages.
@@ -311,7 +311,7 @@ export function CreateJobProfileStep1Page() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Senior Software Engineer"
-                  className="nexus-input"
+                  className="codevox-input"
                 />
               </div>
               <div>
@@ -321,7 +321,7 @@ export function CreateJobProfileStep1Page() {
                 <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="nexus-input"
+                  className="codevox-input"
                 >
                   <option value="">Select...</option>
                   {DEPARTMENTS.map((d) => (
@@ -341,7 +341,7 @@ export function CreateJobProfileStep1Page() {
                 <select
                   value={seniority}
                   onChange={(e) => setSeniority(e.target.value)}
-                  className="nexus-input"
+                  className="codevox-input"
                 >
                   <option value="">Select...</option>
                   <option value="junior">Junior</option>
@@ -358,7 +358,7 @@ export function CreateJobProfileStep1Page() {
                 <label className="font-label-caps mb-1 block text-[var(--assessment-on-surface-variant)]">
                   Employment type
                 </label>
-                <div className="nexus-toggle-group flex gap-2">
+                <div className="codevox-toggle-group flex gap-2">
                   {[
                     { value: 'full_time', label: 'Full-time' },
                     { value: 'contract', label: 'Contract' },
@@ -449,7 +449,7 @@ export function CreateJobProfileStep1Page() {
             </div>
           </section>
 
-          <section className="nexus-card relative overflow-hidden p-6">
+          <section className="codevox-card relative overflow-hidden p-6">
             <h2 className="font-headline-md mb-6">Job description</h2>
 
             <div className="min-h-[280px] rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-6 focus-within:ring-2 focus-within:ring-[var(--assessment-primary-container)]">
@@ -465,7 +465,7 @@ export function CreateJobProfileStep1Page() {
               <ul className="mb-4 space-y-2">
                 {responsibilities.map((r, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="mt-2 text-[var(--nexus-outline)]">-</span>
+                    <span className="mt-2 text-[var(--codevox-outline)]">-</span>
                     <input
                       value={r}
                       onChange={(e) => updateList(responsibilities, setResponsibilities, i, e.target.value)}
@@ -484,8 +484,8 @@ export function CreateJobProfileStep1Page() {
               </button>
 
               {biasFlags.length > 0 ? (
-                <div className="nexus-glass-ai mt-6 rounded-lg p-4">
-                  <p className="font-mono-data flex items-center gap-2 text-sm italic text-[var(--nexus-secondary)]">
+                <div className="codevox-glass-ai mt-6 rounded-lg p-4">
+                  <p className="font-mono-data flex items-center gap-2 text-sm italic text-[var(--codevox-secondary)]">
                     <AssessmentMaterialIcon name="spark" size={16} />
                     AI suggestion: review bias flags in the sidebar before publishing.
                   </p>
@@ -628,12 +628,12 @@ export function CreateJobProfileStep1Page() {
         </div>
 
         <aside className="col-span-12 space-y-6 lg:col-span-3">
-          <div className="nexus-card p-6 shadow-sm">
+          <div className="codevox-card p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-2">
               <AssessmentMaterialIcon
                 name="security_update_good"
                 size={20}
-                className="text-[var(--nexus-secondary)]"
+                className="text-[var(--codevox-secondary)]"
               />
               <h3 className="font-title-sm">Bias analysis</h3>
             </div>
@@ -642,10 +642,10 @@ export function CreateJobProfileStep1Page() {
                 biasFlags.map((flag) => (
                   <div
                     key={flag.label}
-                    className={`nexus-bias-flag ${flag.severity === 'critical' ? 'critical' : 'warning'}`}
+                    className={`codevox-bias-flag ${flag.severity === 'critical' ? 'critical' : 'warning'}`}
                   >
                     <p
-                      className={`font-label-caps mb-1 ${flag.severity === 'critical' ? 'text-[var(--assessment-error,#dc2626)]' : 'text-[var(--nexus-secondary)]'}`}
+                      className={`font-label-caps mb-1 ${flag.severity === 'critical' ? 'text-[var(--assessment-error,#dc2626)]' : 'text-[var(--codevox-secondary)]'}`}
                     >
                       {flag.label}
                     </p>
@@ -667,11 +667,11 @@ export function CreateJobProfileStep1Page() {
               <div className="border-t border-[var(--assessment-outline-variant)] pt-4">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="font-label-caps">Inclusivity score</span>
-                  <span className="font-title-sm text-[var(--nexus-secondary)]">{inclusivityScore}%</span>
+                  <span className="font-title-sm text-[var(--codevox-secondary)]">{inclusivityScore}%</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--assessment-surface-container-high)]">
                   <div
-                    className="h-full bg-[var(--nexus-secondary)]"
+                    className="h-full bg-[var(--codevox-secondary)]"
                     style={{ width: `${inclusivityScore}%` }}
                   />
                 </div>
@@ -697,7 +697,7 @@ export function CreateJobProfileStep1Page() {
           type="button"
           disabled={!title.trim() || createMutation.isPending}
           onClick={() => createMutation.mutate()}
-          className="nexus-btn-primary flex items-center justify-center gap-2 rounded-lg px-6 py-2 font-title-sm shadow-md transition-all hover:shadow-lg disabled:opacity-50"
+          className="codevox-btn-primary flex items-center justify-center gap-2 rounded-lg px-6 py-2 font-title-sm shadow-md transition-all hover:shadow-lg disabled:opacity-50"
         >
           Continue to stages
           <AssessmentMaterialIcon name="arrow_forward" size={18} />

@@ -33,6 +33,13 @@ export type AutonomousSession = {
     faceMatchThreshold: number;
     requireCameraForStart: boolean;
     requireVoiceEnroll: boolean;
+    maxMediaStrikes?: number;
+    autoSubmitOnMediaStrike?: boolean;
+    enableMediaStrikes?: boolean;
+    maxFocusStrikes?: number;
+    autoSubmitOnFocusStrike?: boolean;
+    enableFocusStrikes?: boolean;
+    focusStrikeThresholdSeconds?: number;
   };
   livenessProvider?: 'challenge' | 'vendor';
   proctorSummary?: Record<string, unknown> | null;
@@ -142,9 +149,12 @@ export function forceCompleteAutonomous(
   token: string,
   body?: { endedBy?: 'candidate' | 'proctor'; terminationReason?: string },
 ) {
+  const payload: Record<string, string> = {};
+  if (body?.endedBy) payload.ended_by = body.endedBy;
+  if (body?.terminationReason) payload.termination_reason = body.terminationReason;
   return apiPost<Record<string, unknown>>(
     `/api/autonomous-interview/session/${encodeURIComponent(token)}/force-complete`,
-    body?.endedBy ? { ended_by: body.endedBy } : {},
+    payload,
   );
 }
 
