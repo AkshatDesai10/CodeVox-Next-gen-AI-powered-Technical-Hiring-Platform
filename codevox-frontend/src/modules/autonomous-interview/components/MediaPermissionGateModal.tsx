@@ -56,7 +56,7 @@ function LockGuide({ requireMic, device }: { requireMic: boolean; device?: 'came
           ? 'Camera and Microphone'
           : 'Camera';
   return (
-    <ol className="mt-4 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-800">
+    <ol className="mt-4 space-y-2 rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-4 text-left text-sm text-[var(--assessment-on-surface)]">
       <li>
         <span className="font-semibold">1.</span> Click the <span className="font-semibold">Lock icon</span> (or
         Tune / Site Settings icon) on the left side of your browser address bar.
@@ -174,7 +174,7 @@ export function MediaPermissionGateModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="media-permission-title"
-        className="w-full max-w-lg rounded-2xl border border-slate-200 bg-[var(--assessment-surface-container)] p-6 shadow-2xl"
+        className="w-full max-w-lg rounded-2xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)] p-6 shadow-2xl"
       >
         {showFinalWarning ? (
           <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800 shadow-[0_0_16px_rgba(220,38,38,0.25)]">
@@ -210,12 +210,12 @@ export function MediaPermissionGateModal({
           </p>
         ) : null}
 
-        <h2 id="media-permission-title" className="text-xl font-semibold text-slate-900">
+        <h2 id="media-permission-title" className="text-xl font-semibold text-[var(--assessment-on-surface)]">
           {title}
         </h2>
 
         {description ? (
-          <p className="mt-3 text-sm leading-relaxed text-slate-600">{description}</p>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--assessment-on-surface-variant)]">{description}</p>
         ) : null}
 
         {alert ? (

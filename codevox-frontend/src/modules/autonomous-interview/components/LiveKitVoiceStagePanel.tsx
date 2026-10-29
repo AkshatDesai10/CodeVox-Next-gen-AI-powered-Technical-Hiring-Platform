@@ -28,7 +28,8 @@ import { useSessionProctor } from '@/modules/proctor/useSessionProctor';
 import { BuildAssessmentSidePanel } from '@/modules/autonomous-interview/components/BuildAssessmentSidePanel';
 import { FullscreenEnforcementModal } from '@/modules/autonomous-interview/components/FullscreenEnforcementModal';
 import { getProjectInterviewSubmission } from '@/modules/assessments/lib/project-interview-api';
-import { AI_INTERVIEWER_AVATAR_URL } from '@/modules/autonomous-interview/lib/ai-interviewer-avatar';
+
+import { CircularAudioVisualizer } from '@/modules/autonomous-interview/components/CircularAudioVisualizer';
 import { disconnectLiveKitRoom } from '@/modules/autonomous-interview/lib/livekit-session';
 import { useInterviewLeaveGuard, releaseInterviewLeaveGuard, type LeaveAttempt } from '@/modules/autonomous-interview/lib/interview-leave-guard';
 import type { ProctorEventInput } from '@/modules/proctor/types';
@@ -955,7 +956,7 @@ export function LiveKitVoiceStagePanel({
     roomName.length > 28 ? `${roomName.slice(0, 12)}…${roomName.slice(-8)}` : roomName || '—';
 
   const controlDock = (
-    <div className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--assessment-outline-variant)] bg-white/95 px-3.5 py-1.5 shadow-lg backdrop-blur-sm">
+    <div className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]/90 px-3.5 py-1.5 shadow-xl backdrop-blur-md">
       <button
         type="button"
         onClick={() => void toggleMic()}
@@ -1164,7 +1165,7 @@ export function LiveKitVoiceStagePanel({
         ) : null}
         <div className="pointer-events-none fixed right-4 top-16 z-40 flex flex-col items-end gap-2">
           <div className="pointer-events-auto">{controlDock}</div>
-          <p className="rounded-lg border border-[var(--assessment-outline-variant)] bg-white/95 px-2 py-0.5 font-mono-label text-[10px] text-[var(--assessment-on-surface-variant)] shadow">
+          <p className="rounded-lg border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]/95 px-2 py-0.5 font-mono-label text-[10px] text-[var(--assessment-on-surface-variant)] shadow">
             {phaseLabel} · {agentConnected ? 'Agent connected' : 'Waiting'}
           </p>
           {actionError ? (
@@ -1190,7 +1191,7 @@ export function LiveKitVoiceStagePanel({
       />
 
       {/* TOP HEADER BAR — Nexus Assessment shell */}
-      <header className="z-30 flex h-14 shrink-0 items-center justify-between bg-[var(--assessment-primary)] px-4 shadow-md sm:px-6">
+      <header className="z-30 flex h-14 shrink-0 items-center justify-between border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] px-4 shadow-md sm:px-6">
         <div className="flex min-w-0 items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-white shadow-sm">
@@ -1271,11 +1272,11 @@ export function LiveKitVoiceStagePanel({
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {/* LEFT: AI INTERVIEWER STAGE (70%) */}
         <main className="relative flex w-[70%] flex-col items-center justify-center overflow-hidden border-r border-[var(--assessment-outline-variant)] bg-[var(--color-primary-container)]/20">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#1d3054]/90 via-[#243b66]/70 to-[#1a2a4a]/95" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#050B18] via-[#081426] to-[#0B1930]" />
 
           <div className="custom-scrollbar relative z-10 flex h-full w-full flex-col justify-between overflow-y-auto p-6">
             {/* Active question card */}
-            <div className="w-full shrink-0 rounded-xl border border-[var(--assessment-outline-variant)] bg-white p-5 shadow-sm">
+            <div className="w-full shrink-0 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]/80 backdrop-blur-md p-5 shadow-lg">
               <div className="mb-2.5 flex items-center justify-between gap-3 border-b border-[var(--assessment-outline-variant)]/40 pb-2.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-2.5">
                   <span className="font-mono-label inline-flex items-center gap-1.5 rounded-full border border-[var(--assessment-primary)]/30 bg-[var(--assessment-primary)]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--assessment-primary)]">
@@ -1317,13 +1318,17 @@ export function LiveKitVoiceStagePanel({
 
             {/* Middle: interviewer tile + HUD */}
             <div className="my-4 grid min-h-0 flex-1 grid-cols-12 items-stretch gap-5">
-              <div className="group relative col-span-8 flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[#1d3054] shadow-sm">
-                <img
-                  alt="AI interviewer"
-                  className="absolute inset-0 h-full w-full scale-[1.02] object-cover object-[center_18%] brightness-[0.96] contrast-[1.04] saturate-[1.05] transition-transform duration-500 group-hover:scale-[1.04]"
-                  src={AI_INTERVIEWER_AVATAR_URL}
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0f1b33]/85 via-[#1d3054]/15 to-[#0f1b33]/35" />
+              <div className="group relative col-span-8 flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--assessment-outline-variant)] bg-[#0B1930] shadow-sm">
+                <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#081426] via-[#050B18] to-[#081426]">
+                  <div className="pointer-events-none absolute inset-0 bg-radial-glow opacity-30" />
+                  <CircularAudioVisualizer
+                    size={280}
+                    isSpeaking={status === 'agent_speaking'}
+                    isListening={status === 'listening' || status === 'live'}
+                    isAnalyzing={status === 'connecting' || status === 'idle'}
+                    agentConnected={agentConnected}
+                  />
+                </div>
 
                 <div className="relative z-10 flex w-full items-center justify-between p-3.5">
                   <div className="glass-card flex items-center gap-2.5 rounded-full px-3 py-1 shadow-lg">
@@ -1372,8 +1377,8 @@ export function LiveKitVoiceStagePanel({
               {/* Right HUD + candidate PiP */}
               <div className="col-span-4 flex flex-col justify-between gap-3">
                 {/* Candidate PiP */}
-                <div className="relative flex flex-1 flex-col justify-between overflow-hidden rounded-xl border-2 border-[var(--assessment-primary)] bg-[#1d3054] p-3 shadow-2xl">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1d3054]">
+                <div className="relative flex flex-1 flex-col justify-between overflow-hidden rounded-xl border-2 border-[var(--assessment-primary)] bg-[#0B1930] p-3 shadow-2xl">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0B1930]">
                     {videoEnabled ? (
                       <video
                         ref={videoRef}
@@ -1428,7 +1433,7 @@ export function LiveKitVoiceStagePanel({
                 </div>
 
                 {/* HUD */}
-                <div className="flex shrink-0 flex-col justify-between rounded-xl border border-[var(--assessment-outline-variant)] bg-white p-4 shadow-sm">
+                <div className="flex shrink-0 flex-col justify-between rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container)]/80 backdrop-blur-md p-4 shadow-lg">
                   <div>
                     <div className="mb-2.5 flex items-center justify-between border-b border-[var(--assessment-outline-variant)]/40 pb-2">
                       <span className="font-mono-label flex items-center gap-1.5 text-[11px] font-semibold uppercase text-[var(--assessment-on-surface-variant)]">
@@ -1588,12 +1593,12 @@ export function LiveKitVoiceStagePanel({
         </main>
 
         {/* RIGHT SIDEBAR */}
-        <aside className="z-10 flex h-full w-[30%] min-w-[280px] flex-col border-l border-[var(--assessment-outline-variant)] bg-white shadow-sm">
+        <aside className="z-10 flex h-full w-[30%] min-w-[280px] flex-col border-l border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] shadow-xl">
           {buildMode && buildLookupToken ? (
             <BuildAssessmentSidePanel lookupToken={buildLookupToken} />
           ) : (
             <>
-          <div className="shrink-0 border-b border-[var(--assessment-outline-variant)] bg-white p-4">
+          <div className="shrink-0 border-b border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-4">
             <div className="mb-3 rounded-xl border border-[var(--assessment-outline-variant)] bg-[var(--assessment-surface-container-low)] p-2.5 shadow-sm">
               <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-[var(--assessment-outline-variant)]/40 pb-1.5">
                 <div className="flex min-w-0 items-center gap-1.5">

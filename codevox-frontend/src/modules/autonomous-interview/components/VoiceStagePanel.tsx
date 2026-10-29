@@ -1,10 +1,11 @@
+import { CircularAudioVisualizer } from '@/modules/autonomous-interview/components/CircularAudioVisualizer';
 'use client';
 
 /// <reference types="@types/dom-speech-recognition" />
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AssessmentMaterialIcon } from '@/modules/assessments/components/AssessmentMaterialIcon';
 import { getAutonomousSession, sendVoiceMessage } from '@/modules/autonomous-interview/lib/autonomous-interview-api';
-import { AI_INTERVIEWER_AVATAR_URL } from '@/modules/autonomous-interview/lib/ai-interviewer-avatar';
+
 import { InterviewRecBadge } from '@/modules/autonomous-interview/components/InterviewRecBadge';
 import { VoicePhasePillStrip } from '@/modules/autonomous-interview/components/VoicePhasePillStrip';
 import {

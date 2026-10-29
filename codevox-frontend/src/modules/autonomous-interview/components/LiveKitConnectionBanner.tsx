@@ -84,8 +84,8 @@ export function ScreenShareRequiredOverlay({
   return (
     <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-xl bg-[var(--assessment-surface-container)] p-6 text-center shadow-2xl">
-        <h2 className="text-lg font-semibold text-slate-900">Share your screen again to continue</h2>
-        <p className="mt-2 text-sm text-slate-600">
+        <h2 className="text-lg font-semibold text-[var(--assessment-on-surface)]">Share your screen again to continue</h2>
+        <p className="mt-2 text-sm text-[var(--assessment-on-surface-variant)]">
           Your screen share stopped while the connection was interrupted. Screen sharing is required
           for this round, so choose the screen or window to share when prompted.
         </p>

@@ -140,7 +140,7 @@ export function finalSubmitAutonomous(params: {
 
 export function forceCompleteAutonomous(
   token: string,
-  body?: { endedBy?: 'candidate' },
+  body?: { endedBy?: 'candidate' | 'proctor'; terminationReason?: string },
 ) {
   return apiPost<Record<string, unknown>>(
     `/api/autonomous-interview/session/${encodeURIComponent(token)}/force-complete`,
