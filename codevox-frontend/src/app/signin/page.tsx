@@ -1,10 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import '@/modules/marketing/styles/landing.css';
+
+const DEMO_EMAIL = 'akshat@CodeVox';
+const DEMO_PASSWORD = 'admin';
 
 const ERROR_MESSAGES: Record<string, string> = {
   Configuration: 'Sign-in is not configured correctly. Contact your administrator.',
@@ -19,10 +22,11 @@ function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status, data: session } = useSession();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
-  const [email, setEmail] = useState('admin@localhost');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const autoStarted = useRef(false);
 
   const rawCallback = searchParams.get('callbackUrl') || '/assessments';
   const callbackUrl =
@@ -34,29 +38,42 @@ function SignInForm() {
     ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.Default)
     : null;
 
-  useEffect(() => {
-    if (errorCode) return;
-    if (status === 'authenticated' && session?.access_token && !session.error) {
-      router.replace(callbackUrl);
-    }
-  }, [status, session, callbackUrl, router, errorCode]);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function loginWith(nextEmail: string, nextPassword: string) {
     setLoading(true);
     setFormError(null);
     const result = await signIn('credentials', {
-      email,
-      password,
+      email: nextEmail,
+      password: nextPassword,
       callbackUrl,
       redirect: false,
     });
-    setLoading(false);
     if (result?.error) {
+      setLoading(false);
       setFormError(ERROR_MESSAGES.CredentialsSignin);
       return;
     }
     router.replace(result?.url || callbackUrl);
+  }
+
+  useEffect(() => {
+    if (errorCode) {
+      setLoading(false);
+      return;
+    }
+    if (status === 'authenticated' && session?.access_token && !session.error) {
+      router.replace(callbackUrl);
+      return;
+    }
+    if (status !== 'unauthenticated') return;
+    if (autoStarted.current) return;
+    autoStarted.current = true;
+    void loginWith(DEMO_EMAIL, DEMO_PASSWORD);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot demo auto-login
+  }, [status, session, callbackUrl, router, errorCode]);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    await loginWith(email, password);
   }
 
   return (
@@ -68,7 +85,7 @@ function SignInForm() {
         Sign in to your workspace
       </h1>
       <p className="mt-2 text-sm text-[#A7B7CD]">
-        Use your local admin credentials to continue.
+        Demo credentials are filled in — signing you in automatically.
       </p>
 
       {errorMessage || formError ? (

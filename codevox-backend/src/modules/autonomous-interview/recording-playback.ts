@@ -178,6 +178,19 @@ export function isBuildVideoRecordingEnabled(): boolean {
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 }
 
+/** LiveKit track/file egress for interviews + coding — off when disk must stay empty. */
+export function isLiveKitEgressRecordingEnabled(): boolean {
+  const egress = (process.env.LIVEKIT_EGRESS_ENABLED ?? 'true').trim().toLowerCase();
+  if (egress === '0' || egress === 'false' || egress === 'no' || egress === 'off') {
+    return false;
+  }
+  const mode = (process.env.RECORDING_MODE ?? 'track').trim().toLowerCase();
+  if (mode === 'off' || mode === 'false' || mode === '0' || mode === 'no') {
+    return false;
+  }
+  return true;
+}
+
 export function detectRecordingPhase(
   storageKeyOrUrl: string | null | undefined,
   stageId?: string | null,

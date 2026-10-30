@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EgressClient, EgressStatus, DirectFileOutput } from 'livekit-server-sdk';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { TrackSource } from '@livekit/protocol';
+import { isLiveKitEgressRecordingEnabled } from './recording-playback';
 
 export type StartedEgress = {
   egressId: string;
@@ -328,6 +329,12 @@ export class LiveKitService {
     /** Relative path under egress /out mount, without codec extension. */
     filepath: string;
   }): Promise<StartedEgress | null> {
+    if (!isLiveKitEgressRecordingEnabled()) {
+      this.logger.log(
+        `Track egress SKIPPED (recording disabled) room=${params.roomName} track=${params.trackId}`,
+      );
+      return null;
+    }
     const filepath = params.filepath.replace(/^\/+/, '').replace(/^out\//, '');
     try {
       const info = await this.egressClient().startTrackEgress(

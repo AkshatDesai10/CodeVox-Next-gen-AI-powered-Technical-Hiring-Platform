@@ -22,7 +22,10 @@ import {
 } from '../autonomous-interview/entities/autonomous-interview-round.mysql.entity';
 import { InterviewRecordingMysql } from '../autonomous-interview/entities/interview-recording.mysql.entity';
 import { LiveKitService } from '../autonomous-interview/livekit.service';
-import { interviewRecordingPrefix } from '../autonomous-interview/recording-playback';
+import {
+  interviewRecordingPrefix,
+  isLiveKitEgressRecordingEnabled,
+} from '../autonomous-interview/recording-playback';
 import { resolveProctorStrikeConfig } from '../proctor/proctor-env.config';
 import { InterviewGlobalConfigRepository } from '../proctor/interview-global-config.repository';
 import { DynamicConfigService } from '../system-config/dynamic-config.service';
@@ -195,6 +198,10 @@ export class CodingRoundLiveKitService {
     const trackId = String(body.track_id ?? '').trim();
     if (!trackId) throw new BadRequestException('track_id is required');
     const kind = String(body.kind ?? 'screen_share').trim() || 'screen_share';
+
+    if (!isLiveKitEgressRecordingEnabled()) {
+      return { recording: false, reason: 'recording_disabled', kind };
+    }
 
     const { session } = await this.ensureSession(portalToken);
     const candidateToken = session.candidateToken;
