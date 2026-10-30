@@ -106,6 +106,12 @@ Per-application round breakdown (coding scores, languages, test-case pass rates)
   <img src="docs/screenshots/assessment-report.jpeg" alt="Assessment report with coding round detail" width="100%" />
 </p>
 
+Overall hire evaluation for a completed demo candidate (rounds score, recommendation, why hire / why not).
+
+<p align="center">
+  <img src="docs/screenshots/assessment-report-rohan-demo.png" alt="CodeVox assessment report — Rohan Mehta overall hire evaluation" width="100%" />
+</p>
+
 ---
 
 ## Features
