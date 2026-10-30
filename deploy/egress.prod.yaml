@@ -1,0 +1,8 @@
+# Only used if you start the optional `egress` profile (recordings on).
+log_level: info
+api_key: devkey
+api_secret: "devlocal_livekit_secret_minimum_32b"
+ws_url: ws://livekit:7880
+insecure: true
+redis:
+  address: redis:6379

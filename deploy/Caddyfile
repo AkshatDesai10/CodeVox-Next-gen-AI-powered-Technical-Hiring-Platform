@@ -1,0 +1,26 @@
+# Reverse proxy for CodeVox (Oracle free tier / VPS).
+# HTTP on :80 works with a raw public IP. Add a domain later for automatic HTTPS.
+
+:80 {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy backend:4000
+	}
+
+	handle /health {
+		reverse_proxy backend:4000
+	}
+
+	handle /local-recordings/* {
+		reverse_proxy backend:4000
+	}
+
+	handle /local-uploads/* {
+		reverse_proxy backend:4000
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

@@ -40,12 +40,12 @@ export class CctvJwtStrategy extends PassportStrategy(Strategy, 'cctv-jwt') {
     }
 
     const email = (
-      this.config.get<string>('LOCAL_AUTH_EMAIL') ?? 'admin@localhost'
+      this.config.get<string>('LOCAL_AUTH_EMAIL') ?? 'akshat@CodeVox'
     )
       .trim()
       .toLowerCase();
     const name = (
-      this.config.get<string>('LOCAL_AUTH_NAME') ?? 'Local Admin'
+      this.config.get<string>('LOCAL_AUTH_NAME') ?? 'Akshat'
     ).trim();
     const admno = (
       this.config.get<string>('LOCAL_AUTH_ADMNO') ?? 'local-admin'

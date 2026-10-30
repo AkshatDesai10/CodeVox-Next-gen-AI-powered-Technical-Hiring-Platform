@@ -17,7 +17,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         const expectedEmail = (
-          process.env.LOCAL_AUTH_EMAIL || 'admin@localhost'
+          process.env.LOCAL_AUTH_EMAIL || 'akshat@CodeVox'
         )
           .trim()
           .toLowerCase();
@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: 'local-admin',
           email: expectedEmail,
-          name: process.env.LOCAL_AUTH_NAME || 'Local Admin',
+          name: process.env.LOCAL_AUTH_NAME || 'Akshat',
         };
       },
     }),

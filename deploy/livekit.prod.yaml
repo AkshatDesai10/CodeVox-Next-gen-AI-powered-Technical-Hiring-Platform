@@ -1,0 +1,14 @@
+port: 7880
+log_level: info
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  port_range_start: 50000
+  port_range_end: 60000
+  # Oracle / public VPS: advertise the VM public IP for WebRTC ICE
+  use_external_ip: true
+redis:
+  address: redis:6379
+keys:
+  # Override via LIVEKIT_API_KEY / LIVEKIT_API_SECRET in .env.prod
+  devkey: "devlocal_livekit_secret_minimum_32b"

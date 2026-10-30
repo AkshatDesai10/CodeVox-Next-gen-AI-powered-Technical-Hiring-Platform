@@ -1,0 +1,13 @@
+.env
+.env.local
+.env.prod
+.env*.local
+node_modules/
+dist/
+.next/
+local-recordings/*
+!local-recordings/.gitkeep
+local-uploads/*
+!local-uploads/.gitkeep
+graphify-out/
+*.log

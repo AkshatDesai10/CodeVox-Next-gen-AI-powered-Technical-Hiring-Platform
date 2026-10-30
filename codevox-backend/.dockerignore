@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.env
+.env.local
+local-recordings
+local-uploads
+upload-data
+services/voice-engine/.venv
+services/voice-engine/scratch
+graphify-out
+*.md
+npm-debug.log*

@@ -448,6 +448,12 @@ export function LandingPage() {
             <a href="#advantages" className="transition duration-200 hover:text-white">Why CodeVox</a>
           </nav>
           <div className="flex items-center gap-5">
+            <Link
+              href="/signin"
+              className="hidden text-sm font-semibold text-[#A7B7CD] transition duration-200 hover:text-white sm:inline"
+            >
+              Live demo →
+            </Link>
             <Link href="/signin" className="cvx-btn-primary px-6 py-2.5 text-sm font-semibold">
               Start hiring
             </Link>
@@ -474,12 +480,15 @@ export function LandingPage() {
               </p>
               <div className="cvx-fade-up-delay-2 mt-10 flex flex-wrap items-center gap-4">
                 <Link href="/signin" className="cvx-btn-primary px-7 py-3.5 text-base font-semibold shadow-lg">
-                  Open dashboard &rarr;
+                  Live demo →
                 </Link>
                 <a href="#cockpit" className="cvx-btn-ghost px-7 py-3.5 text-base font-semibold">
                   Explore product
                 </a>
               </div>
+              <p className="cvx-fade-up-delay-2 mt-4 text-sm text-[#7A8BA3]">
+                Opens the recruiter console instantly — demo sign-in is prefilled.
+              </p>
             </div>
 
             {/* Hero Right Visual Card — Spacious glass preview */}

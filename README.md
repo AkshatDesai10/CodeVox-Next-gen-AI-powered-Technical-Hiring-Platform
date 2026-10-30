@@ -275,7 +275,16 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — sign in with `admin@localhost` / `admin` (or your `LOCAL_AUTH_*` values).
+Open [http://localhost:3000](http://localhost:3000) — **Live demo →** auto-signs in as `akshat@CodeVox` / `admin` (or your `LOCAL_AUTH_*` values).
+
+### Production (Docker / Oracle free tier)
+
+```bash
+cp .env.prod.example .env.prod   # fill secrets
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+Recordings stay off by default. Optional LiveKit egress: add `--profile recording`.
 
 ### 3. LiveKit / voice engine
 

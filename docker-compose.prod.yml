@@ -1,0 +1,157 @@
+# CodeVox production stack (Oracle Always Free / any VPS)
+#
+# 1. cp .env.prod.example .env.prod   # fill secrets (never commit .env.prod)
+# 2. docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# 3. Open http://$CODEVOX_HOST  (or https if Caddy has a real domain + TLS)
+#
+# Recordings stay OFF by default (RECORDING_MODE=off). Optional egress:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod --profile recording up -d
+
+name: codevox
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-codevox_root_change_me}
+      MYSQL_DATABASE: ${RECRUITMENT_MYSQL_DATABASE:-codevox}
+      MYSQL_USER: ${RECRUITMENT_MYSQL_USER:-codevox}
+      MYSQL_PASSWORD: ${RECRUITMENT_MYSQL_PASSWORD:-codevox_pass_change_me}
+    volumes:
+      - codevox_mysql:/var/lib/mysql
+      - ./codevox-backend/sql:/sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-codevox_root_change_me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [codevox]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [codevox]
+
+  backend:
+    build:
+      context: ./codevox-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      RECRUITMENT_MYSQL_HOST: mysql
+      RECRUITMENT_MYSQL_PORT: "3306"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL:-ws://localhost:7885}
+      VOICE_ENGINE_URL: http://voice_engine:8001
+      NESTJS_CALLBACK_URL: http://backend:4000
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-http://localhost}
+      RECORDING_MODE: ${RECORDING_MODE:-off}
+      LIVEKIT_EGRESS_ENABLED: ${LIVEKIT_EGRESS_ENABLED:-false}
+      BUILD_VIDEO_RECORDING_ENABLED: ${BUILD_VIDEO_RECORDING_ENABLED:-false}
+      LOCAL_UPLOADS_DIR: /app/local-uploads
+    volumes:
+      - codevox_uploads:/app/local-uploads
+      - codevox_recordings:/app/local-recordings
+      # Coding sandboxes (optional; needs Docker on host)
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    expose: ["4000"]
+    networks: [codevox]
+
+  frontend:
+    build:
+      context: ./codevox-frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost}
+        NEXT_PUBLIC_RECRUITMENT_API_URL: ${NEXT_PUBLIC_RECRUITMENT_API_URL:-http://localhost}
+        NEXT_PUBLIC_FACE: ${NEXT_PUBLIC_FACE:-off}
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      NODE_ENV: production
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost}
+      NEXT_PUBLIC_RECRUITMENT_API_URL: ${NEXT_PUBLIC_RECRUITMENT_API_URL:-http://localhost}
+    depends_on: [backend]
+    expose: ["3000"]
+    networks: [codevox]
+
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit.yaml"]
+    ports:
+      - "7885:7880"
+      - "7886:7881"
+      - "7887:7882/udp"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./deploy/livekit.prod.yaml:/etc/livekit.yaml:ro
+    depends_on: [redis]
+    networks: [codevox]
+
+  voice_engine:
+    build:
+      context: ./codevox-backend/services/voice-engine
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: [.env.prod]
+    environment:
+      PORT: "8001"
+      LIVEKIT_URL: ws://livekit:7880
+      NESTJS_CALLBACK_URL: http://backend:4000
+      PUBLIC_API_BASE_URL: http://backend:4000
+      RECORDING_MODE: ${RECORDING_MODE:-off}
+      RECORDING_STORAGE: local
+    depends_on: [redis, livekit, backend]
+    expose: ["8001"]
+    networks: [codevox]
+
+  # Optional — only when RECORDING_MODE=track and you want disk egress
+  egress:
+    profiles: [recording]
+    image: livekit/egress:latest
+    restart: unless-stopped
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./deploy/egress.prod.yaml:/etc/egress.yaml:ro
+      - codevox_recordings:/out
+    depends_on: [redis, livekit]
+    networks: [codevox]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CODEVOX_HOST: ${CODEVOX_HOST:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - codevox_caddy_data:/data
+      - codevox_caddy_config:/config
+    depends_on: [frontend, backend]
+    networks: [codevox]
+
+networks:
+  codevox:
+
+volumes:
+  codevox_mysql:
+  codevox_uploads:
+  codevox_recordings:
+  codevox_caddy_data:
+  codevox_caddy_config:
