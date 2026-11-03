@@ -1,4 +1,8 @@
 export const PUBLIC_ROUTES: Array<{ method: string; path: string }> = [
+  /** Platform / load-balancer probes (Render, etc.) */
+  { method: 'GET', path: '/health' },
+  { method: 'HEAD', path: '/health' },
+
   { method: 'POST', path: '/api/auth/login' },
   { method: 'POST', path: '/api/auth/register' },
   { method: 'POST', path: '/api/auth/refresh' },
