@@ -23,6 +23,12 @@ export function buildRecruitmentTypeOrmOptions(): TypeOrmModuleOptions {
     );
   }
 
+  const sslEnabled = ['1', 'true', 'yes'].includes(
+    (process.env.RECRUITMENT_MYSQL_SSL ?? process.env.MYSQL_SSL ?? '')
+      .trim()
+      .toLowerCase(),
+  );
+
   return {
     type: 'mysql',
     host,
@@ -31,11 +37,22 @@ export function buildRecruitmentTypeOrmOptions(): TypeOrmModuleOptions {
     password,
     database,
     autoLoadEntities: true,
-    synchronize: false,
+    // Opt-in for empty cloud DBs (TiDB/Render). Keep false for normal prod.
+    synchronize: ['1', 'true', 'yes'].includes(
+      (process.env.TYPEORM_SYNC ?? '').trim().toLowerCase(),
+    ),
     timezone,
     logging: ['1', 'true', 'yes'].includes(
       (process.env.TYPEORM_LOGGING ?? '').toLowerCase(),
     ),
+    ...(sslEnabled
+      ? {
+          ssl: {
+            minVersion: 'TLSv1.2',
+            rejectUnauthorized: true,
+          },
+        }
+      : {}),
     extra: mysqlPoolExtra(),
   };
 }
