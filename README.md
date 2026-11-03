@@ -2,11 +2,14 @@
 
 **AI-powered technical hiring** — autonomous voice interviews, sandboxed coding assessments, and integrity-backed reports in one platform.
 
+**Live demo:** [https://codevox-silk.vercel.app/](https://codevox-silk.vercel.app/)
+
 <p align="center">
   <img src="docs/screenshots/landing.png" alt="CodeVox landing page — AI interviews and proctored coding assessments" width="100%" />
 </p>
 
 <p align="center">
+  <a href="https://codevox-silk.vercel.app/">Live demo</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#features">Features</a> ·
   <a href="#how-it-works">How it works</a> ·

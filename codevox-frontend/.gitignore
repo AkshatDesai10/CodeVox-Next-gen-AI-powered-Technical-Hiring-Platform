@@ -63,3 +63,5 @@ logs.txt
 parsed_events.jsonl
 parsed_turns.txt
 phase0_wrapup_events.jsonl
+.vercel
+.env*
