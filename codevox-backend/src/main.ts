@@ -102,9 +102,10 @@ async function bootstrap() {
   Logger.log(`Serving local uploads from ${uploadsDir}`, 'Bootstrap');
 
   const port = config.get<number>('PORT') ?? 4000;
-  await app.listen(port);
+  // Bind all interfaces so Render/cloud health checks can reach the process.
+  await app.listen(port, '0.0.0.0');
   Logger.log(
-    `CodeVox backend listening on http://localhost:${port}`,
+    `CodeVox backend listening on http://0.0.0.0:${port}`,
     'Bootstrap',
   );
 }
